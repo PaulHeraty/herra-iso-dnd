@@ -103,29 +103,44 @@ func _unhandled_input(event: InputEvent) -> void:
 ## Melee if in reach; otherwise ranged with line of sight (disadvantage at long range or with an
 ## enemy adjacent to the shooter).
 func attack_option(attacker: Actor, target: Actor) -> Dictionary:
+	var opts := attack_options_from(attacker, target, attacker.cell)
+	for o in opts:
+		if o.attack.kind == AttackData.Kind.MELEE:
+			return o
+	return opts[0] if not opts.is_empty() else {}
+
+
+## Every attack `attacker` could make on `target` if it stood on `from`: [{attack, adv, note}].
+func attack_options_from(attacker: Actor, target: Actor, from: Vector2i) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
 	if not target.is_alive() or attacker.stats == null:
-		return {}
-	var dist := DungeonMap.grid_distance(attacker.cell, target.cell)
-	var best := {}
+		return out
+	var dist := DungeonMap.grid_distance(from, target.cell)
+	var los := -1        # computed lazily
 	for a: AttackData in attacker.stats.attacks:
 		if a.damage == "0" or a.damage == "":
 			continue                       # e.g. the spider's Web: a condition attack (Phase 3)
 		if a.kind == AttackData.Kind.MELEE:
 			if dist <= a.reach_cells():
-				return {attack = a, adv = 0, note = ""}
-		elif best.is_empty() and map.has_line_of_sight(attacker.cell, target.cell):
-			var far := a.long_range_cells() if a.long_range_cells() > 0 else a.range_cells()
-			if dist <= far:
-				var adv := 0
-				var note := ""
-				if dist > a.range_cells():
-					adv = -1
-					note = "long range"
-				if _enemy_adjacent(attacker):
-					adv = -1
-					note = "enemy adjacent" if note == "" else note + ", enemy adjacent"
-				best = {attack = a, adv = adv, note = note}
-	return best
+				out.append({attack = a, adv = 0, note = ""})
+			continue
+		var far := a.long_range_cells() if a.long_range_cells() > 0 else a.range_cells()
+		if dist > far:
+			continue
+		if los == -1:
+			los = 1 if map.has_line_of_sight(from, target.cell) else 0
+		if los == 0:
+			continue
+		var adv := 0
+		var note := ""
+		if dist > a.range_cells():
+			adv = -1
+			note = "long range"
+		if _enemy_adjacent_at(attacker, from):
+			adv = -1
+			note = "enemy adjacent" if note == "" else note + ", enemy adjacent"
+		out.append({attack = a, adv = adv, note = note})
+	return out
 
 
 ## Roll an attack and apply it. Awaitable.
@@ -223,10 +238,19 @@ func _enemy_at(c: Vector2i) -> Actor:
 
 
 func _enemy_adjacent(who: Actor) -> bool:
+	return _enemy_adjacent_at(who, who.cell)
+
+
+func _enemy_adjacent_at(who: Actor, cell: Vector2i) -> bool:
+	return _enemies_adjacent_at(who, cell) > 0
+
+
+func _enemies_adjacent_at(who: Actor, cell: Vector2i) -> int:
+	var n := 0
 	for a in order:
-		if a.is_alive() and not DungeonMap._same_side(a, who) and DungeonMap.grid_distance(a.cell, who.cell) <= 1:
-			return true
-	return false
+		if a != who and a.is_alive() and not DungeonMap._same_side(a, who) and DungeonMap.grid_distance(a.cell, cell) <= 1:
+			n += 1
+	return n
 
 
 func _victory_pause() -> void:
@@ -334,7 +358,8 @@ func end_turn() -> void:
 
 
 func _next_turn() -> void:
-	# Skip anyone who has dropped since (death comes in step 5).
+	_check_join()
+	# Skip anyone who has dropped.
 	for i in order.size():
 		_turn_index += 1
 		if _turn_index >= order.size():
@@ -454,11 +479,126 @@ func _emit_status() -> void:
 
 
 func _monster_turn(m: Monster) -> void:
-	await get_tree().create_timer(MONSTER_TURN_PAUSE).timeout
+	await get_tree().create_timer(MONSTER_TURN_PAUSE * 0.5).timeout
 	if not in_combat or current != m:
 		return
-	_say("%s waits." % m.display_name())
-	end_turn()
+	var plan := plan_monster_turn(m)
+	var path: Array[Vector2i] = []
+	path.assign(plan.path)
+	if not path.is_empty():
+		await move_along(m, path)
+		if not in_combat or current != m:
+			return
+	if plan.target:
+		var opts := attack_options_from(m, plan.target, m.cell)
+		var opt := {}
+		for o in opts:
+			if o.attack == plan.attack:
+				opt = o
+		if opt.is_empty() and not opts.is_empty():
+			opt = opts[0]
+		if not opt.is_empty():
+			await perform_attack(m, plan.target, opt)
+			if _check_end():
+				return
+	elif plan.path.is_empty():
+		_say("%s waits." % m.display_name())
+	await get_tree().create_timer(0.25).timeout
+	if in_combat and current == m:
+		end_turn()
+
+
+# --- monster AI ------------------------------------------------------------------------------
+
+## AI tuning (expected-damage units).
+const AI_STEP_COST := 0.08          ## per square walked: prefer not to wander
+const AI_RANGED_CROWDED := 2.5      ## per adjacent hero when the chosen attack is ranged
+const AI_FINISH_BONUS := 4.0        ## the attack would likely drop the target
+
+## What a monster does this turn: {path: cells to walk, target: Actor or null, attack: AttackData}.
+## Scores every reachable stopping cell x every standing hero x every usable attack by expected
+## damage; if nothing can be attacked this turn, walks toward the nearest hero by real path.
+func plan_monster_turn(m: Monster) -> Dictionary:
+	var heroes := map.party.filter(func(h): return h.is_alive())
+	var plan := {path = [] as Array[Vector2i], target = null, attack = null}
+	if heroes.is_empty():
+		return plan
+	var reach := map.combat_reach(m.cell, move_left, m)
+	var best := -INF
+	for c: Vector2i in reach:
+		if not reach[c].stop:
+			continue
+		var crowd := _enemies_adjacent_at(m, c)
+		for h: Hero in heroes:
+			for o in attack_options_from(m, h, c):
+				var a: AttackData = o.attack
+				var p := hit_chance(m.stats.attack_bonus(a), h.stats.armor_class, o.adv)
+				var avg := Dice.average(m.stats.damage_expr(a))
+				if a.rider_damage != "":
+					avg += Dice.average(a.rider_damage) * 0.75       # save for half, roughly
+				var score := p * avg
+				if p * avg >= h.hp * 0.8:
+					score += AI_FINISH_BONUS
+				score -= reach[c].cost * AI_STEP_COST
+				if a.kind == AttackData.Kind.RANGED:
+					score -= crowd * AI_RANGED_CROWDED
+				if score > best:
+					best = score
+					plan.target = h
+					plan.attack = a
+					plan.path = DungeonMap.reach_path(reach, c)
+	if plan.target:
+		return plan
+	# Nothing in reach: close in on the nearest hero (by real path, around walls).
+	var far := map.combat_reach(m.cell, 200, m)
+	var goal := Vector2i.ZERO
+	var goal_cost := 1 << 30
+	for h: Hero in heroes:
+		for d: Vector2i in DungeonMap.DIRS8:
+			var n: Vector2i = h.cell + d
+			if far.has(n) and far[n].stop and far[n].cost < goal_cost:
+				goal_cost = far[n].cost
+				goal = n
+	if goal_cost == 1 << 30:
+		return plan
+	var full := DungeonMap.reach_path(far, goal)
+	# Walk as far as movement allows, ending on a cell we may stop on.
+	var steps := mini(move_left, full.size())
+	while steps > 0 and not far[full[steps - 1]].stop:
+		steps -= 1
+	plan.path = full.slice(0, steps)
+	return plan
+
+
+## Monsters outside the fight that now see a hero join it (with their whole group).
+func _check_join() -> void:
+	var joined: Array[Actor] = []
+	for m in map.monsters:
+		if not m.is_alive() or m in order or m in joined:
+			continue
+		for h in map.party:
+			if h.is_alive() and DungeonMap.grid_distance(m.cell, h.cell) <= m.stats.sight_cells() \
+					and map.has_line_of_sight(m.cell, h.cell):
+				for g in map.monsters:
+					if g.is_alive() and g.group_id == m.group_id and not g in order and not g in joined:
+						joined.append(g)
+				_say("%s joins the fight!" % m.display_name())
+				break
+	if joined.is_empty():
+		return
+	for a in joined:
+		var r := Dice.d20(a.stats.initiative_bonus())
+		initiative[a] = r.total
+		_say("%s initiative: %s" % [a.display_name(), r.describe()])
+		a.facing = _dir_to(a.cell, _nearest(a.cell, map.party).cell)
+	var cur := order[_turn_index] if _turn_index >= 0 and _turn_index < order.size() else null
+	order.append_array(joined)
+	order.sort_custom(func(x: Actor, y: Actor) -> bool:
+		if initiative[x] != initiative[y]:
+			return initiative[x] > initiative[y]
+		return x.stats.dex_score > y.stats.dex_score)
+	if cur:
+		_turn_index = order.find(cur)
 
 
 ## Leave combat (step 8 decides when; available for tests/debugging now).

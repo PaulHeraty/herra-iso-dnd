@@ -74,7 +74,7 @@ scripts/
   markers/              MapMarker base + one script per marker
   actors/               Actor base (grid cell, shadow, step tween) + Hero + Monster (stats, named sheet anims)
   rules/                Dice + DiceRoll (really random, seedable), CreatureStats + AttackData (stat-block Resources)
-  combat/combat_manager.gd  CombatManager: LOS detection -> combat, initiative, turns, movement, attacks (d20 vs AC, crits, riders, resist) (DungeonMap.combat_reach: 1 sq per step incl. diagonals, pass allies, enemies block)
+  combat/combat_manager.gd  CombatManager: LOS detection -> combat, initiative, turns, movement, attacks (d20 vs AC, crits, riders, resist), monster AI (expected-damage plan; groups that see the party join mid-fight) (DungeonMap.combat_reach: 1 sq per step incl. diagonals, pass allies, enemies block)
   ui/combat_hud.gd      CombatHud: TEMPORARY banner + log (default font) until the real UI (step 7)
   fx/                   FloatText (damage numbers), Projectile (arrow / beam)
   audio/sfx.gd          Sfx.play("name"): static, self-creating player for assets/sfx/<name>.wav
