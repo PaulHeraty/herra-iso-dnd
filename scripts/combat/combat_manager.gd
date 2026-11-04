@@ -36,6 +36,8 @@ var move_left := 0
 var action_used := false
 var attacks_left := 0
 var bonus_used := false
+## Sneak Attack: once per turn.
+var sneak_used := false
 var moving := false
 var _reach := {}
 var _hover := Vector2i(-99999, -99999)
@@ -238,6 +240,15 @@ func perform_attack(attacker: Actor, target: Actor, opt: Dictionary) -> void:
 		var dmg := _adjust(maxi(1, dr.total), a.damage_type, target)
 		var parts := "%d %s (%s)" % [dmg, a.damage_type, dr.describe()]
 		var short := ""
+		if _sneak_applies(attacker, target, a, adv):
+			var sp: SpellData = attacker.power("sneak_attack")
+			var sr := Dice.roll(Dice.crit(sp.damage) if crit else sp.damage)
+			var sd := _adjust(sr.total, a.damage_type, target)
+			dmg += sd
+			sneak_used = true
+			parts += " + %d sneak attack (%s)" % [sd, sr.describe()]
+			short += " (+sneak attack)"
+			FloatText.spawn(map, target.body_position() + Vector2(0, -22), "SNEAK", COL_MAGIC, 10)
 		if a.rider_damage != "":
 			var rexpr := Dice.crit(a.rider_damage) if crit else a.rider_damage
 			var rr := Dice.roll(rexpr)
@@ -517,6 +528,7 @@ func _next_turn() -> void:
 	move_left = current.stats.speed_cells()
 	action_used = false
 	bonus_used = false
+	sneak_used = false
 	attacks_left = current.stats.attacks_per_action()
 	chosen_attack = null
 	targeting = null
@@ -607,8 +619,10 @@ func _show_preview() -> void:
 			var bonus := current.stats.attack_bonus(a)
 			var p := hit_chance(bonus, foe.stats.armor_class, opt.adv)
 			map.overlay.set_cells("cursor", [_hover], COL_TARGET, 0.3, 0.9, true)
-			status_changed.emit("Attack %s: %s %+d, %s  (%d%% to hit%s)" % [foe.display_name(), a.name, bonus,
-					current.stats.damage_expr(a), roundi(p * 100), ", " + opt.note if opt.note != "" else ""])
+			var extra := " +3d6 sneak" if sneak_preview(current, foe, opt) else ""
+			var advt := " advantage" if opt.adv > 0 else ""
+			status_changed.emit("Attack %s: %s %+d, %s%s  (%d%% to hit%s%s)" % [foe.display_name(), a.name, bonus,
+					current.stats.damage_expr(a), extra, roundi(p * 100), advt, ", " + opt.note if opt.note != "" else ""])
 		return
 	if _reach.has(_hover) and _reach[_hover].stop and _hover != current.cell:
 		var p := DungeonMap.reach_path(_reach, _hover)
@@ -819,6 +833,8 @@ const COL_MAGIC := Color8(214, 120, 230)
 var targeting: SpellData
 var target_slot := 0
 var picked: Array[Actor] = []
+## Shove: push the target 5 ft away instead of knocking it prone (chosen in the HUD).
+var shove_push := false
 ## Weapon chosen from the Attack menu this turn (null = best automatically).
 var chosen_attack: AttackData
 
@@ -840,6 +856,8 @@ func menu_powers(h: Actor) -> Array[Dictionary]:
 			SpellData.CastTime.ATTACK:
 				if attacks_left <= 0:
 					why = "no attacks left"
+		if why == "" and p.id == "hide" and _enemy_adjacent(h):
+			why = "an enemy is right next to you"
 		if why == "" and not h.can_use(p):
 			why = "no slots left" if p.uses_slot() else "used up"
 		if why == "" and p.target in [SpellData.Target.ENEMY, SpellData.Target.ALLY, SpellData.Target.ANY] \
@@ -1210,7 +1228,7 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 				FloatText.spawn(map, a.body_position() + Vector2(0, -10), "+%d" % got, COL_ALLY, 10)
 		SpellData.Resolve.CONTEST:
 			for a in affected:
-				_contest(caster, p, a)
+				await _contest(caster, p, a)
 	await get_tree().create_timer(0.4).timeout
 
 
@@ -1296,6 +1314,20 @@ func _contest(caster: Actor, p: SpellData, target: Actor) -> void:
 	var their_roll := Dice.d20(theirs)
 	_detail("  %s %s vs %s" % [p.contest_skill, mine.describe(), their_roll.describe()])
 	caster.lunge(target.position, 5.0)
+	if mine.total >= their_roll.total and shove_push:
+		shove_push = false
+		var dir := (target.cell - caster.cell).clampi(-1, 1)
+		var dest := target.cell + dir
+		var occupant := map.actor_at(dest)
+		if map.terrain_walkable(dest) and (occupant == null or not occupant.is_alive()):
+			await target.step_to(dest, 0.16).finished
+			Sfx.play("hit_blunt", -4.0, 0.8)
+			_say("%s pushes %s back 5 ft!" % [caster.display_name(), target.display_name()])
+			FloatText.spawn(map, target.body_position() + Vector2(0, -10), "PUSHED", COL_MAGIC, 10)
+		else:
+			_say("%s wins the shove, but %s has nowhere to go" % [caster.display_name(), target.display_name()])
+		return
+	shove_push = false
 	if mine.total >= their_roll.total and target.stats.fly:
 		_say("%s shoves %s, but it just floats back" % [caster.display_name(), target.display_name()])
 	elif mine.total >= their_roll.total:
@@ -1491,3 +1523,28 @@ func _offer_shield(target: Actor, attacker: Actor, what: String, total: int, ac:
 func answer_reaction(yes: bool) -> void:
 	if reaction_pending:
 		reaction_answered.emit(yes)
+
+
+# --- class abilities (Phase 3 step 5) ----------------------------------------------------------
+
+## Sneak Attack (Rogue): once per turn, a finesse or ranged weapon attack that has advantage, or
+## whose target has another enemy of it (the rogue's ally) within 5 ft - and no disadvantage.
+func _sneak_applies(attacker: Actor, target: Actor, a: AttackData, adv: int) -> bool:
+	if sneak_used or attacker != current or attacker.power("sneak_attack") == null:
+		return false
+	if not (a.ability == AttackData.Ability.FINESSE or a.kind == AttackData.Kind.RANGED):
+		return false
+	if adv < 0:
+		return false
+	if adv > 0:
+		return true
+	for x in order:
+		if x != attacker and x.is_alive() and DungeonMap._same_side(x, attacker) \
+				and DungeonMap.grid_distance(x.cell, target.cell) <= 1:
+			return true
+	return false
+
+
+## For the attack hint: would this option get Sneak Attack?
+func sneak_preview(attacker: Actor, target: Actor, o: Dictionary) -> bool:
+	return _sneak_applies(attacker, target, o.attack, o.adv)

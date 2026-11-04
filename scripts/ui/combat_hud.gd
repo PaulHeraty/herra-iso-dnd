@@ -92,6 +92,8 @@ func _process(_delta: float) -> void:
 	var cur := combat.current
 	_banner.text = ("%s'S TURN" % cur.display_name().to_upper()) if cur else ""
 	_next.text = _upcoming()
+	# "Next:" always sits below the hint, however many lines the hint wraps to.
+	_next.position.y = _hint.position.y + maxf(12.0, _hint.get_line_count() * 11.0) + 1.0
 	for card in _cards:
 		_update_card(card, cur)
 	var hero_turn := cur is Hero and not combat.moving
@@ -447,6 +449,9 @@ const ROW_H := 13
 var _popup: Panel
 var _popup_rows: VBoxContainer
 var _popup_kind := ""
+var _info: Panel
+var _info_title: Label
+var _info_text: Label
 
 
 func _build_popup(root: Control) -> void:
@@ -455,6 +460,16 @@ func _build_popup(root: Control) -> void:
 	_popup.mouse_filter = Control.MOUSE_FILTER_STOP
 	_popup.visible = false
 	root.add_child(_popup)
+	# Description box: sits just above the popup while a row is hovered.
+	_info = Panel.new()
+	_info.add_theme_stylebox_override("panel", _box(COL_BG, COL_EDGE))
+	_info.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_info.visible = false
+	root.add_child(_info)
+	_info_title = _label(_info, Vector2(5, 3), COL_BANNER)
+	_info_text = _label(_info, Vector2(5, 14), COL_TEXT)
+	_info_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_info_text.size = Vector2(POPUP_W - 10, 0)
 	_popup_rows = VBoxContainer.new()
 	_popup_rows.position = Vector2(3, 3)
 	_popup_rows.add_theme_constant_override("separation", 1)
@@ -464,6 +479,8 @@ func _build_popup(root: Control) -> void:
 func _close_popup() -> void:
 	_popup.visible = false
 	_popup_kind = ""
+	if _info:
+		_info.visible = false
 
 
 ## Popup rows: [{text, tag, ok, why, desc, pick: Callable}]
@@ -488,8 +505,10 @@ func _show_popup(kind: String, rows: Array) -> void:
 		tag.position = Vector2(0, 1)
 		tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(tag)
-		var hint: String = r.desc if r.ok else "%s: %s" % [r.text, r.why]
-		b.mouse_entered.connect(func(): _hint.text = hint)
+		var info: String = r.desc if r.ok else "%s: %s" % [r.text, r.why]
+		var title: String = r.text.trim_prefix("> ")
+		b.mouse_entered.connect(func(): _show_info(title, info))
+		b.mouse_exited.connect(func(): _info.visible = false)
 		var pick: Callable = r.pick
 		b.pressed.connect(func():
 			_close_popup()
@@ -498,6 +517,7 @@ func _show_popup(kind: String, rows: Array) -> void:
 	var h := rows.size() * (ROW_H + 1) + 5
 	_popup.size = Vector2(POPUP_W, h)
 	_popup.position = Vector2(SCREEN.x - POPUP_W - 4, SCREEN.y - PANEL_H - h - 2)
+	_info.visible = false
 	_popup_kind = kind
 	_popup.visible = true
 
@@ -515,8 +535,10 @@ func _open_powers() -> void:
 		if p.uses_slot():
 			var lvl := h.lowest_slot_for(p)
 			tag = "%s  %d left" % [tag, h.slots_left[p.level - 1] if p.level <= h.slots_left.size() else 0] if lvl == p.level or lvl == 0 else "%s (%s)" % [tag, CombatManager.power_tag_level(lvl)]
-		rows.append({text = p.display_name, tag = tag, ok = m.ok, why = m.why, desc = p.description,
-				pick = func(): combat.begin_targeting(p)})
+		var pick := func(): combat.begin_targeting(p)
+		if p.id == "shove":
+			pick = func(): _open_shove(p)
+		rows.append({text = p.display_name, tag = tag, ok = m.ok, why = m.why, desc = p.description, pick = pick})
 	if rows.is_empty():
 		return
 	_show_popup("spell", rows)
@@ -618,3 +640,29 @@ func _answer(yes: bool) -> void:
 
 func reaction_open() -> bool:
 	return _react != null and _react.visible
+
+
+## Shove: knock prone or push 5 ft, then pick the target.
+func _open_shove(p: SpellData) -> void:
+	var rows := [
+		{text = "Knock prone", tag = "", ok = true, why = "", desc = "Win the contest: the target falls prone (attacks against it up close have advantage).",
+				pick = func():
+					combat.shove_push = false
+					combat.begin_targeting(p)},
+		{text = "Push 5 ft", tag = "", ok = true, why = "", desc = "Win the contest: the target is pushed one square away from you (if there is room).",
+				pick = func():
+					combat.shove_push = true
+					combat.begin_targeting(p)},
+	]
+	_show_popup("shove", rows)
+
+
+## Show a spell/ability/weapon description in the box above the popup.
+func _show_info(title: String, text: String) -> void:
+	_info_title.text = title
+	_info_text.text = text
+	var lines := maxi(1, _info_text.get_line_count())
+	var h := 18 + lines * 11
+	_info.size = Vector2(POPUP_W, h)
+	_info.position = Vector2(_popup.position.x, _popup.position.y - h - 2)
+	_info.visible = true
