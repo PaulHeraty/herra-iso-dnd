@@ -72,6 +72,7 @@ scripts/
 data/         (Phase 2+) Resources: classes, monsters, spells, items
 tools/
   godot/      gen_art.gd -> build_tileset.gd -> build_test_room.gd   (run in that order, import between)
+              gen_hero_sheets.gd (hero walk sheets), preview_hero_walk.gd + gif_writer.gd (GIF previews)
   python/     concept-session generators (reference + future art/audio work)
 docs/previews/  concept mock-ups (.gdignore'd: Godot does not import them)
 _handoff/     original handoff package (.gdignore'd). Can be deleted once the user is happy.
@@ -109,6 +110,12 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
 
 ## Art specs (user-made and generated assets must match)
 - Characters **16×24 px** (14×22 drawn + 1px outline), feet at bottom centre. Sprite offset in maps: (-8, -22).
+- Hero **walk sheets** `assets/sprites/heroes/<hero>_sheet.png` (80×48): 5 cols (idle, walk A, pass,
+  walk B, pass) × 2 rows (0 = front 3/4 facing screen down-left, 1 = back 3/4 facing up-left);
+  right-facing = mirrored. Drawn as text pixel grids in `tools/godot/gen_hero_sheets.gd` (upper body +
+  standing legs; walk = alternate leg lifted 1px, robes: feet tuck under + hem sways). Preview:
+  `tools/godot/preview_hero_walk.gd` → GIF. Walk feel may be revisited later (user: "fine for now").
+  `Actor` keeps its facing in map cells and picks row/mirror for the current view rotation.
 - Floor tiles **32×16** diamonds. Wall blocks 32 wide with **40 px** faces (texture 32×56). Lit face =
   lower-left (brightness 0.62), darker = lower-right (0.44).
 - Monsters e.g. Eye Tyrant 32×32 floating, offset (-16, -33). Sheet rows: idle(8), blink(6),
@@ -146,8 +153,9 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
 - [x] **Phase 0 — Setup:** project settings for pixel art, folder structure, this file, iso TileSet
   (floor, walls, doorway), marker scenes (party start, monster spawn, chest, torch, door, trap),
   assets brought in, test room, git repo on GitHub.
-- [ ] **Phase 1 — Walking around:** iso map, camera, click-to-move with pathfinding (AStarGrid2D),
-  y-sorting/depth, torch lighting, shadows under figures.
+- [x] **Phase 1 — Walking around:** iso map, camera, click-to-move with pathfinding (AStarGrid2D),
+  y-sorting/depth, torch lighting, shadows under figures. Also done: wall fading, Q/E view rotation,
+  back-face torches, hero 4-facing walk sheets. Next: Phase 2 (combat).
 - [ ] **Phase 2 — Combat:** exploration → combat switch, initiative, move + action, d20 vs AC, damage,
   HP/death, simple monster AI, combat UI, damage numbers.
 - [ ] **Phase 3 — Spells & abilities:** data-driven (Resources); targeting (single, 3×3, line, cone,
@@ -163,8 +171,8 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
 - **First milestone (after phases 0–3):** one user-built dungeon, 4 heroes, 2–3 monster types,
   Fireball + healing + melee working, playable start to finish.
 
-Biggest art job still ahead: heroes need **4 facing directions** and idle/walk/attack/cast/hurt/death
-animations. `DungeonMap.preview_monsters` (static sprites at MonsterSpawn markers) is a stand-in, to be
+Biggest art job still ahead: all 4 heroes have 4 facings + idle/walk (see walk sheets in Art
+specs) but still need attack/cast/hurt/death animations. `DungeonMap.preview_monsters` (static sprites at MonsterSpawn markers) is a stand-in, to be
 replaced by real monster actors in Phase 2. Heroes are real `Hero` actors (`scenes/actors/hero.tscn`,
 `scripts/actors/actor.gd` + `hero.gd`), spawned by `DungeonMap` at the `PartyStart` marker.
 

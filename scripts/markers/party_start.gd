@@ -5,6 +5,8 @@ extends MapMarker
 ## neighbouring cells. One per map (more than one = entry points, picked by id on level change).
 
 enum Facing { NORTH_EAST, SOUTH_EAST, SOUTH_WEST, NORTH_WEST }
+## Map direction for each Facing (as seen in the unturned view: NE = up-right on screen, etc.).
+const FACING_DIR := [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]
 
 @export var entry_id := "start"
 @export var facing := Facing.SOUTH_WEST

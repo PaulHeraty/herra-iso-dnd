@@ -57,7 +57,7 @@ face = 1
 
 [node name="Torch9" parent="World/Entities" unique_id=1590360505 instance=ExtResource("3_uokn5")]
 z_index = 1
-position = Vector2(-168, 132)
+position = Vector2(120, 68)
 face = 3
 
 [node name="Torch10" parent="World/Entities" unique_id=1590360506 instance=ExtResource("3_uokn5")]

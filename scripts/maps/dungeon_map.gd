@@ -280,6 +280,7 @@ func _spawn_party() -> void:
 		var hero: Hero = HERO_SCENE.instantiate()
 		hero.hero_class = PARTY_ORDER[i]
 		entities.add_child(hero)
+		hero.facing = PartyStart.FACING_DIR[start.facing]
 		hero.place_at(cells[i])
 		party.append(hero)
 
