@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/maps/dungeon_map.gd" id="1_f6gqu"]
+[ext_resource type="TileSet" path="res://assets/tiles/dungeon_tileset.tres" id="2_gm3xc"]
+
+[node name="MapTemplate" type="Node2D" unique_id=708587166]
+script = ExtResource("1_f6gqu")
+
+[node name="Ambient" type="CanvasModulate" parent="." unique_id=242956072]
+color = Color(0.34, 0.36, 0.5, 1)
+
+[node name="Floor" type="TileMapLayer" parent="." unique_id=296807937]
+tile_set = ExtResource("2_gm3xc")
+
+[node name="World" type="Node2D" parent="." unique_id=1769407985]
+y_sort_enabled = true
+
+[node name="Walls" type="TileMapLayer" parent="World" unique_id=1805186280]
+y_sort_enabled = true
+tile_set = ExtResource("2_gm3xc")
+
+[node name="Entities" type="Node2D" parent="World" unique_id=299433585]
+y_sort_enabled = true
+
+[node name="Decor" type="Node2D" parent="World" unique_id=869212799]
+y_sort_enabled = true
+
+[node name="Camera" type="Camera2D" parent="." unique_id=2104112563]
+position = Vector2(16, 56)

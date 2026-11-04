@@ -1,0 +1,92 @@
+[gd_scene format=4]
+
+[ext_resource type="Script" path="res://scripts/maps/dungeon_map.gd" id="1_b7x7t"]
+[ext_resource type="TileSet" path="res://assets/tiles/dungeon_tileset.tres" id="2_dt3rr"]
+[ext_resource type="PackedScene" path="res://scenes/markers/torch.tscn" id="3_uokn5"]
+[ext_resource type="Script" path="res://scripts/markers/torch.gd" id="4_6dwks"]
+[ext_resource type="PackedScene" path="res://scenes/markers/door.tscn" id="5_x5ooa"]
+[ext_resource type="Script" path="res://scripts/markers/door.gd" id="6_1l055"]
+[ext_resource type="PackedScene" path="res://scenes/markers/chest.tscn" id="7_lsbp3"]
+[ext_resource type="Script" path="res://scripts/markers/chest.gd" id="8_uaw88"]
+[ext_resource type="PackedScene" path="res://scenes/markers/monster_spawn.tscn" id="9_vxdxe"]
+[ext_resource type="Script" path="res://scripts/markers/monster_spawn.gd" id="10_h2wjs"]
+[ext_resource type="Texture2D" path="res://assets/sprites/monsters/eye_tyrant_32.png" id="11_yh1g1"]
+[ext_resource type="PackedScene" path="res://scenes/markers/party_start.tscn" id="12_ksf8t"]
+[ext_resource type="Script" path="res://scripts/markers/party_start.gd" id="13_odx35"]
+[ext_resource type="Texture2D" path="res://assets/sprites/props/bones.png" id="14_njwk2"]
+[ext_resource type="Texture2D" path="res://assets/sprites/props/web.png" id="15_7fapo"]
+
+[node name="TestRoom" type="Node2D" unique_id=947482]
+script = ExtResource("1_b7x7t")
+
+[node name="Ambient" type="CanvasModulate" parent="." unique_id=48197200]
+color = Color(0.34, 0.36, 0.5, 1)
+
+[node name="Floor" type="TileMapLayer" parent="." unique_id=314239450]
+tile_map_data = PackedByteArray("AAAAAAAAAAABAAAAAAABAAAAAAAEAAAAAAACAAAAAAAAAAAAAAADAAAAAAADAAAAAAAEAAAAAAAAAAAAAAAFAAAAAAAEAAAAAAAGAAAAAAACAAAAAAAHAAAAAAAHAAAAAAAIAAAAAAABAAAAAAAAAAEAAAAHAAAAAAABAAEAAAADAAAAAAACAAEAAAAHAAAAAAADAAEAAAAFAAAAAAAEAAEAAAAFAAAAAAAFAAEAAAABAAAAAAAGAAEAAAADAAAAAAAHAAEAAAAHAAAAAAAIAAEAAAAFAAAAAAAAAAIAAAADAAAAAAABAAIAAAACAAAAAAACAAIAAAADAAAAAAADAAIAAAABAAAAAAAEAAIAAAAHAAAAAAAFAAIAAAAGAAAAAAAGAAIAAAAAAAAAAAAHAAIAAAAHAAAAAAAIAAIAAAADAAAAAAAAAAMAAAADAAAAAAABAAMAAAAFAAAAAAACAAMAAAAHAAAAAAADAAMAAAADAAAAAAAEAAMAAAACAAAAAAAFAAMAAAABAAAAAAAGAAMAAAADAAAAAAAHAAMAAAAAAAAAAAAIAAMAAAADAAAAAAAAAAQAAAAGAAAAAAABAAQAAAAFAAAAAAACAAQAAAACAAAAAAADAAQAAAAFAAAAAAAEAAQAAAAGAAAAAAAFAAQAAAACAAAAAAAGAAQAAAAEAAAAAAAHAAQAAAADAAAAAAAIAAQAAAAFAAAAAAAAAAUAAAAHAAAAAAABAAUAAAAHAAAAAAACAAUAAAAEAAAAAAADAAUAAAAEAAAAAAAEAAUAAAAGAAAAAAAFAAUAAAAGAAAAAAAGAAUAAAACAAAAAAAHAAUAAAAHAAAAAAAIAAUAAAACAAAAAAAAAAYAAAAGAAAAAAABAAYAAAAAAAAAAAACAAYAAAACAAAAAAADAAYAAAAAAAAAAAAEAAYAAAAEAAAAAAAFAAYAAAAAAAAAAAAGAAYAAAAHAAAAAAAHAAYAAAAEAAAAAAAIAAYAAAADAAAAAAAAAAcAAAADAAAAAAABAAcAAAADAAAAAAACAAcAAAABAAAAAAADAAcAAAAGAAAAAAAEAAcAAAACAAAAAAAFAAcAAAABAAAAAAAGAAcAAAAAAAAAAAAHAAcAAAAHAAAAAAAIAAcAAAACAAAAAAAAAAgAAAAAAAAAAAABAAgAAAABAAAAAAACAAgAAAAEAAAAAAADAAgAAAAAAAAAAAAEAAgAAAAHAAAAAAAFAAgAAAAGAAAAAAAGAAgAAAAFAAAAAAAHAAgAAAACAAAAAAAIAAgAAAAGAAAAAAAFAP//AAAAAAEAAAAFAP7/AAABAAEAAAA=")
+tile_set = ExtResource("2_dt3rr")
+
+[node name="World" type="Node2D" parent="." unique_id=698304575]
+y_sort_enabled = true
+
+[node name="Walls" type="TileMapLayer" parent="World" unique_id=1165191532]
+y_sort_enabled = true
+tile_map_data = PackedByteArray("AAD/////AQAAAAMAAAAAAP//AQABAAAAAAABAP//AQADAAAAAAACAP//AQAAAAAAAAADAP//AQACAAAAAAAEAP//AQACAAAAAAAGAP//AQACAAAAAAAHAP//AQACAAAAAAAIAP//AQABAAAAAAD//wAAAQAAAAEAAAD//wEAAQAAAAEAAAD//wIAAQADAAEAAAD//wMAAQADAAEAAAD//wQAAQAAAAEAAAD//wUAAQABAAEAAAD//wYAAQAAAAEAAAD//wcAAQAAAAEAAAD//wgAAQACAAEAAAA=")
+tile_set = ExtResource("2_dt3rr")
+
+[node name="Entities" type="Node2D" parent="World" unique_id=2116703684]
+y_sort_enabled = true
+
+[node name="Torch" type="Node2D" parent="World/Entities" unique_id=1990960874 instance=ExtResource("3_uokn5")]
+position = Vector2(56, 20)
+script = ExtResource("4_6dwks")
+
+[node name="@Node2D@2" type="Node2D" parent="World/Entities" unique_id=1266886411 instance=ExtResource("3_uokn5")]
+position = Vector2(152, 68)
+script = ExtResource("4_6dwks")
+
+[node name="@Node2D@3" type="Node2D" parent="World/Entities" unique_id=1647096270 instance=ExtResource("3_uokn5")]
+position = Vector2(-24, 20)
+script = ExtResource("4_6dwks")
+face = 1
+
+[node name="@Node2D@4" type="Node2D" parent="World/Entities" unique_id=981184161 instance=ExtResource("3_uokn5")]
+position = Vector2(-88, 52)
+script = ExtResource("4_6dwks")
+face = 1
+
+[node name="Door" type="Node2D" parent="World/Entities" unique_id=664664136 instance=ExtResource("5_x5ooa")]
+position = Vector2(112, 40)
+script = ExtResource("6_1l055")
+
+[node name="Chest" type="Node2D" parent="World/Entities" unique_id=503091601 instance=ExtResource("7_lsbp3")]
+position = Vector2(144, 72)
+script = ExtResource("8_uaw88")
+gold = 25
+
+[node name="MonsterSpawn" type="Node2D" parent="World/Entities" unique_id=37502966 instance=ExtResource("9_vxdxe")]
+position = Vector2(64, 64)
+script = ExtResource("10_h2wjs")
+preview = ExtResource("11_yh1g1")
+
+[node name="PartyStart" type="Node2D" parent="World/Entities" unique_id=288951738 instance=ExtResource("12_ksf8t")]
+position = Vector2(0, 80)
+script = ExtResource("13_odx35")
+
+[node name="Decor" type="Node2D" parent="World" unique_id=2012232075]
+y_sort_enabled = true
+
+[node name="Bones" type="Sprite2D" parent="World/Decor" unique_id=281808093]
+position = Vector2(0, 16)
+texture = ExtResource("14_njwk2")
+centered = false
+offset = Vector2(-7, -6)
+
+[node name="Web" type="Sprite2D" parent="World/Decor" unique_id=117433640]
+position = Vector2(16, 1)
+texture = ExtResource("15_7fapo")
+centered = false
+offset = Vector2(-27, -34)
+
+[node name="Camera" type="Camera2D" parent="." unique_id=1082167281]
+position = Vector2(16, 56)
