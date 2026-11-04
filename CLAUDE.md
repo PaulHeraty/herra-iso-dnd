@@ -31,6 +31,10 @@ doesn't supply.
 | Art | Pixel art, limited palettes, light ordered (Bayer 4×4) dithering, 1px dark outlines on sprites |
 | Audio | Retro synthesized SFX (WAV); optional chiptune music later |
 | Story | Placeholder. One pitch exists (below), not chosen. |
+| Party level | Level **5** for the first dungeon (Fireball available, HP like the mock-up). Levels 1–5 progression comes in Phase 5. |
+| Combat start | A monster with **line of sight** to a hero within its sight range (~8 cells) starts combat; its whole `group_id` joins. Walls block sight. |
+| UI font | **Our own** generated bitmap pixel font (no third-party font). |
+| Monsters (Phase 2) | Eye Tyrant + **Giant Spider** (SRD). |
 
 ## Licensing (important)
 - Rules, spells and monsters come only from the **5e SRD (CC-BY-4.0)**, with the attribution in
@@ -157,7 +161,16 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
   y-sorting/depth, torch lighting, shadows under figures. Also done: wall fading, Q/E view rotation,
   back-face torches, hero 4-facing walk sheets. Next: Phase 2 (combat).
 - [ ] **Phase 2 — Combat:** exploration → combat switch, initiative, move + action, d20 vs AC, damage,
-  HP/death, simple monster AI, combat UI, damage numbers.
+  HP/death, simple monster AI, combat UI, damage numbers. Steps:
+  1. Rules core: dice roller, hero + monster stat Resources in `data/` (SRD, level 5), headless tests.
+  2. Monsters as actors: Eye Tyrant (existing sheet) + Giant Spider (new art), replacing previews.
+  3. Combat start: line-of-sight trigger, group joins, initiative, turn order, "X'S TURN", camera.
+  4. Turn movement: blue move range (30 ft = 6 cells), path preview, split move around the action.
+  5. Attacks: d20 + bonus vs AC, crit on 20, damage dice, floating numbers, hurt flash, SFX, death/down.
+  6. Monster AI: approach / ranged (Eye Tyrant eye ray), attack.
+  7. Combat UI: portraits, HP bars, slot pips, action menu (Spell/Item greyed), combat log, pixel font.
+  8. End of combat: victory -> exploration; party down -> game-over placeholder.
+  Full dice-roll animation scene comes with Fireball in Phase 3.
 - [ ] **Phase 3 — Spells & abilities:** data-driven (Resources); targeting (single, 3×3, line, cone,
   self, ally); spell slots, rests. Mage: Fireball, Magic Missile, Shield. Cleric: Cure Wounds, Bless,
   Sacred Flame. Rogue: Sneak Attack, Hide. Fighter: Second Wind, Shove. VFX + SFX hooks.
