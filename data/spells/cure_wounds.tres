@@ -16,5 +16,4 @@ resolve = 3
 add_ability_mod = true
 heal = "1d8"
 upcast_dice = "1d8"
-sfx = "charge"
 vfx = "heal"

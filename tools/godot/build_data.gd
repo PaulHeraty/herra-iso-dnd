@@ -261,7 +261,7 @@ func _build_spells() -> void:
 	cw.add_ability_mod = true
 	cw.upcast_dice = "1d8"
 	cw.needs_los = false
-	cw.sfx = "charge"
+	cw.sfx = ""
 	cw.vfx = "heal"
 
 	var bl := _spell("bless", "Bless", S, 1, C.ACTION, T.ALLY, 30, R.AUTO,

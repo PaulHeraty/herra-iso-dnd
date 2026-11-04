@@ -70,6 +70,7 @@ func _ready() -> void:
 	combat.status_changed.connect(func(t: String): _hint.text = t)
 	combat.combat_started.connect(_on_started)
 	combat.combat_ended.connect(_on_ended)
+	combat.turn_started.connect(func(_a: Actor): _close_popup())     # a new turn: any open menu is stale
 	combat.victory.connect(_on_victory)
 	combat.defeat.connect(_on_defeat)
 	_build_end_screen()
@@ -510,3 +511,15 @@ func _on_card_input(event: InputEvent, h: Hero) -> void:
 	else:
 		combat.map.camera_controller.following = false
 		combat.map.camera_controller.jump_to(h.position)
+
+
+## Esc or a click outside the popup (on the map) closes it.
+func _unhandled_input(event: InputEvent) -> void:
+	if not _popup or not _popup.visible:
+		return
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		_close_popup()
+		get_viewport().set_input_as_handled()
+	elif event is InputEventMouseButton and event.pressed:
+		_close_popup()
+		get_viewport().set_input_as_handled()    # the click only closes the menu

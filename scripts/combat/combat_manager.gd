@@ -1121,6 +1121,8 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 	if caster is Monster:
 		caster.play("attack")
 	Sfx.play(p.sfx)
+	if p.kind == SpellData.Kind.SPELL:
+		await SpellFx.charge(map, caster.body_position() + Vector2(0, -2), _spell_colour(p))
 	var char_level := maxi(1, caster.stats.level)
 	var affected: Array[Actor] = targets.duplicate()
 	if _is_shaped(p):
@@ -1129,13 +1131,29 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 		for a in order:
 			if a.is_alive() and a.cell in cells and (p.hits_allies or not DungeonMap._same_side(a, caster)):
 				affected.append(a)
-		var bolt := Projectile.fire(map, caster.body_position(), IsoGrid.cell_to_world(aim), Projectile.Style.BEAM, _spell_colour(p))
-		await bolt.done
-		await _area_flash(cells)
-	elif p.target != SpellData.Target.SELF and (p.resolve in [SpellData.Resolve.ATTACK, SpellData.Resolve.SAVE] or p.darts > 0):
-		for a in _unique(affected):
-			var beam := Projectile.fire(map, caster.body_position(), a.body_position(), Projectile.Style.BEAM, _spell_colour(p))
+		if p.vfx == "fireball":
+			# Interim until the full Fireball sequence (Phase 3 step 6): fly, then burst on every cell.
+			await SpellFx.bolt(map, caster.body_position(), IsoGrid.cell_to_world(aim) + Vector2(0, -6))
+			Sfx.play("explosion")
+			for i in cells.size():
+				SpellFx.burst(map, IsoGrid.cell_to_world(cells[i]) + Vector2(0, 4), 1.0 if i == 4 else 0.7, 1.6 if i == 4 else 0.5)
+				if i % 3 == 2:
+					await get_tree().create_timer(0.04).timeout
+			await _area_flash(cells)
+		else:
+			var beam := Projectile.fire(map, caster.body_position(), IsoGrid.cell_to_world(aim), Projectile.Style.BEAM, _spell_colour(p))
 			await beam.done
+			await _area_flash(cells)
+	elif p.target != SpellData.Target.SELF and (p.resolve in [SpellData.Resolve.ATTACK, SpellData.Resolve.SAVE]):
+		for a in _unique(affected):
+			match p.vfx:
+				"fire_bolt":
+					await SpellFx.bolt(map, caster.body_position(), a.body_position())
+				"sacred_flame":
+					await SpellFx.column(map, a.position)
+				_:
+					var beam := Projectile.fire(map, caster.body_position(), a.body_position(), Projectile.Style.BEAM, _spell_colour(p))
+					await beam.done
 	match p.resolve:
 		SpellData.Resolve.ATTACK:
 			for a in affected:
@@ -1148,13 +1166,19 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 				_spell_save(caster, p, a, dmg_roll)
 		SpellData.Resolve.AUTO:
 			if p.darts > 0:
+				var bend := 16.0
 				for a in affected:
 					if a.is_alive():
+						await SpellFx.dart(map, caster.body_position(), a.body_position(), bend)
+						bend = -bend * 1.2
+						SpellFx.sparkles(map, a.body_position(), _spell_colour(p), false).duration = 0.3
 						var r := Dice.roll(p.damage_for(char_level, slot))
 						_deal(caster, a, r.total, p.damage_type, false)
-						await get_tree().create_timer(0.12).timeout
+						await get_tree().create_timer(0.06).timeout
 			if p.condition != "":
 				for a in _unique(affected):
+					if p.vfx == "bless":
+						SpellFx.sparkles(map, a.body_position(), Color8(255, 220, 110))
 					a.add_condition(p.condition, p.condition_rounds, caster, p)
 					_say("  %s is %s." % [a.display_name(), Condition.display(p.condition).to_lower()])
 					FloatText.spawn(map, a.body_position() + Vector2(0, -10), Condition.display(p.condition).to_upper(), COL_ALLY, 10)
@@ -1166,6 +1190,8 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 					amount += caster.stats.mod(caster.stats.spell_ability)
 				if p.add_level:
 					amount += caster.stats.level
+				SpellFx.sparkles(map, a.body_position(), Color8(150, 235, 140))
+				Sfx.play("heal_chime")
 				var was_down := not a.is_alive()
 				var got := a.heal(amount)
 				_detail("  heal %s: %s -> %d" % [a.display_name(), r.describe(), amount])
@@ -1194,10 +1220,15 @@ func _spell_attack(caster: Actor, p: SpellData, slot: int, target: Actor, char_l
 	if not hit:
 		_say("%s misses %s" % [caster.display_name(), target.display_name()])
 		Sfx.play("miss_swish")
+		if p.vfx == "fire_bolt":
+			SpellFx.sparkles(map, target.body_position() + Vector2(10, 0), Color8(110, 104, 112), false).duration = 0.4
 		FloatText.spawn(map, target.body_position() + Vector2(0, -10), "MISS", Color8(200, 196, 210), 10)
 		return
 	if p.damage != "":
 		var expr := p.damage_for(char_level, slot)
+		if p.vfx == "fire_bolt":
+			SpellFx.burst(map, target.body_position() + Vector2(0, 10), 0.6, 1.0)
+			Sfx.play("fire_impact")
 		var d := Dice.roll(Dice.crit(expr) if crit else expr)
 		_deal(caster, target, d.total, p.damage_type, crit)
 	if p.condition != "" and target.is_alive():
@@ -1213,6 +1244,8 @@ func _spell_save(caster: Actor, p: SpellData, target: Actor, dmg_roll: DiceRoll)
 	var s := roll_save(target, p.save_ability)
 	var saved := s.total >= dc
 	_detail("  %s %s save: %s vs DC %d - %s" % [target.display_name(), p.save_ability, s.describe(), dc, "success" if saved else "FAILED"])
+	if p.vfx == "sacred_flame" and not saved:
+		SpellFx.sparkles(map, target.body_position(), Color8(255, 236, 150))
 	if dmg_roll:
 		var dmg := dmg_roll.total
 		if saved:

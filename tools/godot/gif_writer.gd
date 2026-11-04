@@ -13,6 +13,7 @@ static func save(path: String, frames: Array[Image], delay_cs: int = 10) -> Erro
 	var index := {}
 	var colors: Array[int] = []
 	var pixels: Array[PackedByteArray] = []
+	var too_many := false
 	for img in frames:
 		var im := img.duplicate() as Image
 		im.convert(Image.FORMAT_RGB8)
@@ -23,12 +24,31 @@ static func save(path: String, frames: Array[Image], delay_cs: int = 10) -> Erro
 			var c := (data[i * 3] << 16) | (data[i * 3 + 1] << 8) | data[i * 3 + 2]
 			if not index.has(c):
 				if colors.size() >= 256:
-					push_error("GifWriter: more than 256 colours")
-					return ERR_INVALID_DATA
+					too_many = true
+					break
 				index[c] = colors.size()
 				colors.append(c)
 			px[i] = index[c]
+		if too_many:
+			break
 		pixels.append(px)
+	if too_many:
+		# Rendered game frames: map to a fixed 6x7x6 colour cube (252 colours). Lossy, previews only.
+		colors.clear()
+		pixels.clear()
+		for r in 6:
+			for g in 7:
+				for b in 6:
+					colors.append((roundi(r * 51.0) << 16) | (roundi(g * 42.5) << 8) | roundi(b * 51.0))
+		for img in frames:
+			var im := img.duplicate() as Image
+			im.convert(Image.FORMAT_RGB8)
+			var data := im.get_data()
+			var px := PackedByteArray()
+			px.resize(w * h)
+			for i in w * h:
+				px[i] = roundi(data[i * 3] / 51.0) * 42 + roundi(data[i * 3 + 1] / 42.5) * 6 + roundi(data[i * 3 + 2] / 51.0)
+			pixels.append(px)
 	var bits := 1
 	while (1 << bits) < colors.size():
 		bits += 1

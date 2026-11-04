@@ -86,7 +86,8 @@ scripts/
                         Spell/Ability + weapon popups)
   combat/targeting.gd   Targeting: area (NxN) / line / cone cells. CombatManager: menu_powers, begin_targeting,
                         resolve_power (generic: spell attack / save / auto darts+conditions / heal / contest)
-  fx/                   FloatText (damage numbers), Projectile (arrow / beam)
+  fx/                   FloatText (damage numbers), Projectile (arrow / beam), SpellFx (bolt, dart, column,
+                        sparkles, burst, charge; pixel particles + PointLight2D)
   audio/sfx.gd          Sfx.play("name"): static, self-creating player for assets/sfx/<name>.wav
 data/         heroes/*.tres (level 5 party), monsters/*.tres: CreatureStats + AttackData; spells/*.tres: SpellData
               (spells, class abilities, monster powers) — all from tools/godot/build_data.gd
@@ -95,7 +96,7 @@ tools/
               gen_hero_sheets.gd (hero walk sheets), preview_hero_walk.gd + gif_writer.gd (GIF previews)
               build_data.gd (stat blocks -> data/), test_rules.gd (headless rules tests: PASS/FAIL)
               gen_spider.gd (procedural Giant Spider sheet: 3D-ish model projected to iso)
-              gen_sfx.gd (combat SFX: hits, miss, bow, hurt, hiss, ray, crit -> assets/sfx/)
+              gen_sfx.gd (SFX: hits, miss, bow, hurt, hiss, ray, crit, mm_zip, radiant, heal_chime, fire_impact)
               gen_font.gd (our HerraPixel bitmap font -> assets/fonts/herra_pixel.fnt + .png)
   python/     concept-session generators (reference + future art/audio work)
 docs/previews/  concept mock-ups (.gdignore'd: Godot does not import them)

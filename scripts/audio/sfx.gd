@@ -15,6 +15,10 @@ const TRIM := {
 	"miss_swish": -3.0,
 	"turn_chime": -6.0,
 	"ui_select": -6.0,
+	"mm_zip": -8.0,
+	"fire_impact": 3.0,
+	"radiant": -2.0,
+	"heal_chime": -3.0,
 }
 
 static var _inst: Sfx

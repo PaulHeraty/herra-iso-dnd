@@ -20,6 +20,10 @@ func _init() -> void:
 	_save("spider_hiss", _spider_hiss())
 	_save("ray_zap", _ray_zap())
 	_save("crit_hit", _crit_hit())
+	_save("mm_zip", _mm_zip())
+	_save("radiant", _radiant())
+	_save("heal_chime", _heal_chime())
+	_save("fire_impact", _fire_impact())
 	quit()
 
 
@@ -199,6 +203,63 @@ func _crit_hit() -> PackedFloat32Array:
 	var shine := _mul(_square(n, 1046.5, 1568.0, 0.25), _env(n, 0.002, 2.5))
 	return _mix(base, _lowpass(shine, 6000.0), 0.22, _n(0.03))
 
+
+
+
+# --- spell sounds (Phase 3 step 3) ------------------------------------------------------------
+
+## Magic Missile dart: quick rising zip with a glassy ring.
+func _mm_zip() -> PackedFloat32Array:
+	var n := _n(0.22)
+	var zip := _mul(_square(n, 520.0, 1900.0, 0.25), _env(n, 0.003, 2.2))
+	var ring := _mul(_sine(_n(0.2), 2400.0, 2300.0), _env(_n(0.2), 0.002, 3.0))
+	return _mix(_lowpass(zip, 6000.0), ring, 0.35, _n(0.05))
+
+
+## Sacred Flame: shimmering major chord with tremolo, swelling then fading.
+func _radiant() -> PackedFloat32Array:
+	var n := _n(0.9)
+	var x := PackedFloat32Array()
+	x.resize(n)
+	for f in [523.25, 659.25, 783.99, 1046.5]:
+		var s := _sine(n, f, f * 1.01)
+		for i in n:
+			x[i] += s[i] * 0.25
+	var e := PackedFloat32Array()
+	e.resize(n)
+	for i in n:
+		var t := float(i) / n
+		e[i] = minf(1.0, t * 6.0) * pow(1.0 - t, 1.6) * (0.75 + 0.25 * sin(TAU * 11.0 * i / RATE))
+	var shimmer := _mul(_highpass(_noise(n), 6000.0), _env(n, 0.05, 2.0))
+	return _mix(_mul(x, e), shimmer, 0.08)
+
+
+## Cure Wounds: soft rising arpeggio of bell-like notes.
+func _heal_chime() -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(_n(0.85))
+	var notes := [659.25, 783.99, 987.77, 1318.5]
+	for k in notes.size():
+		var n := _n(0.45)
+		var b := _mul(_sine(n, notes[k], notes[k]), _env(n, 0.004, 3.0))
+		var over := _mul(_sine(n, notes[k] * 2.0, notes[k] * 2.0), _env(n, 0.002, 5.0))
+		out = _mix(out, _mix(b, over, 0.3), 0.6, _n(0.09 * k))
+	return out
+
+
+## Fire Bolt impact: small whoompf + crackle.
+func _fire_impact() -> PackedFloat32Array:
+	var n := _n(0.35)
+	var boom := _mul(_lowpass(_noise(n), 1800.0, 300.0), _env(n, 0.002, 2.5))
+	var crack := PackedFloat32Array()
+	crack.resize(n)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 99
+	for i in n:
+		if rng.randf() < 0.004:
+			crack[i] = rng.randf_range(-1.0, 1.0)
+	crack = _mul(_highpass(crack, 2000.0), _env(n, 0.001, 1.5))
+	return _mix(boom, crack, 1.5)
 
 # --- output -----------------------------------------------------------------------------------
 
