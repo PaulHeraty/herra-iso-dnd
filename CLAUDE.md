@@ -35,6 +35,10 @@ doesn't supply.
 | Combat start | A monster with **line of sight** to a hero within its sight range (~8 cells) starts combat; its whole `group_id` joins. Walls block sight. |
 | UI font | **Our own** generated bitmap pixel font (no third-party font). |
 | Monsters (Phase 2) | Eye Tyrant + **Giant Spider** (SRD). |
+| Fireball area | **3×3** like the mock-up (simplified from the SRD 20-ft sphere); 8d6 fire, DEX save half. |
+| Reactions | **Prompt the player** (e.g. "Cast Shield?") when a reaction could change the outcome. |
+| Hero at 0 HP | **5e death saves** (3 successes stabilise, 3 failures = dead); any healing revives. |
+| Dice scene | Full animation for **big moments** (Fireball/area spells, crits, bosses); quick inline rolls otherwise; setting full / quick / off. |
 
 ## Licensing (important)
 - Rules, spells and monsters come only from the **5e SRD (CC-BY-4.0)**, with the attribution in
@@ -189,6 +193,16 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
 - [ ] **Phase 3 — Spells & abilities:** data-driven (Resources); targeting (single, 3×3, line, cone,
   self, ally); spell slots, rests. Mage: Fireball, Magic Missile, Shield. Cleric: Cure Wounds, Bless,
   Sacred Flame. Rogue: Sneak Attack, Hide. Fighter: Second Wind, Shove. VFX + SFX hooks.
+  Steps:
+  1. Core: SpellData + ability Resources, slots spent (pips), bonus actions, conditions w/ durations, tests.
+  2. Menus + targeting: Spell list (slot costs), class-ability menu, weapon choice; single/ally/self/
+     area (pulsing orange)/line/cone with range + LOS.
+  3. Simple spells: Fire Bolt, Magic Missile, Sacred Flame, Cure Wounds (+ VFX/SFX).
+  4. Bless (concentration), Shield (reaction prompt), death saves + stabilise.
+  5. Class abilities: Sneak Attack, Hide, Second Wind, Shove (prone/push).
+  6. Fireball showcase (charge, arc, 3x3 blast + bursts, flash, shake, scorch, smoke).
+  7. Dice-roll scene (freeze, spotlight, d20 save panel, damage dice + clacks); full/quick/off.
+  8. Monster abilities (spider Web: restrained, recharge; Eye Tyrant fear ray) + short/long rests.
 - [ ] **Phase 4 — Items:** chests, loot, gold, inventory, equipment changing stats, potions, scrolls, keys.
 - [ ] **Phase 5 — Progression:** XP, levels 1–5, SRD class features, character sheet.
 - [ ] **Phase 6 — Dungeon features:** doors/locks/keys, traps (Rogue detect/disarm), secret walls,
