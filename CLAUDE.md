@@ -100,7 +100,10 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
 - Doorway = dark floor tile in the wall run + a `Door` marker on it.
 - Markers (`MapMarker`, `@tool`) snap to cell centres while dragged in the editor and draw a coloured
   diamond + label, in the editor only. `Torch` sits on a **wall** cell and snaps to the middle of the
-  bottom edge of its chosen face (so it y-sorts in front of that wall).
+  bottom edge of its chosen face (so it y-sorts in front of that wall). At runtime its flame is
+  unshaded (fire palette shows as drawn, warm-tinted) with a small additive glow halo; the
+  PointLight2D (240×150 radial gradient ≈ (1-d/R)^1.6, energy 1.25) reproduces the mock-up's
+  lighting model — checked by sampling against `iso_scene.png` with the mock-up's torch layout.
 - `tools/godot/build_*.gd` overwrite their outputs. Once the user hand-edits the TileSet or maps,
   don't re-run them (or change them to merge).
 

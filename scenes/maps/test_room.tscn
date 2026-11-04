@@ -48,16 +48,32 @@ position = Vector2(120, 52)
 position = Vector2(-104, 60)
 face = 1
 
-[node name="Torch6" parent="World/Entities" unique_id=1590360502 instance=ExtResource("3_uokn5")]
-position = Vector2(-168, 92)
-face = 1
-
 [node name="Torch7" parent="World/Entities" unique_id=1590360503 instance=ExtResource("3_uokn5")]
 position = Vector2(-56, 108)
 
 [node name="Torch8" parent="World/Entities" unique_id=1590360504 instance=ExtResource("3_uokn5")]
 position = Vector2(-8, 124)
 face = 1
+
+[node name="Torch9" parent="World/Entities" unique_id=1590360505 instance=ExtResource("3_uokn5")]
+z_index = 1
+position = Vector2(-168, 132)
+face = 3
+
+[node name="Torch10" parent="World/Entities" unique_id=1590360506 instance=ExtResource("3_uokn5")]
+z_index = 1
+position = Vector2(-104, 164)
+face = 3
+
+[node name="Torch11" parent="World/Entities" unique_id=1590360507 instance=ExtResource("3_uokn5")]
+z_index = 1
+position = Vector2(104, 100)
+face = 2
+
+[node name="Torch12" parent="World/Entities" unique_id=1590360508 instance=ExtResource("3_uokn5")]
+z_index = 1
+position = Vector2(-8, 156)
+face = 2
 
 [node name="Door" parent="World/Entities" unique_id=664664136 instance=ExtResource("5_x5ooa")]
 position = Vector2(112, 40)
