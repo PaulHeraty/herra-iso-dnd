@@ -32,6 +32,7 @@ const COL_TARGET := Color8(255, 110, 40)
 var move_left := 0
 var action_used := false
 var attacks_left := 0
+var bonus_used := false
 var moving := false
 var _reach := {}
 var _hover := Vector2i(-99999, -99999)
@@ -165,6 +166,9 @@ func attack_options_from(attacker: Actor, target: Actor, from: Vector2i) -> Arra
 			adv = -1
 			note = "enemy adjacent" if note == "" else note + ", enemy adjacent"
 		out.append({attack = a, adv = adv, note = note})
+	for o in out:
+		var ca := Condition.attack_advantage(attacker, target, o.attack.kind == AttackData.Kind.MELEE, dist)
+		o.adv = combine_advantage(o.adv, ca)
 	return out
 
 
@@ -186,11 +190,17 @@ func perform_attack(attacker: Actor, target: Actor, opt: Dictionary) -> void:
 		var p := Projectile.fire(map, attacker.body_position(), target.body_position(),
 				Projectile.Style.BEAM if beam else Projectile.Style.ARROW, col)
 		await p.done
-	var roll := Dice.d20(st.attack_bonus(a), opt.adv)
-	var ac := target.stats.armor_class
+	var melee := a.kind == AttackData.Kind.MELEE
+	var cond_adv := Condition.attack_advantage(attacker, target, melee, DungeonMap.grid_distance(attacker.cell, target.cell))
+	var adv := combine_advantage(opt.adv, cond_adv)
+	var roll := Dice.d20(st.attack_bonus(a), adv)
+	var bless_txt := _add_bonus_dice(roll, attacker)
+	attacker.remove_condition("hidden")          # attacking gives you away
+	var ac := target.stats.armor_class + Condition.ac_bonus(target)
 	var crit := roll.is_crit()
 	var hit := crit or (not roll.is_fumble() and roll.total >= ac)
-	var adv_txt := "" if opt.adv == 0 else (" (disadvantage: %s)" % opt.note if opt.adv < 0 else " (advantage)")
+	var adv_txt := "" if adv == 0 else (" (disadvantage%s)" % (": " + opt.note if opt.note != "" else "") if adv < 0 else " (advantage)")
+	adv_txt += bless_txt
 	_detail("%s attacks %s with %s: %s vs AC %d%s - %s" % [attacker.display_name(), target.display_name(),
 			a.name, roll.describe(), ac, adv_txt, "CRITICAL HIT!" if crit else ("hit" if hit else "miss")])
 	if not hit:
@@ -207,7 +217,7 @@ func perform_attack(attacker: Actor, target: Actor, opt: Dictionary) -> void:
 		if a.rider_damage != "":
 			var rexpr := Dice.crit(a.rider_damage) if crit else a.rider_damage
 			var rr := Dice.roll(rexpr)
-			var save := Dice.d20(target.stats.save_bonus(a.rider_save))
+			var save := roll_save(target, a.rider_save)
 			var rd := rr.total
 			var saved := save.total >= a.rider_dc
 			if saved:
@@ -243,6 +253,49 @@ func _hero_attack(foe: Actor, opt: Dictionary) -> void:
 		return
 	if in_combat and current is Hero:
 		_show_range()
+
+
+## Combine advantage sources: any advantage + any disadvantage cancel (5e).
+static func combine_advantage(a: int, b: int) -> int:
+	var adv := a > 0 or b > 0
+	var dis := a < 0 or b < 0
+	if adv and dis:
+		return 0
+	return 1 if adv else (-1 if dis else 0)
+
+
+## Add condition dice (Bless: +1d4) to an attack roll or save. Returns log text ("" if none).
+func _add_bonus_dice(r: DiceRoll, who: Actor) -> String:
+	var extra := Condition.roll_bonus_dice(who)
+	if extra == "":
+		return ""
+	var b := Dice.roll(extra)
+	r.total += b.total
+	r.modifier += b.total
+	return " (bless +%d)" % b.total
+
+
+## A saving throw for `who` (proficiency, Bless, restrained DEX disadvantage).
+func roll_save(who: Actor, ability: String) -> DiceRoll:
+	var r := Dice.d20(who.stats.save_bonus(ability), Condition.save_advantage(who, ability))
+	_add_bonus_dice(r, who)
+	return r
+
+
+## Start of a creature's turn: conditions tick down, reaction back, restrained = no movement,
+## prone = stand up for half the speed.
+func _start_of_turn(a: Actor) -> void:
+	a.reaction_used = false
+	for cid in a.tick_conditions():
+		_say("%s is no longer %s." % [a.display_name(), Condition.display(cid).to_lower()])
+		if cid == "blessed":
+			pass
+	if Condition.speed_zero(a):
+		move_left = 0
+	elif a.has_condition("prone"):
+		a.remove_condition("prone")
+		move_left -= a.stats.speed_cells() / 2
+		_say("%s stands up." % a.display_name())
 
 
 ## Resistance halves, immunity zeroes.
@@ -424,7 +477,9 @@ func _next_turn() -> void:
 	current = order[_turn_index]
 	move_left = current.stats.speed_cells()
 	action_used = false
+	bonus_used = false
 	attacks_left = current.stats.attacks_per_action()
+	_start_of_turn(current)
 	moving = false
 	map.camera_controller.target = current
 	map.camera_controller.recenter()

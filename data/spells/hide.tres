@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_t0xxm"]
+
+[resource]
+resource_name = "Hide"
+script = ExtResource("1_t0xxm")
+id = "hide"
+display_name = "Hide"
+description = "Cunning Action (bonus action): Stealth vs the enemies' passive Perception. Success: your next attack has advantage."
+kind = 1
+cast_time = 1
+target = 3
+range_ft = 0
+needs_los = false
+resolve = 4
+contest_skill = "stealth"
+resist_skills = PackedStringArray()
+cantrip_dice = PackedInt32Array()
+condition = "hidden"
+condition_rounds = -1
+sfx = "miss_swish"

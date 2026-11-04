@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_37h3m"]
+
+[resource]
+resource_name = "Bless"
+script = ExtResource("1_37h3m")
+id = "bless"
+display_name = "Bless"
+description = "Up to three allies add 1d4 to attack rolls and saving throws. Concentration, up to 1 minute. +1 target per slot above 1st."
+level = 1
+target = 1
+max_targets = 3
+resist_skills = PackedStringArray()
+upcast_targets = 1
+cantrip_dice = PackedInt32Array()
+condition = "blessed"
+condition_rounds = 10
+concentration = true
+sfx = "turn_chime"
+vfx = "bless"

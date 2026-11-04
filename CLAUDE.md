@@ -78,12 +78,15 @@ scripts/
   party/party_controller.gd  PartyController: exploration click-to-move, trail-follow, camera follow
   markers/              MapMarker base + one script per marker
   actors/               Actor base (grid cell, shadow, step tween) + Hero + Monster (stats, named sheet anims)
-  rules/                Dice + DiceRoll (really random, seedable), CreatureStats + AttackData (stat-block Resources)
+  rules/                Dice + DiceRoll (really random, seedable), CreatureStats + AttackData (stat-block Resources),
+                        SpellData (spell/ability/monster power), Condition (blessed, prone, restrained, hidden,
+                        frightened, shielded: durations + their effects on attacks/saves/AC)
   combat/combat_manager.gd  CombatManager: LOS detection -> combat, initiative, turns, movement, attacks (d20 vs AC, crits, riders, resist), monster AI (expected-damage plan; groups that see the party join mid-fight) (DungeonMap.combat_reach: 1 sq per step incl. diagonals, pass allies, enemies block)
   ui/combat_hud.gd      CombatHud: mock-up combat UI (turn banner, hint, next turns, colour log; hero cards + action menu)
   fx/                   FloatText (damage numbers), Projectile (arrow / beam)
   audio/sfx.gd          Sfx.play("name"): static, self-creating player for assets/sfx/<name>.wav
-data/         heroes/*.tres (level 5 party), monsters/*.tres: CreatureStats + AttackData (from tools/godot/build_data.gd)
+data/         heroes/*.tres (level 5 party), monsters/*.tres: CreatureStats + AttackData; spells/*.tres: SpellData
+              (spells, class abilities, monster powers) — all from tools/godot/build_data.gd
 tools/
   godot/      gen_art.gd -> build_tileset.gd -> build_test_room.gd   (run in that order, import between)
               gen_hero_sheets.gd (hero walk sheets), preview_hero_walk.gd + gif_writer.gd (GIF previews)

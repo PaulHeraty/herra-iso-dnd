@@ -9,11 +9,17 @@ extends SceneTree
 
 const HERO_DIR := "res://data/heroes/"
 const MONSTER_DIR := "res://data/monsters/"
+const SPELL_DIR := "res://data/spells/"
+
+## Saved spells/abilities by id (stats reference these files).
+var sp := {}
 
 
 func _init() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(HERO_DIR))
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(MONSTER_DIR))
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SPELL_DIR))
+	_build_spells()
 	for s in [_fighter(), _rogue(), _cleric(), _wizard()]:
 		_save(s, HERO_DIR)
 	for s in [_giant_spider(), _eye_tyrant()]:
@@ -76,6 +82,8 @@ func _fighter() -> CreatureStats:
 	var s := _stats("fighter", "Fighter", [16, 12, 14, 10, 12, 8])
 	_hero(s, "fighter", 44, "5d10", 18, ["STR", "CON"])      # chain mail + shield
 	s.extra_attacks = 1                                       # Extra Attack (level 5)
+	s.powers = [sp.second_wind, sp.shove]
+	s.skill_proficiencies = PackedStringArray(["athletics", "perception"])
 	s.attacks = [
 		_attack("Longsword", AttackData.Kind.MELEE, AttackData.Ability.STR, "1d8", "slashing"),
 		_ranged(_attack("Handaxe", AttackData.Kind.RANGED, AttackData.Ability.STR, "1d6", "slashing"), 20, 60),
@@ -86,6 +94,9 @@ func _fighter() -> CreatureStats:
 func _rogue() -> CreatureStats:
 	var s := _stats("rogue", "Rogue", [8, 18, 12, 12, 12, 10])
 	_hero(s, "rogue", 33, "5d8", 15, ["DEX", "INT"])          # leather armour
+	s.powers = [sp.sneak_attack, sp.hide]
+	s.skill_proficiencies = PackedStringArray(["acrobatics", "athletics"])
+	s.skill_expertise = PackedStringArray(["stealth", "perception"])
 	s.attacks = [
 		_attack("Shortsword", AttackData.Kind.MELEE, AttackData.Ability.FINESSE, "1d6", "piercing"),
 		_ranged(_attack("Shortbow", AttackData.Kind.RANGED, AttackData.Ability.DEX, "1d6", "piercing"), 80, 320),
@@ -98,6 +109,8 @@ func _cleric() -> CreatureStats:
 	_hero(s, "cleric", 38, "5d8", 18, ["WIS", "CHA"])         # chain mail + shield (Life domain)
 	s.spell_ability = "WIS"
 	s.spell_slots = PackedInt32Array([4, 3, 2])
+	s.powers = [sp.sacred_flame, sp.cure_wounds, sp.bless]
+	s.skill_proficiencies = PackedStringArray(["insight", "medicine"])
 	s.attacks = [
 		_attack("Mace", AttackData.Kind.MELEE, AttackData.Ability.STR, "1d6", "bludgeoning"),
 	]
@@ -109,6 +122,8 @@ func _wizard() -> CreatureStats:
 	_hero(s, "wizard", 27, "5d6", 12, ["INT", "WIS"])
 	s.spell_ability = "INT"
 	s.spell_slots = PackedInt32Array([4, 3, 2])
+	s.powers = [sp.fire_bolt, sp.magic_missile, sp.shield, sp.fireball]
+	s.skill_proficiencies = PackedStringArray(["arcana", "investigation"])
 	s.attacks = [
 		_attack("Quarterstaff", AttackData.Kind.MELEE, AttackData.Ability.STR, "1d6", "bludgeoning"),
 		_ranged(_attack("Light Crossbow", AttackData.Kind.RANGED, AttackData.Ability.DEX, "1d8", "piercing"), 80, 320),
@@ -139,7 +154,9 @@ func _giant_spider() -> CreatureStats:
 	bite.rider_dc = 11
 	var web := _ranged(_attack("Web", AttackData.Kind.RANGED, AttackData.Ability.DEX, "0", "none"), 30, 60)
 	web.to_hit_override = 5     # restrains (Phase 3 conditions); recharge 5-6
-	s.attacks = [bite, web]
+	s.attacks = [bite]
+	s.powers = [sp.spider_web]
+	s.skill_overrides = {"stealth": 7, "perception": 0}
 	return s
 
 
@@ -162,4 +179,143 @@ func _eye_tyrant() -> CreatureStats:
 	var ray := _ranged(_attack("Gaze Ray", AttackData.Kind.RANGED, AttackData.Ability.DEX, "2d8+2", "necrotic"), 60, 0)
 	ray.to_hit_override = 5
 	s.attacks = [ray, bite]
+	s.skill_overrides = {"perception": 4}
 	return s
+
+
+# --- spells & abilities (SRD 5.1; Fireball's area simplified to 3x3) -------------------------------
+
+func _spell(id: String, name: String, kind: SpellData.Kind, level: int, cast: SpellData.CastTime,
+		target: SpellData.Target, range_ft: int, resolve: SpellData.Resolve, desc: String) -> SpellData:
+	var s := SpellData.new()
+	s.id = id
+	s.display_name = name
+	s.resource_name = name
+	s.kind = kind
+	s.level = level
+	s.cast_time = cast
+	s.target = target
+	s.range_ft = range_ft
+	s.resolve = resolve
+	s.description = desc
+	return s
+
+
+func _build_spells() -> void:
+	var S := SpellData.Kind.SPELL
+	var A := SpellData.Kind.ABILITY
+	var T := SpellData.Target
+	var R := SpellData.Resolve
+	var C := SpellData.CastTime
+
+	var fb := _spell("fire_bolt", "Fire Bolt", S, 0, C.ACTION, T.ENEMY, 120, R.ATTACK,
+			"Hurl a mote of fire. Ranged spell attack, 1d10 fire (2d10 at 5th level).")
+	fb.damage = "1d10"
+	fb.damage_type = "fire"
+	fb.cantrip_dice = PackedInt32Array([1, 2, 3, 4])
+	fb.sfx = "cast_whoosh"
+	fb.vfx = "fire_bolt"
+
+	var mm := _spell("magic_missile", "Magic Missile", S, 1, C.ACTION, T.ENEMY, 120, R.AUTO,
+			"Three glowing darts that never miss, 1d4+1 force each. Split them between targets. +1 dart per slot above 1st.")
+	mm.damage = "1d4+1"
+	mm.damage_type = "force"
+	mm.darts = 3
+	mm.upcast_darts = 1
+	mm.max_targets = 3
+	mm.sfx = "cast_whoosh"
+	mm.vfx = "magic_missile"
+
+	var sh := _spell("shield", "Shield", S, 1, C.REACTION, T.SELF, 0, R.AUTO,
+			"Reaction when hit by an attack: +5 AC until the start of your next turn, including against the triggering attack.")
+	sh.condition = "shielded"
+	sh.condition_rounds = 1
+	sh.needs_los = false
+	sh.sfx = "charge"
+	sh.vfx = "shield"
+
+	var fi := _spell("fireball", "Fireball", S, 3, C.ACTION, T.AREA, 150, R.SAVE,
+			"A burst of flame on a 3x3 area: 8d6 fire, DEX save for half. +1d6 per slot above 3rd.")
+	fi.area_size = 3
+	fi.save_ability = "DEX"
+	fi.half_on_save = true
+	fi.damage = "8d6"
+	fi.damage_type = "fire"
+	fi.upcast_dice = "1d6"
+	fi.sfx = "explosion"
+	fi.vfx = "fireball"
+	fi.big_moment = true
+
+	var sf := _spell("sacred_flame", "Sacred Flame", S, 0, C.ACTION, T.ENEMY, 60, R.SAVE,
+			"Radiant flame descends on a creature: DEX save or 1d8 radiant (2d8 at 5th level). Ignores cover.")
+	sf.save_ability = "DEX"
+	sf.damage = "1d8"
+	sf.damage_type = "radiant"
+	sf.cantrip_dice = PackedInt32Array([1, 2, 3, 4])
+	sf.sfx = "cast_whoosh"
+	sf.vfx = "sacred_flame"
+
+	var cw := _spell("cure_wounds", "Cure Wounds", S, 1, C.ACTION, T.ALLY, 5, R.HEAL,
+			"Touch: heal 1d8 + your spellcasting modifier. Brings a dying ally back. +1d8 per slot above 1st.")
+	cw.heal = "1d8"
+	cw.add_ability_mod = true
+	cw.upcast_dice = "1d8"
+	cw.needs_los = false
+	cw.sfx = "charge"
+	cw.vfx = "heal"
+
+	var bl := _spell("bless", "Bless", S, 1, C.ACTION, T.ALLY, 30, R.AUTO,
+			"Up to three allies add 1d4 to attack rolls and saving throws. Concentration, up to 1 minute. +1 target per slot above 1st.")
+	bl.max_targets = 3
+	bl.upcast_targets = 1
+	bl.condition = "blessed"
+	bl.condition_rounds = 10
+	bl.concentration = true
+	bl.sfx = "turn_chime"
+	bl.vfx = "bless"
+
+	var sw := _spell("second_wind", "Second Wind", A, 0, C.BONUS, T.SELF, 0, R.HEAL,
+			"Bonus action: regain 1d10 + fighter level HP. Once per short rest.")
+	sw.heal = "1d10"
+	sw.add_level = true
+	sw.uses = 1
+	sw.recharge = SpellData.Recharge.SHORT_REST
+	sw.needs_los = false
+	sw.sfx = "charge"
+	sw.vfx = "heal"
+
+	var sv := _spell("shove", "Shove", A, 0, C.ATTACK, T.ENEMY, 5, R.CONTEST,
+			"Instead of one attack: Athletics vs the target's Athletics or Acrobatics. Win: knock it prone (or push it 5 ft).")
+	sv.contest_skill = "athletics"
+	sv.resist_skills = PackedStringArray(["athletics", "acrobatics"])
+	sv.condition = "prone"
+	sv.condition_rounds = -1
+	sv.sfx = "hit_blunt"
+
+	var hd := _spell("hide", "Hide", A, 0, C.BONUS, T.SELF, 0, R.CONTEST,
+			"Cunning Action (bonus action): Stealth vs the enemies' passive Perception. Success: your next attack has advantage.")
+	hd.contest_skill = "stealth"
+	hd.condition = "hidden"
+	hd.condition_rounds = -1
+	hd.needs_los = false
+	hd.sfx = "miss_swish"
+
+	var sa := _spell("sneak_attack", "Sneak Attack", A, 0, C.FREE, T.ENEMY, 0, R.AUTO,
+			"Once per turn: +3d6 damage with a finesse or ranged weapon attack that has advantage, or when an ally is next to the target.")
+	sa.damage = "3d6"
+
+	var wb := _spell("spider_web", "Web", SpellData.Kind.MONSTER, 0, C.ACTION, T.ENEMY, 30, R.ATTACK,
+			"Recharge 5-6. Ranged attack +5, 30/60 ft: the target is restrained (escape: DC 12 Strength check).")
+	wb.attack_bonus_override = 5
+	wb.dc_override = 12
+	wb.condition = "restrained"
+	wb.condition_rounds = -1
+	wb.recharge = SpellData.Recharge.DICE
+	wb.sfx = "spider_hiss"
+	wb.vfx = "web"
+
+	for s: SpellData in [fb, mm, sh, fi, sf, cw, bl, sw, sv, hd, sa, wb]:
+		var path := SPELL_DIR + s.id + ".tres"
+		var err := ResourceSaver.save(s, path, ResourceSaver.FLAG_CHANGE_PATH)
+		print("wrote ", path, " err=", err)
+		sp[s.id] = load(path)

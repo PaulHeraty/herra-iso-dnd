@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_4eng0"]
+
+[resource]
+resource_name = "Sneak Attack"
+script = ExtResource("1_4eng0")
+id = "sneak_attack"
+display_name = "Sneak Attack"
+description = "Once per turn: +3d6 damage with a finesse or ranged weapon attack that has advantage, or when an ally is next to the target."
+kind = 1
+cast_time = 3
+range_ft = 0
+resist_skills = PackedStringArray()
+damage = "3d6"
+cantrip_dice = PackedInt32Array()

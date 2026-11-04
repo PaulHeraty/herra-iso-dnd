@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_5gfp2"]
+
+[resource]
+resource_name = "Web"
+script = ExtResource("1_5gfp2")
+id = "spider_web"
+display_name = "Web"
+description = "Recharge 5-6. Ranged attack +5, 30/60 ft: the target is restrained (escape: DC 12 Strength check)."
+kind = 2
+resolve = 0
+attack_bonus_override = 5
+dc_override = 12
+resist_skills = PackedStringArray()
+cantrip_dice = PackedInt32Array()
+condition = "restrained"
+condition_rounds = -1
+recharge = 3
+sfx = "spider_hiss"
+vfx = "web"

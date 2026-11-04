@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_0kgil"]
+
+[resource]
+resource_name = "Fireball"
+script = ExtResource("1_0kgil")
+id = "fireball"
+display_name = "Fireball"
+description = "A burst of flame on a 3x3 area: 8d6 fire, DEX save for half. +1d6 per slot above 3rd."
+level = 3
+target = 4
+range_ft = 150
+area_size = 3
+resolve = 1
+save_ability = "DEX"
+half_on_save = true
+resist_skills = PackedStringArray()
+damage = "8d6"
+damage_type = "fire"
+upcast_dice = "1d6"
+cantrip_dice = PackedInt32Array()
+sfx = "explosion"
+vfx = "fireball"
+big_moment = true

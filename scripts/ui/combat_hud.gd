@@ -198,16 +198,20 @@ func _build_panel(root: Control) -> void:
 		bar.size = back.size
 		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card.add_child(bar)
-		var pips: Array[ColorRect] = []
-		var slots := h.stats.spell_slots[0] if h.stats.spell_slots.size() > 0 else 0
-		for s in slots:
-			var pip := ColorRect.new()
-			pip.position = Vector2(3 + s * 8, 48)
-			pip.size = Vector2(6, 3)
-			pip.color = COL_SLOT
-			pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			card.add_child(pip)
-			pips.append(pip)
+		# Spell-slot pips: one group per spell level (Cleric/Mage: 4 / 3 / 2).
+		var pips: Array[Dictionary] = []
+		var px := 3
+		for lvl in h.stats.spell_slots.size():
+			for s in h.stats.spell_slots[lvl]:
+				var pip := ColorRect.new()
+				pip.position = Vector2(px, 48)
+				pip.size = Vector2(6, 3)
+				pip.color = COL_SLOT
+				pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				card.add_child(pip)
+				pips.append({rect = pip, level = lvl, index = s})
+				px += 8
+			px += 4
 		_cards.append({hero = h, panel = card, pic = pic, hp = hp_l, cond = cond_l, bar = bar, bar_w = back.size.x, pips = pips})
 	# Action menu.
 	var mx := 4 + 4 * (card_w + 3)
@@ -237,11 +241,14 @@ func _update_card(card: Dictionary, cur: Actor) -> void:
 	card.panel.add_theme_stylebox_override("panel", _box(COL_CARD, COL_ACTIVE if active else COL_EDGE))
 	card.hp.text = "%d/%d" % [h.hp, h.stats.max_hp]
 	card.bar.size.x = roundf(card.bar_w * clampf(float(h.hp) / h.stats.max_hp, 0.0, 1.0))
-	card.cond.text = "" if h.is_alive() else "DOWN"
+	var conds: PackedStringArray = []
+	for c in h.conditions:
+		conds.append(Condition.display(c.id))
+	card.cond.text = ("DEAD" if h.dead else "DOWN") if not h.is_alive() else ", ".join(conds)
 	card.pic.modulate = Color.WHITE if h.is_alive() else Color(0.45, 0.45, 0.55)
-	# Spell slots are not spent until Phase 3: all shown as available.
-	for p: ColorRect in card.pips:
-		p.color = COL_SLOT
+	for p: Dictionary in card.pips:
+		var left: int = h.slots_left[p.level] if p.level < h.slots_left.size() else 0
+		p.rect.color = COL_SLOT if p.index < left else COL_SLOT_USED
 
 
 ## Buttons size themselves with the default font before our theme applies; reset once it has.

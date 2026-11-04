@@ -1,17 +1,21 @@
 [gd_resource type="Resource" script_class="CreatureStats" format=3]
 
-[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_n7vcb"]
-[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="2_1gmxv"]
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_0vm8f"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_7t45k"]
+[ext_resource type="Resource" path="res://data/spells/sacred_flame.tres" id="3_cj410"]
+[ext_resource type="Resource" path="res://data/spells/cure_wounds.tres" id="4_r1w0a"]
+[ext_resource type="Resource" path="res://data/spells/bless.tres" id="5_qffdq"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="6_msbuf"]
 
-[sub_resource type="Resource" id="Resource_0jo8y"]
+[sub_resource type="Resource" id="Resource_ybcvv"]
 resource_name = "Mace"
-script = ExtResource("1_n7vcb")
+script = ExtResource("1_0vm8f")
 name = "Mace"
 damage_type = "bludgeoning"
 
 [resource]
 resource_name = "Cleric"
-script = ExtResource("2_1gmxv")
+script = ExtResource("6_msbuf")
 id = "cleric"
 display_name = "Cleric"
 class_id = "cleric"
@@ -27,6 +31,9 @@ armor_class = 18
 resistances = PackedStringArray()
 immunities = PackedStringArray()
 proficiency_bonus = 3
-attacks = Array[ExtResource("1_n7vcb")]([SubResource("Resource_0jo8y")])
+attacks = Array[ExtResource("1_0vm8f")]([SubResource("Resource_ybcvv")])
+powers = Array[ExtResource("2_7t45k")]([ExtResource("3_cj410"), ExtResource("4_r1w0a"), ExtResource("5_qffdq")])
+skill_proficiencies = PackedStringArray("insight", "medicine")
+skill_expertise = PackedStringArray()
 spell_ability = "WIS"
 spell_slots = PackedInt32Array(4, 3, 2)

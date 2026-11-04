@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_u0usf"]
+
+[resource]
+resource_name = "Magic Missile"
+script = ExtResource("1_u0usf")
+id = "magic_missile"
+display_name = "Magic Missile"
+description = "Three glowing darts that never miss, 1d4+1 force each. Split them between targets. +1 dart per slot above 1st."
+level = 1
+range_ft = 120
+max_targets = 3
+resist_skills = PackedStringArray()
+damage = "1d4+1"
+damage_type = "force"
+darts = 3
+upcast_darts = 1
+cantrip_dice = PackedInt32Array()
+sfx = "cast_whoosh"
+vfx = "magic_missile"

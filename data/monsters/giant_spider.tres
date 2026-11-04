@@ -1,11 +1,13 @@
 [gd_resource type="Resource" script_class="CreatureStats" format=3]
 
-[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_eidfk"]
-[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="2_05x7u"]
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_lklsm"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_rb4q6"]
+[ext_resource type="Resource" path="res://data/spells/spider_web.tres" id="3_nbsmn"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="4_xpooi"]
 
-[sub_resource type="Resource" id="Resource_lklsm"]
+[sub_resource type="Resource" id="Resource_qq5in"]
 resource_name = "Bite"
-script = ExtResource("1_eidfk")
+script = ExtResource("1_lklsm")
 name = "Bite"
 ability = 1
 damage = "1d8+3"
@@ -16,21 +18,9 @@ rider_damage_type = "poison"
 rider_save = "CON"
 rider_dc = 11
 
-[sub_resource type="Resource" id="Resource_rb4q6"]
-resource_name = "Web"
-script = ExtResource("1_eidfk")
-name = "Web"
-kind = 1
-ability = 1
-range_ft = 30
-long_range_ft = 60
-damage = "0"
-damage_type = "none"
-to_hit_override = 5
-
 [resource]
 resource_name = "Giant Spider"
-script = ExtResource("2_05x7u")
+script = ExtResource("4_xpooi")
 id = "giant_spider"
 display_name = "Giant Spider"
 challenge = 1.0
@@ -49,5 +39,12 @@ hit_dice = "4d10+4"
 armor_class = 14
 resistances = PackedStringArray()
 immunities = PackedStringArray()
-attacks = Array[ExtResource("1_eidfk")]([SubResource("Resource_lklsm"), SubResource("Resource_rb4q6")])
+attacks = Array[ExtResource("1_lklsm")]([SubResource("Resource_qq5in")])
+powers = Array[ExtResource("2_rb4q6")]([ExtResource("3_nbsmn")])
+skill_proficiencies = PackedStringArray()
+skill_expertise = PackedStringArray()
+skill_overrides = {
+"perception": 0,
+"stealth": 7
+}
 spell_slots = PackedInt32Array()

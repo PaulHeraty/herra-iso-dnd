@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_tpdmv"]
+
+[resource]
+resource_name = "Shield"
+script = ExtResource("1_tpdmv")
+id = "shield"
+display_name = "Shield"
+description = "Reaction when hit by an attack: +5 AC until the start of your next turn, including against the triggering attack."
+level = 1
+cast_time = 2
+target = 3
+range_ft = 0
+needs_los = false
+resist_skills = PackedStringArray()
+cantrip_dice = PackedInt32Array()
+condition = "shielded"
+condition_rounds = 1
+sfx = "charge"
+vfx = "shield"

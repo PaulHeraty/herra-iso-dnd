@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_vpb6m"]
+
+[resource]
+resource_name = "Second Wind"
+script = ExtResource("1_vpb6m")
+id = "second_wind"
+display_name = "Second Wind"
+description = "Bonus action: regain 1d10 + fighter level HP. Once per short rest."
+kind = 1
+cast_time = 1
+target = 3
+range_ft = 0
+needs_los = false
+resolve = 3
+resist_skills = PackedStringArray()
+add_level = true
+heal = "1d10"
+cantrip_dice = PackedInt32Array()
+uses = 1
+recharge = 1
+sfx = "charge"
+vfx = "heal"

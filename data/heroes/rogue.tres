@@ -1,18 +1,21 @@
 [gd_resource type="Resource" script_class="CreatureStats" format=3]
 
-[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_lo2fl"]
-[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="2_p7wkh"]
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_jnfjw"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_s1b8e"]
+[ext_resource type="Resource" path="res://data/spells/sneak_attack.tres" id="3_ejxn8"]
+[ext_resource type="Resource" path="res://data/spells/hide.tres" id="4_8lcum"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="5_yb44c"]
 
-[sub_resource type="Resource" id="Resource_3okwm"]
+[sub_resource type="Resource" id="Resource_tnvac"]
 resource_name = "Shortsword"
-script = ExtResource("1_lo2fl")
+script = ExtResource("1_jnfjw")
 name = "Shortsword"
 ability = 2
 damage_type = "piercing"
 
-[sub_resource type="Resource" id="Resource_jnfjw"]
+[sub_resource type="Resource" id="Resource_iuxw5"]
 resource_name = "Shortbow"
-script = ExtResource("1_lo2fl")
+script = ExtResource("1_jnfjw")
 name = "Shortbow"
 kind = 1
 ability = 1
@@ -22,7 +25,7 @@ damage_type = "piercing"
 
 [resource]
 resource_name = "Rogue"
-script = ExtResource("2_p7wkh")
+script = ExtResource("5_yb44c")
 id = "rogue"
 display_name = "Rogue"
 class_id = "rogue"
@@ -39,5 +42,8 @@ armor_class = 15
 resistances = PackedStringArray()
 immunities = PackedStringArray()
 proficiency_bonus = 3
-attacks = Array[ExtResource("1_lo2fl")]([SubResource("Resource_3okwm"), SubResource("Resource_jnfjw")])
+attacks = Array[ExtResource("1_jnfjw")]([SubResource("Resource_tnvac"), SubResource("Resource_iuxw5")])
+powers = Array[ExtResource("2_s1b8e")]([ExtResource("3_ejxn8"), ExtResource("4_8lcum")])
+skill_proficiencies = PackedStringArray("acrobatics", "athletics")
+skill_expertise = PackedStringArray("stealth", "perception")
 spell_slots = PackedInt32Array()

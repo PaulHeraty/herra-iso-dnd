@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_6ko2g"]
+
+[resource]
+resource_name = "Shove"
+script = ExtResource("1_6ko2g")
+id = "shove"
+display_name = "Shove"
+description = "Instead of one attack: Athletics vs the target's Athletics or Acrobatics. Win: knock it prone (or push it 5 ft)."
+kind = 1
+cast_time = 4
+range_ft = 5
+resolve = 4
+contest_skill = "athletics"
+resist_skills = PackedStringArray("athletics", "acrobatics")
+cantrip_dice = PackedInt32Array()
+condition = "prone"
+condition_rounds = -1
+sfx = "hit_blunt"

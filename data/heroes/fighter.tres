@@ -1,17 +1,20 @@
 [gd_resource type="Resource" script_class="CreatureStats" format=3]
 
-[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_m4i40"]
-[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="2_5l8af"]
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_pwjl6"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_dv2d3"]
+[ext_resource type="Resource" path="res://data/spells/second_wind.tres" id="3_qnc6f"]
+[ext_resource type="Resource" path="res://data/spells/shove.tres" id="4_clnly"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="5_km8d3"]
 
-[sub_resource type="Resource" id="Resource_d60d2"]
+[sub_resource type="Resource" id="Resource_6dh4b"]
 resource_name = "Longsword"
-script = ExtResource("1_m4i40")
+script = ExtResource("1_pwjl6")
 name = "Longsword"
 damage = "1d8"
 
-[sub_resource type="Resource" id="Resource_pwjl6"]
+[sub_resource type="Resource" id="Resource_3viyi"]
 resource_name = "Handaxe"
-script = ExtResource("1_m4i40")
+script = ExtResource("1_pwjl6")
 name = "Handaxe"
 kind = 1
 range_ft = 20
@@ -19,7 +22,7 @@ long_range_ft = 60
 
 [resource]
 resource_name = "Fighter"
-script = ExtResource("2_5l8af")
+script = ExtResource("5_km8d3")
 id = "fighter"
 display_name = "Fighter"
 class_id = "fighter"
@@ -36,6 +39,9 @@ armor_class = 18
 resistances = PackedStringArray()
 immunities = PackedStringArray()
 proficiency_bonus = 3
-attacks = Array[ExtResource("1_m4i40")]([SubResource("Resource_d60d2"), SubResource("Resource_pwjl6")])
+attacks = Array[ExtResource("1_pwjl6")]([SubResource("Resource_6dh4b"), SubResource("Resource_3viyi")])
 extra_attacks = 1
+powers = Array[ExtResource("2_dv2d3")]([ExtResource("3_qnc6f"), ExtResource("4_clnly")])
+skill_proficiencies = PackedStringArray("athletics", "perception")
+skill_expertise = PackedStringArray()
 spell_slots = PackedInt32Array()

@@ -36,6 +36,13 @@ enum Size { TINY, SMALL, MEDIUM, LARGE, HUGE }
 @export var proficiency_bonus := 2
 @export var attacks: Array[AttackData] = []
 @export var extra_attacks := 0          ## Fighter 5: Extra Attack = 1 (two attacks per Attack action)
+## Spells and abilities this creature can use (data/spells/*.tres).
+@export var powers: Array[SpellData] = []
+@export_group("Skills")
+@export var skill_proficiencies: PackedStringArray = []   ## "stealth", "athletics", "perception"...
+@export var skill_expertise: PackedStringArray = []       ## double proficiency (Rogue)
+## Monsters: skill bonuses straight from the stat block (e.g. {"stealth": 7}); overrides the maths.
+@export var skill_overrides := {}
 @export_group("Spellcasting")
 @export var spell_ability := ""         ## "INT" (wizard), "WIS" (cleric), "" = none
 ## Slots per spell level: index 0 = 1st level. Level 5 full caster: [4, 3, 2].
@@ -121,3 +128,26 @@ func damage_expr(a: AttackData) -> String:
 ## Number of attacks one Attack action makes.
 func attacks_per_action() -> int:
 	return 1 + extra_attacks
+
+
+const SKILL_ABILITY := {
+	"athletics": "STR", "acrobatics": "DEX", "stealth": "DEX", "sleight_of_hand": "DEX",
+	"perception": "WIS", "insight": "WIS", "survival": "WIS", "medicine": "WIS",
+	"arcana": "INT", "investigation": "INT", "religion": "INT", "history": "INT",
+	"intimidation": "CHA", "persuasion": "CHA", "deception": "CHA",
+}
+
+
+func skill_bonus(skill: String) -> int:
+	if skill_overrides.has(skill):
+		return skill_overrides[skill]
+	var b := mod(SKILL_ABILITY.get(skill, "STR"))
+	if skill in skill_expertise:
+		b += proficiency_bonus * 2
+	elif skill in skill_proficiencies:
+		b += proficiency_bonus
+	return b
+
+
+func passive_perception() -> int:
+	return 10 + skill_bonus("perception")

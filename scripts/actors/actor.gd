@@ -38,6 +38,18 @@ var _still_t := 0.0
 var _row := 0
 ## Current hit points (set to stats.max_hp on spawn).
 var hp := 0
+## Conditions on this creature (Condition), spell slots left per level (index 0 = 1st), uses left
+## per power id, the spell being concentrated on, and this round's reaction.
+var conditions: Array[Condition] = []
+var slots_left: PackedInt32Array = []
+var uses_left := {}
+var concentrating: SpellData
+var reaction_used := false
+## Death saves (heroes at 0 HP; Phase 3 step 4).
+var death_successes := 0
+var death_failures := 0
+var stable := false
+var dead := false
 
 @onready var sprite: Sprite2D = $Sprite
 
@@ -45,6 +57,7 @@ var hp := 0
 func _ready() -> void:
 	if stats:
 		hp = stats.max_hp
+	reset_resources()
 	_update_facing_visual()
 
 
@@ -165,3 +178,106 @@ func _on_hurt() -> void:
 
 func _on_down() -> void:
 	_flash()
+
+
+# --- conditions & resources (Phase 3) -------------------------------------------------------
+
+func has_condition(cid: String) -> bool:
+	for c in conditions:
+		if c.id == cid:
+			return true
+	return false
+
+
+func get_condition(cid: String) -> Condition:
+	for c in conditions:
+		if c.id == cid:
+			return c
+	return null
+
+
+## Apply a condition for `rounds` of this creature's turns (-1 = until removed). Re-applying keeps
+## the longer duration.
+func add_condition(cid: String, rounds: int, source: Actor = null, spell: SpellData = null) -> Condition:
+	var c := get_condition(cid)
+	if c:
+		if rounds < 0 or (c.rounds >= 0 and rounds > c.rounds):
+			c.rounds = rounds
+		c.source = source
+		c.spell = spell
+		return c
+	c = Condition.new(cid, rounds, source, spell)
+	conditions.append(c)
+	return c
+
+
+func remove_condition(cid: String) -> void:
+	for i in range(conditions.size() - 1, -1, -1):
+		if conditions[i].id == cid:
+			conditions.remove_at(i)
+
+
+## Start of this creature's turn: count down timed conditions. Returns the ids that ended.
+func tick_conditions() -> PackedStringArray:
+	var ended: PackedStringArray = []
+	for i in range(conditions.size() - 1, -1, -1):
+		var c := conditions[i]
+		if c.rounds > 0:
+			c.rounds -= 1
+			if c.rounds == 0:
+				ended.append(c.id)
+				conditions.remove_at(i)
+	return ended
+
+
+## Full spell slots and per-rest uses (spawn / long rest).
+func reset_resources() -> void:
+	if stats == null:
+		return
+	slots_left = stats.spell_slots.duplicate()
+	uses_left.clear()
+	for p: SpellData in stats.powers:
+		if p.uses > 0:
+			uses_left[p.id] = p.uses
+
+
+## Lowest slot level (>= the spell's level) with a slot left; 0 if none (cantrips return 0 too).
+func lowest_slot_for(spell: SpellData) -> int:
+	if not spell.uses_slot():
+		return 0
+	for lvl in range(spell.level, slots_left.size() + 1):
+		if slots_left[lvl - 1] > 0:
+			return lvl
+	return 0
+
+
+## Can this power be used now (slots / uses / recharge permitting)?
+func can_use(p: SpellData) -> bool:
+	if p.uses_slot() and lowest_slot_for(p) == 0:
+		return false
+	if p.uses > 0 and uses_left.get(p.id, 0) <= 0:
+		return false
+	if p.recharge == SpellData.Recharge.DICE and uses_left.get(p.id, 1) <= 0:
+		return false
+	return true
+
+
+## Spend a slot of exactly `level`. False if none left.
+func spend_slot(level: int) -> bool:
+	if level <= 0 or level > slots_left.size() or slots_left[level - 1] <= 0:
+		return false
+	slots_left[level - 1] -= 1
+	return true
+
+
+func spend_use(p: SpellData) -> void:
+	if p.uses > 0 or p.recharge == SpellData.Recharge.DICE:
+		uses_left[p.id] = uses_left.get(p.id, maxi(1, p.uses)) - 1
+
+
+func power(pid: String) -> SpellData:
+	if stats:
+		for p: SpellData in stats.powers:
+			if p.id == pid:
+				return p
+	return null
