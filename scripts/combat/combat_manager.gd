@@ -14,10 +14,22 @@ signal combat_started
 signal turn_started(actor: Actor)
 signal combat_ended
 signal log_line(text: String)
+## Short status for the HUD hint line (movement left, controls).
+signal status_changed(text: String)
 
 const DETECT_INTERVAL := 0.2
 const MONSTER_TURN_PAUSE := 0.8     ## step 3 placeholder: monsters "wait" this long
+const STEP_TIME := 0.18             ## s per square while moving in combat (diagonal x1.41)
 const COL_ACTIVE := Color8(255, 220, 90)
+const COL_RANGE := Color8(90, 150, 255)
+const COL_BLOCKED := Color8(255, 80, 60)
+
+## This turn: squares of movement left, whether the action is used (step 5), moving right now.
+var move_left := 0
+var action_used := false
+var moving := false
+var _reach := {}
+var _hover := Vector2i(-99999, -99999)
 
 var map: DungeonMap
 var in_combat := false
@@ -56,8 +68,24 @@ func _process(delta: float) -> void:
 	if current:
 		var pulse := 0.5 + 0.5 * sin(_pulse_t * TAU / 1.2)
 		map.overlay.set_cells("active", [current.cell], COL_ACTIVE, 0.15, 0.55 + 0.4 * pulse)
-	if current is Hero and Input.is_action_just_pressed("end_turn"):
-		end_turn()
+	if current is Hero and not moving:
+		if Input.is_action_just_pressed("end_turn"):
+			end_turn()
+			return
+		var c := IsoGrid.world_to_cell(map.get_local_mouse_position())
+		if c != _hover:
+			_hover = c
+			_show_preview()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not in_combat or not current is Hero or moving:
+		return
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		var c := IsoGrid.world_to_cell(map.get_local_mouse_position())
+		if _reach.has(c) and _reach[c].stop and c != current.cell:
+			get_viewport().set_input_as_handled()
+			move_along(current, DungeonMap.reach_path(_reach, c))
 
 
 # --- starting --------------------------------------------------------------------------------
@@ -140,12 +168,83 @@ func _next_turn() -> void:
 		if order[_turn_index].is_alive():
 			break
 	current = order[_turn_index]
+	move_left = current.stats.speed_cells()
+	action_used = false
+	moving = false
 	map.camera_controller.target = current
 	map.camera_controller.recenter()
 	_pulse_t = 0.0
+	_clear_move_overlay()
 	turn_started.emit(current)
 	if current is Monster:
+		_emit_status()
 		_monster_turn(current)
+	else:
+		_show_range()
+
+
+# --- movement --------------------------------------------------------------------------------
+
+## Walk `who` along `path` (cells, excluding its own), one square at a time, spending movement.
+func move_along(who: Actor, path: Array[Vector2i]) -> void:
+	if path.is_empty() or moving:
+		return
+	moving = true
+	_clear_move_overlay()
+	map.overlay.set_cells("destination", [path[-1]], COL_ACTIVE, 0.2, 0.6, true)
+	for c in path:
+		if move_left <= 0 or not in_combat:
+			break
+		var d := c - who.cell
+		var tw := who.step_to(c, STEP_TIME * (1.4142 if d.x != 0 and d.y != 0 else 1.0))
+		move_left -= 1
+		_emit_status()
+		await tw.finished
+		map.apply_pending_rotation()
+	map.overlay.clear("destination")
+	moving = false
+	if in_combat and who == current and who is Hero:
+		_show_range()
+
+
+func _show_range() -> void:
+	_reach = map.combat_reach(current.cell, move_left, current)
+	var cells: Array[Vector2i] = []
+	for c: Vector2i in _reach:
+		if _reach[c].stop and c != current.cell:
+			cells.append(c)
+	if cells.is_empty():
+		map.overlay.clear("range")
+	else:
+		map.overlay.set_cells("range", cells, COL_RANGE, 0.18, 0.45)
+	_hover = Vector2i(-99999, -99999)
+	_emit_status()
+
+
+func _show_preview() -> void:
+	map.overlay.clear("path")
+	map.overlay.clear("cursor")
+	if not map.has_floor(_hover):
+		return
+	if _reach.has(_hover) and _reach[_hover].stop and _hover != current.cell:
+		var p := DungeonMap.reach_path(_reach, _hover)
+		if p.size() > 1:
+			map.overlay.set_cells("path", p.slice(0, -1), COL_RANGE, 0.25, 0.6, true)
+		map.overlay.set_cells("cursor", [_hover], COL_ACTIVE, 0.2, 0.75, true)
+	elif _hover != current.cell:
+		map.overlay.set_cells("cursor", [_hover], COL_BLOCKED, 0.08, 0.5)
+
+
+func _clear_move_overlay() -> void:
+	for layer in ["range", "path", "cursor", "destination"]:
+		map.overlay.clear(layer)
+
+
+func _emit_status() -> void:
+	if current is Hero:
+		status_changed.emit("Move %d/%d   Enter = end turn" % [move_left, current.stats.speed_cells()])
+	else:
+		status_changed.emit("")
 
 
 func _monster_turn(m: Monster) -> void:
@@ -164,6 +263,8 @@ func end_combat() -> void:
 	current = null
 	order.clear()
 	map.overlay.clear("active")
+	_clear_move_overlay()
+	map.refresh_navigation()      # monsters may have moved
 	map.camera_controller.target = map.party[0]
 	map.controller.enabled = true
 	combat_ended.emit()

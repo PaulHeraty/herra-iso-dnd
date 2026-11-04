@@ -135,6 +135,18 @@ func apply_pending_rotation() -> void:
 
 ## True if a cell has floor, no wall, no closed door, no chest and no monster (heroes are ignored).
 func is_walkable(cell: Vector2i) -> bool:
+	if not terrain_walkable(cell):
+		return false
+	for n in entities.get_children():
+		if n is Monster and n.cell == cell and n.is_alive():
+			return false
+		if n is MonsterSpawn and n.monster == null and n.get_cell() == cell:
+			return false
+	return true
+
+
+## Floor without a wall, closed door or chest (ignores creatures).
+func terrain_walkable(cell: Vector2i) -> bool:
 	if floor_layer.get_cell_source_id(cell) == -1:
 		return false
 	var wall := walls_layer.get_cell_tile_data(cell)
@@ -145,11 +157,54 @@ func is_walkable(cell: Vector2i) -> bool:
 			return false
 		if n is Chest and n.get_cell() == cell:
 			return false
-		if n is Monster and n.cell == cell:
-			return false
-		if n is MonsterSpawn and n.monster == null and n.get_cell() == cell:
-			return false
 	return true
+
+
+const DIRS8 := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1),
+		Vector2i(1, 1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(-1, -1)]
+
+
+## Combat movement: every cell `mover` can reach from `from` within `budget` squares (5e: each
+## square costs 1, diagonals too; no cutting wall corners). Allies can be passed through but not
+## stopped on; enemies block. Returns cell -> {cost, prev, stop} where stop = can end the move there.
+func combat_reach(from: Vector2i, budget: int, mover: Actor) -> Dictionary:
+	var reach := {from: {cost = 0, prev = from, stop = true}}
+	var frontier: Array[Vector2i] = [from]
+	while not frontier.is_empty():
+		var next: Array[Vector2i] = []
+		for c in frontier:
+			var cost: int = reach[c].cost + 1
+			if cost > budget:
+				continue
+			for d: Vector2i in DIRS8:
+				var n := c + d
+				if reach.has(n) or not terrain_walkable(n):
+					continue
+				if d.x != 0 and d.y != 0 and not (terrain_walkable(c + Vector2i(d.x, 0)) and terrain_walkable(c + Vector2i(0, d.y))):
+					continue
+				var occ := actor_at(n)
+				if occ and occ != mover and occ.is_alive() and not _same_side(occ, mover):
+					continue
+				reach[n] = {cost = cost, prev = c, stop = occ == null or occ == mover or not occ.is_alive()}
+				next.append(n)
+		frontier = next
+	return reach
+
+
+## Path (excluding the start) to `to` through a combat_reach result, or [] if unreachable.
+static func reach_path(reach: Dictionary, to: Vector2i) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	if not reach.has(to):
+		return out
+	var c := to
+	while reach[c].prev != c:
+		out.push_front(c)
+		c = reach[c].prev
+	return out
+
+
+static func _same_side(a: Actor, b: Actor) -> bool:
+	return (a is Hero) == (b is Hero)
 
 
 ## True if the map has a floor tile at `cell`.

@@ -24,6 +24,7 @@ func _ready() -> void:
 	_log.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	combat.log_line.connect(_on_log)
 	combat.turn_started.connect(_on_turn)
+	combat.status_changed.connect(func(t: String): _hint.text = t)
 	combat.combat_ended.connect(func(): visible = false)
 	combat.combat_started.connect(func(): visible = true)
 	visible = false
@@ -43,7 +44,6 @@ func _label(pos: Vector2, col: Color, font_size: int) -> Label:
 
 func _on_turn(a: Actor) -> void:
 	_banner.text = "%s'S TURN" % a.display_name().to_upper()
-	_hint.text = "Enter = end turn" if a is Hero else ""
 
 
 func _on_log(text: String) -> void:
