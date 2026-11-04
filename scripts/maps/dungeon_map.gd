@@ -6,28 +6,34 @@ extends Node2D
 ##   World     Node2D (y-sort)  - everything that depth-sorts:
 ##     Walls     TileMapLayer (y-sort) - wall blocks (source 1)
 ##     Entities  Node2D (y-sort)       - markers (party start, monsters, chests, torches, doors, traps)
+##                                       and actors (the party is spawned here at runtime)
 ##     Decor     Node2D (y-sort)       - pure decoration sprites (bones, webs...)
+##   Camera    Camera2D
 
-## Phase 0 only: show static hero/monster sprites at the markers so the room can be eyeballed.
-## Phase 1 replaces this with real party/monster actors.
-@export var preview_actors := true
+## Until Phase 2 adds real monsters: show a static sprite at each MonsterSpawn marker.
+@export var preview_monsters := true
+## Which PartyStart to use (matches PartyStart.entry_id).
+@export var entry_id := "start"
 
-const HERO_SPRITES := [
-	preload("res://assets/sprites/heroes/fighter.png"),
-	preload("res://assets/sprites/heroes/rogue.png"),
-	preload("res://assets/sprites/heroes/cleric.png"),
-	preload("res://assets/sprites/heroes/mage.png"),
-]
+const HERO_SCENE := preload("res://scenes/actors/hero.tscn")
+const PARTY_ORDER := [Hero.HeroClass.FIGHTER, Hero.HeroClass.ROGUE, Hero.HeroClass.CLERIC, Hero.HeroClass.MAGE]
+## Preferred formation around the leader's cell; falls back to the nearest free cells.
 const FORMATION := [Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1)]
+const NEIGHBOURS := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
+
+## The heroes, leader first.
+var party: Array[Hero] = []
 
 @onready var floor_layer: TileMapLayer = $Floor
 @onready var walls_layer: TileMapLayer = $World/Walls
 @onready var entities: Node2D = $World/Entities
+@onready var camera: Camera2D = $Camera
 
 
 func _ready() -> void:
-	if preview_actors:
-		_spawn_preview_actors()
+	_spawn_party()
+	if preview_monsters:
+		_spawn_monster_previews()
 
 
 ## True if a cell has floor, no wall and no closed door.
@@ -43,22 +49,69 @@ func is_walkable(cell: Vector2i) -> bool:
 	return true
 
 
-func _spawn_preview_actors() -> void:
+## The actor standing on a cell, or null.
+func actor_at(cell: Vector2i) -> Actor:
+	for n in entities.get_children():
+		if n is Actor and n.cell == cell:
+			return n
+	return null
+
+
+func _find_party_start() -> PartyStart:
+	var first: PartyStart = null
 	for n in entities.get_children():
 		if n is PartyStart:
-			for i in HERO_SPRITES.size():
-				_add_sprite(HERO_SPRITES[i], n.get_cell() + FORMATION[i], Rect2(), Vector2(-8, -22))
-		elif n is MonsterSpawn and n.preview:
-			_add_sprite(n.preview, n.get_cell(), Rect2(), Vector2(-16, -33))
+			if n.entry_id == entry_id:
+				return n
+			if first == null:
+				first = n
+	return first
 
 
-func _add_sprite(tex: Texture2D, cell: Vector2i, region: Rect2, offset: Vector2) -> void:
-	var s := Sprite2D.new()
-	s.texture = tex
-	s.centered = false
-	s.offset = offset
-	if region.has_area():
-		s.region_enabled = true
-		s.region_rect = region
-	s.position = IsoGrid.cell_to_world(cell)
-	entities.add_child(s)
+func _spawn_party() -> void:
+	var start := _find_party_start()
+	if start == null:
+		push_warning("%s: no PartyStart marker, party not spawned" % name)
+		return
+	var cells := _formation_cells(start.get_cell(), PARTY_ORDER.size())
+	for i in cells.size():
+		var hero: Hero = HERO_SCENE.instantiate()
+		hero.hero_class = PARTY_ORDER[i]
+		entities.add_child(hero)
+		hero.place_at(cells[i])
+		party.append(hero)
+	camera.position = party[0].position.round()
+
+
+## n free walkable cells for the party: the FORMATION offsets where possible, else the nearest
+## free cells reachable from the start (breadth-first), so walls never swallow a hero.
+func _formation_cells(origin: Vector2i, n: int) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for off in FORMATION:
+		if out.size() < n and is_walkable(origin + off):
+			out.append(origin + off)
+	var queue: Array[Vector2i] = [origin]
+	var seen := {origin: true}
+	while out.size() < n and not queue.is_empty():
+		var c: Vector2i = queue.pop_front()
+		if is_walkable(c) and c not in out:
+			out.append(c)
+		for d in NEIGHBOURS:
+			var nc: Vector2i = c + d
+			if not seen.has(nc) and is_walkable(nc):
+				seen[nc] = true
+				queue.append(nc)
+	if out.size() < n:
+		push_warning("%s: only %d free cells near PartyStart" % [name, out.size()])
+	return out
+
+
+func _spawn_monster_previews() -> void:
+	for n in entities.get_children():
+		if n is MonsterSpawn and n.preview:
+			var s := Sprite2D.new()
+			s.texture = n.preview
+			s.centered = false
+			s.offset = n.preview_offset
+			s.position = IsoGrid.cell_to_world(n.get_cell())
+			entities.add_child(s)

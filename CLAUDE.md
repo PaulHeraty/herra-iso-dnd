@@ -59,11 +59,12 @@ assets/
 scenes/
   maps/       map_template.tscn (copy this for new maps), test_room.tscn (main scene for now)
   markers/    party_start, monster_spawn, chest, torch, door, trap (.tscn)
-  actors/     (Phase 1+)
+  actors/     hero.tscn (Actor/Hero; spawned by DungeonMap at PartyStart)
 scripts/
   iso_grid.gd           IsoGrid: cell <-> world maths
   maps/dungeon_map.gd   DungeonMap: root script of every map
   markers/              MapMarker base + one script per marker
+  actors/               Actor base (grid cell, shadow) + Hero
 data/         (Phase 2+) Resources: classes, monsters, spells, items
 tools/
   godot/      gen_art.gd -> build_tileset.gd -> build_test_room.gd   (run in that order, import between)
@@ -130,7 +131,7 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
 ## Roadmap
 - [x] **Phase 0 — Setup:** project settings for pixel art, folder structure, this file, iso TileSet
   (floor, walls, doorway), marker scenes (party start, monster spawn, chest, torch, door, trap),
-  assets brought in, test room. *Open: git commit + GitHub repo (ask the user).*
+  assets brought in, test room, git repo on GitHub.
 - [ ] **Phase 1 — Walking around:** iso map, camera, click-to-move with pathfinding (AStarGrid2D),
   y-sorting/depth, torch lighting, shadows under figures.
 - [ ] **Phase 2 — Combat:** exploration → combat switch, initiative, move + action, d20 vs AC, damage,
@@ -149,8 +150,9 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
   Fireball + healing + melee working, playable start to finish.
 
 Biggest art job still ahead: heroes need **4 facing directions** and idle/walk/attack/cast/hurt/death
-animations. `DungeonMap.preview_actors` (static sprites at the markers) is a Phase 0 stand-in, to be
-replaced by real actors in Phase 1.
+animations. `DungeonMap.preview_monsters` (static sprites at MonsterSpawn markers) is a stand-in, to be
+replaced by real monster actors in Phase 2. Heroes are real `Hero` actors (`scenes/actors/hero.tscn`,
+`scripts/actors/actor.gd` + `hero.gd`), spawned by `DungeonMap` at the `PartyStart` marker.
 
 ## Story pitch (optional, not chosen)
 "The Weaver's Deep": an apprentice's master vanished in the silver mines beneath Harrowmere, which
