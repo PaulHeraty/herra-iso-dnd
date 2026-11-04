@@ -63,7 +63,7 @@ assets/
 scenes/
   maps/       map_template.tscn (copy this for new maps), test_room.tscn (main scene for now)
   markers/    party_start, monster_spawn, chest, torch, door, trap (.tscn)
-  actors/     hero.tscn (Actor/Hero; spawned by DungeonMap at PartyStart)
+  actors/     hero.tscn (Actor/Hero; spawned by DungeonMap at PartyStart), monsters/<monster_id>.tscn (Monster)
 scripts/
   iso_grid.gd           IsoGrid: cell <-> world maths, view rotation
   maps/dungeon_map.gd   DungeonMap: root script of every map (walk grid/A*, view rotation, spawns party + overlay + controllers)
@@ -72,13 +72,14 @@ scripts/
   maps/wall_fader.gd    WallFader: walls in front of a hero or revealed overlay cell fade to 55% (runtime alternative tiles 101-104)
   party/party_controller.gd  PartyController: exploration click-to-move, trail-follow, camera follow
   markers/              MapMarker base + one script per marker
-  actors/               Actor base (grid cell, shadow, step tween) + Hero
+  actors/               Actor base (grid cell, shadow, step tween) + Hero + Monster (stats, named sheet anims)
   rules/                Dice + DiceRoll (really random, seedable), CreatureStats + AttackData (stat-block Resources)
 data/         heroes/*.tres (level 5 party), monsters/*.tres: CreatureStats + AttackData (from tools/godot/build_data.gd)
 tools/
   godot/      gen_art.gd -> build_tileset.gd -> build_test_room.gd   (run in that order, import between)
               gen_hero_sheets.gd (hero walk sheets), preview_hero_walk.gd + gif_writer.gd (GIF previews)
               build_data.gd (stat blocks -> data/), test_rules.gd (headless rules tests: PASS/FAIL)
+              gen_spider.gd (procedural Giant Spider sheet: 3D-ish model projected to iso)
   python/     concept-session generators (reference + future art/audio work)
 docs/previews/  concept mock-ups (.gdignore'd: Godot does not import them)
 _handoff/     original handoff package (.gdignore'd). Can be deleted once the user is happy.
@@ -125,7 +126,9 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
 - Floor tiles **32×16** diamonds. Wall blocks 32 wide with **40 px** faces (texture 32×56). Lit face =
   lower-left (brightness 0.62), darker = lower-right (0.44).
 - Monsters e.g. Eye Tyrant 32×32 floating, offset (-16, -33). Sheet rows: idle(8), blink(6),
-  attack(6), hurt(4), death(9), 32×32 cells.
+  attack(6), hurt(4), death(9), 32×32 cells. Giant Spider 40×32 cells (Large), offset (-20, -27), 17 cols
+  (idle 2, walk 4, attack 4, hurt 2, death 5) × 2 rows (front / back 3/4). `Monster.anims` maps names to
+  [row, col, count, fps, loop].
 - Effects: fireball 16×16 × 6 frames, explosion 32×32 × 7 frames.
 - PNG with transparency. Filter Nearest (project default), no mipmaps (import default).
 - Sounds: WAV 44.1 kHz 16-bit mono, or OGG.
@@ -187,8 +190,8 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
   Fireball + healing + melee working, playable start to finish.
 
 Biggest art job still ahead: all 4 heroes have 4 facings + idle/walk (see walk sheets in Art
-specs) but still need attack/cast/hurt/death animations. `DungeonMap.preview_monsters` (static sprites at MonsterSpawn markers) is a stand-in, to be
-replaced by real monster actors in Phase 2. Heroes are real `Hero` actors (`scenes/actors/hero.tscn`,
+specs) but still need attack/cast/hurt/death animations. Monsters are real `Monster` actors spawned at `MonsterSpawn` markers
+(scene `scenes/actors/monsters/<monster_id>.tscn` + stats `data/monsters/<monster_id>.tres`). Heroes are real `Hero` actors (`scenes/actors/hero.tscn`,
 `scripts/actors/actor.gd` + `hero.gd`), spawned by `DungeonMap` at the `PartyStart` marker.
 
 ## Story pitch (optional, not chosen)

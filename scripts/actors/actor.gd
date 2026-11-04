@@ -24,6 +24,10 @@ var facing := Vector2i(0, 1):
 		if is_node_ready():
 			_update_facing_visual()
 
+## True for hero-style walk sheets (5 x 2: idle + 4 walk frames, front/back rows). Set by Hero.
+var walk_sheet := false
+## Without a walk sheet: bob 1px per step so walking reads (monsters animate themselves instead).
+var hop_steps := true
 var _tween: Tween
 var _anim_t := 0.0
 var _still_t := 0.0
@@ -48,7 +52,7 @@ func is_moving() -> bool:
 
 
 func has_walk_sheet() -> bool:
-	return sprite.hframes >= 5 and sprite.vframes >= 2
+	return walk_sheet
 
 
 ## Walk to a neighbouring cell over `duration` seconds. `cell` changes at once (so pathing and
@@ -63,7 +67,7 @@ func step_to(c: Vector2i, duration: float) -> Tween:
 		_tween.kill()
 	_tween = create_tween()
 	_tween.tween_property(self, "position", target, duration)
-	if not has_walk_sheet():
+	if hop_steps and not has_walk_sheet():
 		# Little 1px hop per step so walking reads as walking without a walk cycle.
 		_tween.parallel().tween_property(sprite, "position:y", -1.0, duration * 0.5)
 		_tween.parallel().tween_property(sprite, "position:y", 0.0, duration * 0.5).set_delay(duration * 0.5)

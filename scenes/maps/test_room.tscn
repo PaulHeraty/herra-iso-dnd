@@ -9,6 +9,8 @@
 [ext_resource type="PackedScene" path="res://scenes/markers/party_start.tscn" id="12_ksf8t"]
 [ext_resource type="Texture2D" uid="uid://s3jabtxsm7mn" path="res://assets/sprites/props/bones.png" id="14_njwk2"]
 [ext_resource type="Texture2D" uid="uid://dep5yj4n01mcp" path="res://assets/sprites/props/web.png" id="15_7fapo"]
+[ext_resource type="Texture2D" path="res://assets/sprites/monsters/eye_tyrant_32.png" id="16_eyeprev"]
+[ext_resource type="Texture2D" path="res://assets/sprites/monsters/giant_spider_preview.png" id="17_spiderprev"]
 
 [node name="TestRoom" type="Node2D" unique_id=947482]
 script = ExtResource("1_b7x7t")
@@ -84,6 +86,15 @@ gold = 25
 
 [node name="MonsterSpawn" parent="World/Entities" unique_id=37502966 instance=ExtResource("9_vxdxe")]
 position = Vector2(64, 64)
+preview = ExtResource("16_eyeprev")
+
+[node name="SpiderSpawn" parent="World/Entities" unique_id=1590360520 instance=ExtResource("9_vxdxe")]
+position = Vector2(-64, 144)
+monster_id = "giant_spider"
+group_id = 1
+facing = 1
+preview = ExtResource("17_spiderprev")
+preview_offset = Vector2(-20, -27)
 
 [node name="PartyStart" parent="World/Entities" unique_id=288951738 instance=ExtResource("12_ksf8t")]
 position = Vector2(0, 80)

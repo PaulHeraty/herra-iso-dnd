@@ -15,8 +15,8 @@ extends Node2D
 ## View rotation (Q/E): the Floor and Walls layers you paint are the *map* (hidden at runtime);
 ## FloorView/WallsView show it turned by quarter turns. All game logic uses map cells.
 
-## Until Phase 2 adds real monsters: show a static sprite at each MonsterSpawn marker.
-@export var preview_monsters := true
+## Monsters without a scene in scenes/actors/monsters/ get a static preview sprite instead.
+@export var preview_missing_monsters := true
 ## Which PartyStart to use (matches PartyStart.entry_id).
 @export var entry_id := "start"
 
@@ -33,6 +33,8 @@ const WALL_ROW_CAP := 3
 
 ## The heroes, leader first.
 var party: Array[Hero] = []
+## Monsters spawned from MonsterSpawn markers.
+var monsters: Array[Monster] = []
 var overlay: GridOverlay
 var controller: PartyController
 var camera_controller: CameraController
@@ -67,10 +69,9 @@ func _ready() -> void:
 	overlay.name = "Overlay"
 	add_child(overlay)
 	move_child(overlay, floor_view.get_index() + 1)   # above the floor, below World
+	_spawn_monsters()
 	refresh_navigation()
 	_spawn_party()
-	if preview_monsters:
-		_spawn_monster_previews()
 	camera_controller = CameraController.new()
 	camera_controller.name = "CameraController"
 	camera_controller.camera = camera
@@ -97,6 +98,8 @@ func _process(delta: float) -> void:
 	var reveal: Array[Rect2] = []
 	for h in party:
 		reveal.append(WallFader.figure_rect(h.position))
+	for mo in monsters:
+		reveal.append(WallFader.figure_rect(mo.position))
 	for c in overlay.revealed_cells():
 		reveal.append(WallFader.floor_rect(c))
 	wall_fader.update(reveal, delta)
@@ -120,7 +123,7 @@ func apply_pending_rotation() -> void:
 	camera_controller.jump_to(IsoGrid.cell_to_world(focus))
 
 
-## True if a cell has floor, no wall, no closed door, no chest and no monster (actors are ignored).
+## True if a cell has floor, no wall, no closed door, no chest and no monster (heroes are ignored).
 func is_walkable(cell: Vector2i) -> bool:
 	if floor_layer.get_cell_source_id(cell) == -1:
 		return false
@@ -130,7 +133,11 @@ func is_walkable(cell: Vector2i) -> bool:
 	for n in entities.get_children():
 		if n is Door and n.get_cell() == cell and n.blocks_move():
 			return false
-		if (n is Chest or n is MonsterSpawn) and n.get_cell() == cell:
+		if n is Chest and n.get_cell() == cell:
+			return false
+		if n is Monster and n.cell == cell:
+			return false
+		if n is MonsterSpawn and n.monster == null and n.get_cell() == cell:
 			return false
 	return true
 
@@ -308,13 +315,31 @@ func _formation_cells(origin: Vector2i, n: int) -> Array[Vector2i]:
 	return out
 
 
-func _spawn_monster_previews() -> void:
+## A Monster actor at every MonsterSpawn whose scenes/actors/monsters/<monster_id>.tscn exists.
+func _spawn_monsters() -> void:
 	for n in entities.get_children():
-		if n is MonsterSpawn and n.preview:
-			var s := Sprite2D.new()
-			s.texture = n.preview
-			s.centered = false
-			s.offset = n.preview_offset
-			entities.add_child(s)
-			_placed[s] = [n.get_cell(), Vector2.ZERO]
-			s.position = IsoGrid.cell_to_world(n.get_cell())
+		if not n is MonsterSpawn:
+			continue
+		var path := "res://scenes/actors/monsters/%s.tscn" % n.monster_id
+		if not ResourceLoader.exists(path):
+			push_warning("%s: no scene for monster '%s'" % [name, n.monster_id])
+			if preview_missing_monsters and n.preview:
+				_spawn_preview_sprite(n)
+			continue
+		var m: Monster = (load(path) as PackedScene).instantiate()
+		m.group_id = n.group_id
+		entities.add_child(m)
+		m.facing = PartyStart.FACING_DIR[n.facing]
+		m.place_at(n.get_cell())
+		n.monster = m
+		monsters.append(m)
+
+
+func _spawn_preview_sprite(n: MonsterSpawn) -> void:
+	var s := Sprite2D.new()
+	s.texture = n.preview
+	s.centered = false
+	s.offset = n.preview_offset
+	entities.add_child(s)
+	_placed[s] = [n.get_cell(), Vector2.ZERO]
+	s.position = IsoGrid.cell_to_world(n.get_cell())

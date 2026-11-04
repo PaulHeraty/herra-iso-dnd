@@ -29,10 +29,12 @@ func _apply_class() -> void:
 		sprite.texture = load(sheet_path)
 		sprite.hframes = 5
 		sprite.vframes = 2
+		walk_sheet = true
 	else:
 		sprite.texture = load(SPRITE_DIR + key + ".png")
 		sprite.hframes = 1
 		sprite.vframes = 1
+		walk_sheet = false
 	sprite.frame = 0
 	if hero_name == "":
 		hero_name = key.capitalize()

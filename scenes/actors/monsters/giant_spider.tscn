@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/actors/monster.gd" id="1_m"]
+[ext_resource type="Texture2D" path="res://assets/sprites/monsters/giant_spider_sheet.png" id="2_t"]
+
+[node name="GiantSpider" type="Node2D"]
+script = ExtResource("1_m")
+shadow_radius = 11.0
+shadow_alpha = 0.6
+monster_id = "giant_spider"
+anims = {
+"attack": [0, 6, 4, 10.0, false],
+"death": [0, 12, 5, 8.0, false],
+"hurt": [0, 10, 2, 10.0, false],
+"idle": [0, 0, 2, 3.0, true],
+"walk": [0, 2, 4, 11.0, true]
+}
+back_row_offset = 1
+
+[node name="Sprite" type="Sprite2D" parent="."]
+texture = ExtResource("2_t")
+centered = false
+offset = Vector2(-20, -27)
+hframes = 17
+vframes = 2
