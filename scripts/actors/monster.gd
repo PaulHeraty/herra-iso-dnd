@@ -17,6 +17,11 @@ signal animation_finished(anim: String)
 @export var idle_extras: PackedStringArray = []
 ## Seconds between idle variants (random in this range).
 @export var idle_extra_every := Vector2(2.5, 6.0)
+## After the death animation the monster disappears: it waits death_fade_delay seconds on its
+## last frame, then fades out (shadow too). The Eye Tyrant's animation already dissolves it, so
+## its delay is 0. Set false to leave a corpse.
+@export var vanish_on_death := true
+@export var death_fade_delay := 1.0
 
 var group_id := 0
 var _anim := ""
@@ -63,6 +68,8 @@ func _process(delta: float) -> void:
 			_show_frame()
 			if not get_meta("death_signalled", false):
 				set_meta("death_signalled", true)
+				if vanish_on_death:
+					_fade_out()
 				animation_finished.emit(done)
 			return
 		animation_finished.emit(done)
@@ -104,3 +111,23 @@ func _update_facing_visual() -> void:
 		_back = screen.y < 0
 	if _anim != "":
 		_show_frame()
+
+
+func _on_hurt() -> void:
+	_flash()
+	play("hurt")
+	Sfx.play("monster_hurt")
+
+
+func _on_down() -> void:
+	_flash()
+	play("death")
+	Sfx.play("monster_death")
+
+
+func _fade_out() -> void:
+	var tw := create_tween()
+	if death_fade_delay > 0.0:
+		tw.tween_interval(death_fade_delay)
+		tw.tween_property(self, "modulate:a", 0.0, 0.6)
+	tw.tween_callback(func(): visible = false)

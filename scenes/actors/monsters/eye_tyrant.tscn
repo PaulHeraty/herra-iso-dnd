@@ -7,6 +7,7 @@
 script = ExtResource("1_m")
 shadow_radius = 9.0
 shadow_alpha = 0.5
+body_height = 20.0
 monster_id = "eye_tyrant"
 anims = {
 "attack": [2, 0, 6, 10.0, false],
@@ -16,6 +17,7 @@ anims = {
 "idle": [0, 0, 8, 8.0, true]
 }
 idle_extras = PackedStringArray("blink")
+death_fade_delay = 0.0
 
 [node name="Sprite" type="Sprite2D" parent="."]
 texture = ExtResource("2_t")

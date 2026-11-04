@@ -47,3 +47,16 @@ func _apply_class() -> void:
 	if hero_name == "":
 		hero_name = key.capitalize()
 	name = hero_name
+
+
+func _on_hurt() -> void:
+	_flash()
+	Sfx.play("hero_hurt")
+
+
+## 0 HP: unconscious (5e death saves come later). Lies down, greyed.
+func _on_down() -> void:
+	Sfx.play("hero_hurt", 0.0, 0.8)
+	var tw := create_tween()
+	tw.tween_property(sprite, "rotation_degrees", -90.0, 0.25)
+	sprite.modulate = Color(0.55, 0.55, 0.65)

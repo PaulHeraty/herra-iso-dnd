@@ -13,6 +13,8 @@ extends Node2D
 @export var shadow_alpha := 0.7
 ## Stat block (heroes: data/heroes/, monsters: data/monsters/). Current HP lives in `hp`.
 @export var stats: CreatureStats
+## Height of the figure's middle above its feet (aim point for numbers, arrows and rays).
+@export var body_height := 14.0
 
 const WALK_FRAME_TIME := 0.09     ## s per walk frame: 2 frames per orthogonal step
 const IDLE_DELAY := 0.06          ## stay in the walk cycle across the gap between steps
@@ -122,3 +124,44 @@ func display_name() -> String:
 
 func is_alive() -> bool:
 	return hp > 0
+
+
+## World position of the figure's middle (where hits land).
+func body_position() -> Vector2:
+	return position + Vector2(0, -body_height)
+
+
+## Lose hit points. Returns the damage actually taken. Plays hurt or down/death visuals.
+func take_damage(amount: int) -> int:
+	if hp <= 0:
+		return 0
+	var taken := mini(amount, hp)
+	hp -= taken
+	if hp <= 0:
+		_on_down()
+	else:
+		_on_hurt()
+	return taken
+
+
+func _flash(col := Color(1.0, 0.35, 0.35)) -> void:
+	var tw := create_tween()
+	sprite.modulate = col
+	tw.tween_property(sprite, "modulate", Color.WHITE, 0.3)
+
+
+## Brief lunge toward a point (melee attack), then back.
+func lunge(toward: Vector2, px := 4.0) -> Tween:
+	var d := (toward - position).normalized() * px
+	var tw := create_tween()
+	tw.tween_property(sprite, "position", d, 0.08)
+	tw.tween_property(sprite, "position", Vector2.ZERO, 0.12)
+	return tw
+
+
+func _on_hurt() -> void:
+	_flash()
+
+
+func _on_down() -> void:
+	_flash()

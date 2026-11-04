@@ -7,6 +7,7 @@
 script = ExtResource("1_m")
 shadow_radius = 11.0
 shadow_alpha = 0.6
+body_height = 10.0
 monster_id = "giant_spider"
 anims = {
 "attack": [0, 6, 4, 10.0, false],

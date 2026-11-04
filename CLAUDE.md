@@ -74,14 +74,17 @@ scripts/
   markers/              MapMarker base + one script per marker
   actors/               Actor base (grid cell, shadow, step tween) + Hero + Monster (stats, named sheet anims)
   rules/                Dice + DiceRoll (really random, seedable), CreatureStats + AttackData (stat-block Resources)
-  combat/combat_manager.gd  CombatManager: LOS detection -> combat, initiative, turn order, turn movement (DungeonMap.combat_reach: 1 sq per step incl. diagonals, pass allies, enemies block)
+  combat/combat_manager.gd  CombatManager: LOS detection -> combat, initiative, turns, movement, attacks (d20 vs AC, crits, riders, resist) (DungeonMap.combat_reach: 1 sq per step incl. diagonals, pass allies, enemies block)
   ui/combat_hud.gd      CombatHud: TEMPORARY banner + log (default font) until the real UI (step 7)
+  fx/                   FloatText (damage numbers), Projectile (arrow / beam)
+  audio/sfx.gd          Sfx.play("name"): static, self-creating player for assets/sfx/<name>.wav
 data/         heroes/*.tres (level 5 party), monsters/*.tres: CreatureStats + AttackData (from tools/godot/build_data.gd)
 tools/
   godot/      gen_art.gd -> build_tileset.gd -> build_test_room.gd   (run in that order, import between)
               gen_hero_sheets.gd (hero walk sheets), preview_hero_walk.gd + gif_writer.gd (GIF previews)
               build_data.gd (stat blocks -> data/), test_rules.gd (headless rules tests: PASS/FAIL)
               gen_spider.gd (procedural Giant Spider sheet: 3D-ish model projected to iso)
+              gen_sfx.gd (combat SFX: hits, miss, bow, hurt, hiss, ray, crit -> assets/sfx/)
   python/     concept-session generators (reference + future art/audio work)
 docs/previews/  concept mock-ups (.gdignore'd: Godot does not import them)
 _handoff/     original handoff package (.gdignore'd). Can be deleted once the user is happy.

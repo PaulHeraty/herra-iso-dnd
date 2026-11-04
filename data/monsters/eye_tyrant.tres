@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="CreatureStats" format=3 uid="uid://cn1lna3im5niu"]
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
 
-[ext_resource type="Script" uid="uid://b0q48jjgteqfo" path="res://scripts/rules/attack_data.gd" id="1_7qaar"]
-[ext_resource type="Script" uid="uid://4i1rpkjn0rd" path="res://scripts/rules/creature_stats.gd" id="2_axuvi"]
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_7qaar"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="2_axuvi"]
 
 [sub_resource type="Resource" id="Resource_nuxna"]
 resource_name = "Gaze Ray"
@@ -36,10 +36,14 @@ dex_score = 14
 con_score = 14
 int_score = 14
 wis_score = 14
+save_proficiencies = PackedStringArray("WIS")
 max_hp = 52
 hit_dice = "8d8+16"
 armor_class = 14
+resistances = PackedStringArray()
+immunities = PackedStringArray()
 speed_ft = 20
 fly = true
 sight_ft = 60
 attacks = Array[ExtResource("1_7qaar")]([SubResource("Resource_nuxna"), SubResource("Resource_ubvt5")])
+spell_slots = PackedInt32Array()

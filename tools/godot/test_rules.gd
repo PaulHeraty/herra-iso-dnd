@@ -105,5 +105,10 @@ func _test_stats() -> void:
 	check(et.mod("DEX") == 2 and et.save_bonus("DEX") == 2, "Eye Tyrant DEX +2 (mock-up)")
 	check(sp.attack_bonus(sp.attacks[0]) == 5 and sp.damage_expr(sp.attacks[0]) == "1d8+3", "Spider bite +5, 1d8+3")
 	check(sp.attacks[0].rider_dc == 11, "Spider poison DC 11")
+	# Packed-array exports once got dropped by an editor re-save: guard every one of them.
+	check(c.spell_slots == PackedInt32Array([4, 3, 2]), "Cleric slots 4/3/2 (%s)" % c.spell_slots)
+	check(c.save_bonus("WIS") == 7 and c.save_bonus("CHA") == 4, "Cleric WIS/CHA saves")
+	check(r.save_bonus("DEX") == 7 and w.save_bonus("INT") == 7, "Rogue DEX / Wizard INT saves")
+	check(et.save_bonus("WIS") == 4, "Eye Tyrant WIS save +4")
 	check(f.speed_cells() == 6 and et.speed_cells() == 4, "speed in cells")
 	check(et.sight_cells() == 12 and sp.sight_cells() == 8, "sight in cells")
