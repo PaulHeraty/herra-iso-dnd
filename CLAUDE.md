@@ -64,9 +64,11 @@ scripts/
   iso_grid.gd           IsoGrid: cell <-> world maths
   maps/dungeon_map.gd   DungeonMap: root script of every map (walk grid/A*, spawns party + overlay + controller)
   maps/grid_overlay.gd  GridOverlay: unlit tinted floor diamonds (cursor, path, later ranges/areas)
+  maps/camera_controller.gd  CameraController: follow leader, WASD/arrows + middle-drag pan, wheel zoom 1-3x, Space or C recentres, clamped to map
+  maps/wall_fader.gd    WallFader: walls in front of a hero fade to 55% (runtime alternative tiles 101-104)
   party/party_controller.gd  PartyController: exploration click-to-move, trail-follow, camera follow
   markers/              MapMarker base + one script per marker
-  actors/               Actor base (grid cell, shadow) + Hero
+  actors/               Actor base (grid cell, shadow, step tween) + Hero
 data/         (Phase 2+) Resources: classes, monsters, spells, items
 tools/
   godot/      gen_art.gd -> build_tileset.gd -> build_test_room.gd   (run in that order, import between)

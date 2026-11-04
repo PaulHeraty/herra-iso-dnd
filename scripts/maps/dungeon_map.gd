@@ -25,6 +25,8 @@ const NEIGHBOURS := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0
 var party: Array[Hero] = []
 var overlay: GridOverlay
 var controller: PartyController
+var camera_controller: CameraController
+var wall_fader: WallFader
 var _astar := AStarGrid2D.new()
 
 @onready var floor_layer: TileMapLayer = $Floor
@@ -39,16 +41,32 @@ func _ready() -> void:
 	add_child(overlay)
 	move_child(overlay, floor_layer.get_index() + 1)   # above the floor, below World
 	refresh_navigation()
+	wall_fader = WallFader.new(walls_layer, entities)
 	_spawn_party()
 	if preview_monsters:
 		_spawn_monster_previews()
+	camera_controller = CameraController.new()
+	camera_controller.name = "CameraController"
+	camera_controller.camera = camera
+	camera_controller.target = party[0] if not party.is_empty() else null
+	camera_controller.bounds = get_world_bounds()
+	add_child(camera_controller)
 	controller = PartyController.new()
 	controller.name = "PartyController"
 	controller.map = self
 	controller.overlay = overlay
-	controller.camera = camera
+	controller.camera = camera_controller
 	controller.party = party
 	add_child(controller)
+
+
+func _process(delta: float) -> void:
+	var reveal: Array[Rect2] = []
+	for h in party:
+		reveal.append(WallFader.figure_rect(h.position))
+	for c in overlay.revealed_cells():
+		reveal.append(WallFader.floor_rect(c))
+	wall_fader.update(reveal, delta)
 
 
 ## True if a cell has floor, no wall, no closed door, no chest and no monster (actors are ignored).
@@ -89,6 +107,20 @@ func find_path(from: Vector2i, to: Vector2i) -> Array[Vector2i]:
 	return out
 
 
+## World-space box around all floor and wall tiles (wall blocks reach 40 px up).
+func get_world_bounds() -> Rect2:
+	var r := Rect2()
+	var first := true
+	for layer: TileMapLayer in [floor_layer, walls_layer]:
+		var up := 40.0 if layer == walls_layer else 0.0
+		for c in layer.get_used_cells():
+			var p := IsoGrid.cell_to_world(c)
+			var cell_r := Rect2(p.x - 16, p.y - 8 - up, 32, 16 + up)
+			r = cell_r if first else r.merge(cell_r)
+			first = false
+	return r
+
+
 ## The actor standing on a cell, or null.
 func actor_at(cell: Vector2i) -> Actor:
 	for n in entities.get_children():
@@ -120,7 +152,7 @@ func _spawn_party() -> void:
 		entities.add_child(hero)
 		hero.place_at(cells[i])
 		party.append(hero)
-	camera.position = party[0].position
+
 
 
 ## n free walkable cells for the party: the FORMATION offsets where possible, else the nearest
