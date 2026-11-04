@@ -62,7 +62,9 @@ scenes/
   actors/     hero.tscn (Actor/Hero; spawned by DungeonMap at PartyStart)
 scripts/
   iso_grid.gd           IsoGrid: cell <-> world maths
-  maps/dungeon_map.gd   DungeonMap: root script of every map
+  maps/dungeon_map.gd   DungeonMap: root script of every map (walk grid/A*, spawns party + overlay + controller)
+  maps/grid_overlay.gd  GridOverlay: unlit tinted floor diamonds (cursor, path, later ranges/areas)
+  party/party_controller.gd  PartyController: exploration click-to-move, trail-follow, camera follow
   markers/              MapMarker base + one script per marker
   actors/               Actor base (grid cell, shadow) + Hero
 data/         (Phase 2+) Resources: classes, monsters, spells, items

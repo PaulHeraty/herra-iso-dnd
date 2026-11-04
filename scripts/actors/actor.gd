@@ -8,7 +8,9 @@ extends Node2D
 @export var shadow_radius := 7.0
 @export var shadow_alpha := 0.7
 
+## The cell the actor stands on, or is walking into.
 var cell := Vector2i.ZERO
+var _tween: Tween
 
 @onready var sprite: Sprite2D = $Sprite
 
@@ -17,6 +19,27 @@ var cell := Vector2i.ZERO
 func place_at(c: Vector2i) -> void:
 	cell = c
 	position = IsoGrid.cell_to_world(c)
+
+
+func is_moving() -> bool:
+	return _tween != null and _tween.is_running()
+
+
+## Walk to a neighbouring cell over `duration` seconds. `cell` changes at once (so pathing and
+## occupancy see where the actor is going). Returns the tween; await its `finished`.
+func step_to(c: Vector2i, duration: float) -> Tween:
+	cell = c
+	var target := IsoGrid.cell_to_world(c)
+	if not is_equal_approx(target.x, position.x):
+		sprite.flip_h = target.x < position.x   # until 4-way sprites exist: mirror to face left
+	if _tween:
+		_tween.kill()
+	_tween = create_tween()
+	_tween.tween_property(self, "position", target, duration)
+	# Little 1px hop per step so walking reads as walking until real walk cycles exist.
+	_tween.parallel().tween_property(sprite, "position:y", -1.0, duration * 0.5)
+	_tween.parallel().tween_property(sprite, "position:y", 0.0, duration * 0.5).set_delay(duration * 0.5)
+	return _tween
 
 
 func _draw() -> void:

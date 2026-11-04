@@ -23,6 +23,9 @@ const NEIGHBOURS := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0
 
 ## The heroes, leader first.
 var party: Array[Hero] = []
+var overlay: GridOverlay
+var controller: PartyController
+var _astar := AStarGrid2D.new()
 
 @onready var floor_layer: TileMapLayer = $Floor
 @onready var walls_layer: TileMapLayer = $World/Walls
@@ -31,12 +34,24 @@ var party: Array[Hero] = []
 
 
 func _ready() -> void:
+	overlay = GridOverlay.new()
+	overlay.name = "Overlay"
+	add_child(overlay)
+	move_child(overlay, floor_layer.get_index() + 1)   # above the floor, below World
+	refresh_navigation()
 	_spawn_party()
 	if preview_monsters:
 		_spawn_monster_previews()
+	controller = PartyController.new()
+	controller.name = "PartyController"
+	controller.map = self
+	controller.overlay = overlay
+	controller.camera = camera
+	controller.party = party
+	add_child(controller)
 
 
-## True if a cell has floor, no wall and no closed door.
+## True if a cell has floor, no wall, no closed door, no chest and no monster (actors are ignored).
 func is_walkable(cell: Vector2i) -> bool:
 	if floor_layer.get_cell_source_id(cell) == -1:
 		return false
@@ -46,7 +61,32 @@ func is_walkable(cell: Vector2i) -> bool:
 	for n in entities.get_children():
 		if n is Door and n.get_cell() == cell and n.blocks_move():
 			return false
+		if (n is Chest or n is MonsterSpawn) and n.get_cell() == cell:
+			return false
 	return true
+
+
+## Rebuild the walk grid from the tiles and doors. Call after opening/closing doors or editing tiles.
+func refresh_navigation() -> void:
+	_astar.region = floor_layer.get_used_rect().grow(1)
+	_astar.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
+	_astar.default_compute_heuristic = AStarGrid2D.HEURISTIC_OCTILE
+	_astar.default_estimate_heuristic = AStarGrid2D.HEURISTIC_OCTILE
+	_astar.update()
+	var r := _astar.region
+	for x in range(r.position.x, r.end.x):
+		for y in range(r.position.y, r.end.y):
+			_astar.set_point_solid(Vector2i(x, y), not is_walkable(Vector2i(x, y)))
+
+
+## Cells from `from` to `to` inclusive (diagonals allowed when not cutting a wall corner),
+## or [] if `to` can't be reached.
+func find_path(from: Vector2i, to: Vector2i) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	if not _astar.is_in_boundsv(from) or not _astar.is_in_boundsv(to) or _astar.is_point_solid(to):
+		return out
+	out.assign(_astar.get_id_path(from, to))
+	return out
 
 
 ## The actor standing on a cell, or null.
@@ -80,7 +120,7 @@ func _spawn_party() -> void:
 		entities.add_child(hero)
 		hero.place_at(cells[i])
 		party.append(hero)
-	camera.position = party[0].position.round()
+	camera.position = party[0].position
 
 
 ## n free walkable cells for the party: the FORMATION offsets where possible, else the nearest

@@ -1,7 +1,7 @@
-[gd_resource type="TileSet" format=3]
+[gd_resource type="TileSet" format=3 uid="uid://ywy5quhujd2q"]
 
-[ext_resource type="Texture2D" path="res://assets/tiles/floor_atlas.png" id="1_21tkw"]
-[ext_resource type="Texture2D" path="res://assets/tiles/wall_atlas.png" id="2_bufhf"]
+[ext_resource type="Texture2D" uid="uid://cjpkeoi3e7y5w" path="res://assets/tiles/floor_atlas.png" id="1_21tkw"]
+[ext_resource type="Texture2D" uid="uid://d20fwtlilp62p" path="res://assets/tiles/wall_atlas.png" id="2_bufhf"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_gounw"]
 resource_name = "Floor"
