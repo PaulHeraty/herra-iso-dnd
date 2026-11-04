@@ -60,3 +60,11 @@ func _on_down() -> void:
 	var tw := create_tween()
 	tw.tween_property(sprite, "rotation_degrees", -90.0, 0.25)
 	sprite.modulate = Color(0.55, 0.55, 0.65)
+
+
+## Back on their feet with `amount` HP (stand up, colour back).
+func revive(amount: int) -> void:
+	hp = clampi(amount, 1, stats.max_hp)
+	var tw := create_tween()
+	tw.tween_property(sprite, "rotation_degrees", 0.0, 0.25)
+	sprite.modulate = Color.WHITE

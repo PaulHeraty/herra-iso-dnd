@@ -13,6 +13,9 @@ extends Node
 signal combat_started
 signal turn_started(actor: Actor)
 signal combat_ended
+## All foes dead (xp = total XP of the monsters beaten) / all heroes down.
+signal victory(xp: int)
+signal defeat
 signal log_line(text: String)
 ## Short status for the HUD hint line (movement left, controls).
 signal status_changed(text: String)
@@ -35,6 +38,8 @@ var _hover := Vector2i(-99999, -99999)
 
 var map: DungeonMap
 var in_combat := false
+## The whole party is down: input stops; R restarts the map.
+var game_over := false
 var round_number := 0
 ## Initiative order and each combatant's roll.
 var order: Array[Actor] = []
@@ -57,6 +62,11 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if game_over:
+		if Input.is_key_pressed(KEY_R):
+			game_over = false
+			get_tree().reload_current_scene()
+		return
 	if not in_combat:
 		if _starting:
 			return
@@ -105,11 +115,24 @@ func _unhandled_input(event: InputEvent) -> void:
 ## Melee if in reach; otherwise ranged with line of sight (disadvantage at long range or with an
 ## enemy adjacent to the shooter).
 func attack_option(attacker: Actor, target: Actor) -> Dictionary:
-	var opts := attack_options_from(attacker, target, attacker.cell)
-	for o in opts:
-		if o.attack.kind == AttackData.Kind.MELEE:
-			return o
-	return opts[0] if not opts.is_empty() else {}
+	var best := {}
+	var best_ev := -1.0
+	for o in attack_options_from(attacker, target, attacker.cell):
+		var ev := expected_damage(attacker, target, o)
+		if ev > best_ev:
+			best_ev = ev
+			best = o
+	return best
+
+
+## Expected damage of an attack option (hit chance x average damage, riders included).
+func expected_damage(attacker: Actor, target: Actor, o: Dictionary) -> float:
+	var a: AttackData = o.attack
+	var p := hit_chance(attacker.stats.attack_bonus(a), target.stats.armor_class, o.adv)
+	var avg := maxf(1.0, Dice.average(attacker.stats.damage_expr(a)))
+	if a.rider_damage != "":
+		avg += Dice.average(a.rider_damage) * 0.75       # save for half, roughly
+	return p * avg
 
 
 ## Every attack `attacker` could make on `target` if it stood on `from`: [{attack, adv, note}].
@@ -177,7 +200,8 @@ func perform_attack(attacker: Actor, target: Actor, opt: Dictionary) -> void:
 		if crit:
 			expr = Dice.crit(expr)
 		var dr := Dice.roll(expr)
-		var dmg := _adjust(maxi(0, dr.total), a.damage_type, target)
+		# House rule: a hit always deals at least 1 damage (before resistance/immunity).
+		var dmg := _adjust(maxi(1, dr.total), a.damage_type, target)
 		var parts := "%d %s (%s)" % [dmg, a.damage_type, dr.describe()]
 		var short := ""
 		if a.rider_damage != "":
@@ -261,7 +285,12 @@ func _enemies_adjacent_at(who: Actor, cell: Vector2i) -> int:
 
 
 func _victory_pause() -> void:
-	await get_tree().create_timer(1.2).timeout
+	await get_tree().create_timer(2.2).timeout
+	# Simplified until death saves + healing (Phase 3): the fallen come to with 1 HP.
+	for h in map.party:
+		if not h.is_alive():
+			h.revive(1)
+			_say("%s comes to (1 HP)." % h.display_name())
 	end_combat()
 
 
@@ -282,15 +311,28 @@ func _check_end() -> bool:
 	var foes := order.filter(func(x): return x is Monster and x.is_alive())
 	var heroes := order.filter(func(x): return x is Hero and x.is_alive())
 	if foes.is_empty():
-		_say("Victory!")
+		var xp := 0
+		for x in order:
+			if x is Monster:
+				xp += x.stats.xp
+		map.party_xp += xp
+		_say("Victory! +%d XP" % xp)
 		current = null
 		_clear_move_overlay()
+		status_changed.emit("")
+		Sfx.play("total_sting")
+		victory.emit(xp)
 		_victory_pause()
 		return true
 	if heroes.is_empty():
 		_say("The party has fallen...")
 		current = null
+		game_over = true
 		_clear_move_overlay()
+		map.overlay.clear("active")
+		status_changed.emit("")
+		Sfx.play("fail_sting")
+		defeat.emit()
 		return true
 	return false
 
@@ -388,6 +430,8 @@ func _next_turn() -> void:
 	map.camera_controller.recenter()
 	_pulse_t = 0.0
 	_clear_move_overlay()
+	if current is Hero:
+		Sfx.play("turn_chime")
 	turn_started.emit(current)
 	if current is Monster:
 		_emit_status()
@@ -491,14 +535,14 @@ func _emit_status() -> void:
 
 func _monster_turn(m: Monster) -> void:
 	await get_tree().create_timer(MONSTER_TURN_PAUSE * 0.5).timeout
-	if not in_combat or current != m:
+	if not in_combat or current != m or game_over:
 		return
 	var plan := plan_monster_turn(m)
 	var path: Array[Vector2i] = []
 	path.assign(plan.path)
 	if not path.is_empty():
 		await move_along(m, path)
-		if not in_combat or current != m:
+		if not in_combat or current != m or game_over:
 			return
 	if plan.target:
 		var opts := attack_options_from(m, plan.target, m.cell)
@@ -543,12 +587,9 @@ func plan_monster_turn(m: Monster) -> Dictionary:
 		for h: Hero in heroes:
 			for o in attack_options_from(m, h, c):
 				var a: AttackData = o.attack
-				var p := hit_chance(m.stats.attack_bonus(a), h.stats.armor_class, o.adv)
-				var avg := Dice.average(m.stats.damage_expr(a))
-				if a.rider_damage != "":
-					avg += Dice.average(a.rider_damage) * 0.75       # save for half, roughly
-				var score := p * avg
-				if p * avg >= h.hp * 0.8:
+				var ev := expected_damage(m, h, o)
+				var score := ev
+				if ev >= h.hp * 0.8:
 					score += AI_FINISH_BONUS
 				score -= reach[c].cost * AI_STEP_COST
 				if a.kind == AttackData.Kind.RANGED:

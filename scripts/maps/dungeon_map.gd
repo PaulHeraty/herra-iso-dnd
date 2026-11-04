@@ -35,6 +35,8 @@ const WALL_ROW_CAP := 3
 var party: Array[Hero] = []
 ## Monsters spawned from MonsterSpawn markers.
 var monsters: Array[Monster] = []
+## XP the party has earned (levelling comes in Phase 5).
+var party_xp := 0
 var overlay: GridOverlay
 var controller: PartyController
 var camera_controller: CameraController

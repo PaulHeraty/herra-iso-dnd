@@ -172,7 +172,7 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
 - [x] **Phase 1 — Walking around:** iso map, camera, click-to-move with pathfinding (AStarGrid2D),
   y-sorting/depth, torch lighting, shadows under figures. Also done: wall fading, Q/E view rotation,
   back-face torches, hero 4-facing walk sheets. Next: Phase 2 (combat).
-- [ ] **Phase 2 — Combat:** exploration → combat switch, initiative, move + action, d20 vs AC, damage,
+- [x] **Phase 2 — Combat:** exploration → combat switch, initiative, move + action, d20 vs AC, damage,
   HP/death, simple monster AI, combat UI, damage numbers. Steps:
   1. Rules core: dice roller, hero + monster stat Resources in `data/` (SRD, level 5), headless tests.
   2. Monsters as actors: Eye Tyrant (existing sheet) + Giant Spider (new art), replacing previews.
@@ -183,6 +183,9 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
   7. Combat UI: portraits, HP bars, slot pips, action menu (Spell/Item greyed), combat log, pixel font.
   8. End of combat: victory -> exploration; party down -> game-over placeholder.
   Full dice-roll animation scene comes with Fireball in Phase 3.
+  Done. Simplifications to revisit: downed heroes come to with 1 HP after a victory (no death saves
+  yet), a hit always deals at least 1 damage (house rule), unlimited thrown weapons, Large spider takes 1 cell, Web/recharge/conditions not used,
+  slot pips not spent, portraits are walk-sprite crops. R restarts the map after a party wipe.
 - [ ] **Phase 3 — Spells & abilities:** data-driven (Resources); targeting (single, 3×3, line, cone,
   self, ally); spell slots, rests. Mage: Fireball, Magic Missile, Shield. Cleric: Cure Wounds, Bless,
   Sacred Flame. Rogue: Sneak Attack, Hide. Fighter: Second Wind, Shove. VFX + SFX hooks.

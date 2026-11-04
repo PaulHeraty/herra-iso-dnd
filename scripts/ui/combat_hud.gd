@@ -70,6 +70,9 @@ func _ready() -> void:
 	combat.status_changed.connect(func(t: String): _hint.text = t)
 	combat.combat_started.connect(_on_started)
 	combat.combat_ended.connect(_on_ended)
+	combat.victory.connect(_on_victory)
+	combat.defeat.connect(_on_defeat)
+	_build_end_screen()
 	visible = false
 
 
@@ -302,3 +305,60 @@ func _on_ended() -> void:
 	_lines.clear()
 	_log.text = ""
 	combat.map.camera_controller.ui_bottom = 0
+
+
+# --- end of combat -------------------------------------------------------------------------
+
+var _end_layer: CanvasLayer
+var _end_dim: ColorRect
+var _end_big: Label
+var _end_small: Label
+
+
+func _build_end_screen() -> void:
+	_end_layer = CanvasLayer.new()
+	_end_layer.layer = 12
+	add_sibling.call_deferred(_end_layer)
+	var root := Control.new()
+	root.size = SCREEN
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.theme = _make_theme()
+	_end_layer.add_child(root)
+	_end_dim = ColorRect.new()
+	_end_dim.size = SCREEN
+	_end_dim.color = Color(0.02, 0.01, 0.04, 0.6)
+	_end_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_end_dim)
+	_end_big = _label(root, Vector2.ZERO, COL_BANNER)
+	_end_small = _label(root, Vector2.ZERO, COL_TEXT)
+	_end_layer.visible = false
+
+
+## Centre a label horizontally at height y, drawn at `scale_k`x.
+func _centre(l: Label, text: String, y: float, scale_k: float) -> void:
+	l.text = text
+	l.scale = Vector2(scale_k, scale_k)
+	var w := FONT.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x * scale_k
+	l.position = Vector2(roundf((SCREEN.x - w) / 2.0), y)
+
+
+func _on_victory(xp: int) -> void:
+	_end_dim.visible = false
+	_end_big.add_theme_color_override("font_color", COL_BANNER)
+	_centre(_end_big, "VICTORY!", 120, 3)
+	_centre(_end_small, "+%d XP" % xp, 160, 1)
+	_end_layer.visible = true
+	var r := _end_big.get_parent() as Control
+	r.modulate.a = 1.0
+	var tw := create_tween()
+	tw.tween_interval(1.8)
+	tw.tween_property(r, "modulate:a", 0.0, 0.4)
+	tw.tween_callback(func(): _end_layer.visible = false; r.modulate.a = 1.0)
+
+
+func _on_defeat() -> void:
+	_end_dim.visible = true
+	_end_big.add_theme_color_override("font_color", COL_LOG_BAD)
+	_centre(_end_big, "THE PARTY HAS FALLEN", 130, 2)
+	_centre(_end_small, "Press R to try again", 164, 1)
+	_end_layer.visible = true
