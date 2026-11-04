@@ -39,6 +39,8 @@ var overlay: GridOverlay
 var controller: PartyController
 var camera_controller: CameraController
 var wall_fader: WallFader
+var combat: CombatManager
+var hud: CombatHud
 ## Visible, rotated copies of the Floor / Walls layers.
 var floor_view: TileMapLayer
 var walls_view: TileMapLayer
@@ -85,6 +87,14 @@ func _ready() -> void:
 	controller.camera = camera_controller
 	controller.party = party
 	add_child(controller)
+	combat = CombatManager.new()
+	combat.name = "CombatManager"
+	combat.map = self
+	add_child(combat)
+	hud = CombatHud.new()
+	hud.name = "CombatHud"
+	hud.combat = combat
+	add_child(hud)
 	_apply_view()
 
 
@@ -182,6 +192,42 @@ func get_world_bounds() -> Rect2:
 			r = cell_r if first else r.merge(cell_r)
 			first = false
 	return r
+
+
+## 5e grid distance in cells (diagonals count as one square, like moving).
+static func grid_distance(a: Vector2i, b: Vector2i) -> int:
+	return maxi(absi(a.x - b.x), absi(a.y - b.y))
+
+
+## True if a cell blocks sight: a wall, or a closed door.
+func blocks_sight(cell: Vector2i) -> bool:
+	if walls_layer.get_cell_source_id(cell) != -1:
+		return true
+	for n in entities.get_children():
+		if n is Door and n.get_cell() == cell and n.blocks_move():
+			return true
+	return false
+
+
+## Clear line between two cell centres (endpoints excluded): sampled every 1/8 cell, so a line
+## that only grazes a wall corner still counts as clear.
+func has_line_of_sight(a: Vector2i, b: Vector2i) -> bool:
+	var pa := Vector2(a) + Vector2(0.5, 0.5)
+	var pb := Vector2(b) + Vector2(0.5, 0.5)
+	var n := int(ceil(pa.distance_to(pb) * 8.0))
+	for i in range(1, n):
+		var p := pa.lerp(pb, float(i) / n)
+		var c := Vector2i(floori(p.x), floori(p.y))
+		if c == a or c == b:
+			continue
+		# skip samples within a hair of a cell edge (corner grazing)
+		var fx := p.x - c.x
+		var fy := p.y - c.y
+		if minf(fx, 1.0 - fx) < 0.02 or minf(fy, 1.0 - fy) < 0.02:
+			continue
+		if blocks_sight(c):
+			return false
+	return true
 
 
 ## The actor standing on a cell, or null.

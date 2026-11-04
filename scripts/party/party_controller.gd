@@ -20,10 +20,27 @@ var party: Array[Hero] = []
 var _path: Array[Vector2i] = []
 var _walking := false
 var _hover := Vector2i(-99999, -99999)
+## False while combat runs (CombatManager takes over input).
+var enabled := true:
+	set(v):
+		enabled = v
+		if not v:
+			stop()
+			for layer in ["path", "destination", "cursor"]:
+				overlay.clear(layer)
+
+
+## Stop walking after the step in progress.
+func stop() -> void:
+	_path.clear()
+
+
+func is_walking() -> bool:
+	return _walking
 
 
 func _process(_delta: float) -> void:
-	if party.is_empty():
+	if party.is_empty() or not enabled:
 		return
 	var c := IsoGrid.world_to_cell(map.get_local_mouse_position())
 	if c != _hover:
@@ -32,7 +49,7 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if party.is_empty():
+	if party.is_empty() or not enabled:
 		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var target := IsoGrid.world_to_cell(map.get_local_mouse_position())
@@ -69,6 +86,8 @@ func _walk() -> void:
 
 
 func _refresh_overlay() -> void:
+	if not enabled:
+		return
 	var preview: Array[Vector2i] = []
 	if _walking:
 		preview = _path

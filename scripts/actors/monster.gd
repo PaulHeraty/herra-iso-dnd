@@ -10,7 +10,6 @@ extends Actor
 signal animation_finished(anim: String)
 
 @export var monster_id := ""
-@export var stats: CreatureStats
 @export var anims := {
 	"idle": [0, 0, 1, 4.0, true],
 }

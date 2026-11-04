@@ -74,6 +74,8 @@ scripts/
   markers/              MapMarker base + one script per marker
   actors/               Actor base (grid cell, shadow, step tween) + Hero + Monster (stats, named sheet anims)
   rules/                Dice + DiceRoll (really random, seedable), CreatureStats + AttackData (stat-block Resources)
+  combat/combat_manager.gd  CombatManager: LOS detection -> combat, initiative, turn order (signals for UI)
+  ui/combat_hud.gd      CombatHud: TEMPORARY banner + log (default font) until the real UI (step 7)
 data/         heroes/*.tres (level 5 party), monsters/*.tres: CreatureStats + AttackData (from tools/godot/build_data.gd)
 tools/
   godot/      gen_art.gd -> build_tileset.gd -> build_test_room.gd   (run in that order, import between)

@@ -11,6 +11,8 @@ extends Node2D
 ## Shadow ellipse radius (x) in px; it's squashed vertically like the iso floor.
 @export var shadow_radius := 7.0
 @export var shadow_alpha := 0.7
+## Stat block (heroes: data/heroes/, monsters: data/monsters/). Current HP lives in `hp`.
+@export var stats: CreatureStats
 
 const WALK_FRAME_TIME := 0.09     ## s per walk frame: 2 frames per orthogonal step
 const IDLE_DELAY := 0.06          ## stay in the walk cycle across the gap between steps
@@ -32,11 +34,15 @@ var _tween: Tween
 var _anim_t := 0.0
 var _still_t := 0.0
 var _row := 0
+## Current hit points (set to stats.max_hp on spawn).
+var hp := 0
 
 @onready var sprite: Sprite2D = $Sprite
 
 
 func _ready() -> void:
+	if stats:
+		hp = stats.max_hp
 	_update_facing_visual()
 
 
@@ -108,3 +114,11 @@ func _draw() -> void:
 	draw_circle(Vector2.ZERO, shadow_radius + 1.5, Color(0, 0, 0, shadow_alpha * 0.5))
 	draw_circle(Vector2.ZERO, shadow_radius, Color(0, 0, 0, shadow_alpha))
 	draw_set_transform(Vector2.ZERO)
+
+
+func display_name() -> String:
+	return stats.display_name if stats else String(name)
+
+
+func is_alive() -> bool:
+	return hp > 0

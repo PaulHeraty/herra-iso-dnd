@@ -7,6 +7,13 @@ extends Actor
 enum HeroClass { FIGHTER, ROGUE, CLERIC, MAGE }
 
 const SPRITE_DIR := "res://assets/sprites/heroes/"
+## Stat block per class (the Mage is a 5e Wizard).
+const STATS := {
+	HeroClass.FIGHTER: "res://data/heroes/fighter.tres",
+	HeroClass.ROGUE: "res://data/heroes/rogue.tres",
+	HeroClass.CLERIC: "res://data/heroes/cleric.tres",
+	HeroClass.MAGE: "res://data/heroes/wizard.tres",
+}
 
 @export var hero_class := HeroClass.FIGHTER:
 	set(v):
@@ -36,6 +43,7 @@ func _apply_class() -> void:
 		sprite.vframes = 1
 		walk_sheet = false
 	sprite.frame = 0
+	stats = load(STATS[hero_class])
 	if hero_name == "":
 		hero_name = key.capitalize()
 	name = hero_name

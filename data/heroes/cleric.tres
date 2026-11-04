@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="CreatureStats" format=3]
+[gd_resource type="Resource" script_class="CreatureStats" format=3 uid="uid://daww1do2gonhh"]
 
-[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_n7vcb"]
-[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="2_1gmxv"]
+[ext_resource type="Script" uid="uid://b0q48jjgteqfo" path="res://scripts/rules/attack_data.gd" id="1_n7vcb"]
+[ext_resource type="Script" uid="uid://4i1rpkjn0rd" path="res://scripts/rules/creature_stats.gd" id="2_1gmxv"]
 
 [sub_resource type="Resource" id="Resource_0jo8y"]
 resource_name = "Mace"
@@ -20,13 +20,9 @@ str_score = 14
 con_score = 14
 wis_score = 18
 cha_score = 12
-save_proficiencies = PackedStringArray("WIS", "CHA")
 max_hp = 38
 hit_dice = "5d8"
 armor_class = 18
-resistances = PackedStringArray()
-immunities = PackedStringArray()
 proficiency_bonus = 3
 attacks = Array[ExtResource("1_n7vcb")]([SubResource("Resource_0jo8y")])
 spell_ability = "WIS"
-spell_slots = PackedInt32Array(4, 3, 2)
