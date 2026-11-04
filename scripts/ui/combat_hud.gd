@@ -227,7 +227,34 @@ func _build_panel(root: Control) -> void:
 				pips.append({rect = pip, level = lvl, index = s})
 				px += 8
 			px += 4
-		_cards.append({hero = h, panel = card, pic = pic, hp = hp_l, cond = cond_l, bar = bar, bar_w = back.size.x, pips = pips})
+		# Condition icons (hover: name + effect) and death-save pips.
+		var icons: Array[TextureRect] = []
+		for k in 7:
+			var ic := TextureRect.new()
+			var at2 := AtlasTexture.new()
+			at2.atlas = Condition.ICONS
+			at2.region = Rect2(0, 0, Condition.ICON_SIZE, Condition.ICON_SIZE)
+			ic.texture = at2
+			ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			ic.stretch_mode = TextureRect.STRETCH_KEEP
+			ic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			ic.position = Vector2(43 + k * 10, 28)
+			ic.size = Vector2(9, 9)
+			ic.mouse_filter = Control.MOUSE_FILTER_PASS
+			ic.visible = false
+			ic.mouse_entered.connect(func(): _hint.text = ic.tooltip_text)
+			card.add_child(ic)
+			icons.append(ic)
+		var dpips: Array[ColorRect] = []
+		for k in 6:
+			var dp := ColorRect.new()
+			dp.position = Vector2(54 + k * 5 + (4 if k >= 3 else 0), 31)
+			dp.size = Vector2(4, 3)
+			dp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			dp.visible = false
+			card.add_child(dp)
+			dpips.append(dp)
+		_cards.append({hero = h, panel = card, pic = pic, hp = hp_l, cond = cond_l, bar = bar, bar_w = back.size.x, pips = pips, icons = icons, dpips = dpips})
 	# Action menu.
 	var mx := 4 + 4 * (card_w + 3)
 	var labels := [["attack", "Attack"], ["spell", "Spell"], ["item", "Item"], ["wait", "Wait"]]
@@ -246,6 +273,7 @@ func _build_panel(root: Control) -> void:
 	_buttons.attack.pressed.connect(_open_weapons)
 	_buttons.spell.pressed.connect(_open_powers)
 	_build_popup(root)
+	_build_reaction(root)
 	_buttons.item.tooltip_text = "Items arrive in Phase 4"
 
 
@@ -267,10 +295,24 @@ func _update_card(card: Dictionary, cur: Actor) -> void:
 	card.panel.add_theme_stylebox_override("panel", _box(COL_CARD, edge, width))
 	card.hp.text = "%d/%d" % [h.hp, h.stats.max_hp]
 	card.bar.size.x = roundf(card.bar_w * clampf(float(h.hp) / h.stats.max_hp, 0.0, 1.0))
-	var conds: PackedStringArray = []
-	for c in h.conditions:
-		conds.append(Condition.display(c.id))
-	card.cond.text = ("DEAD" if h.dead else "DOWN") if not h.is_alive() else ", ".join(conds)
+	card.cond.text = "DEAD" if h.dead else ""
+	var ids := Condition.shown_ids(h) if not h.dead else PackedStringArray()
+	var dying := CombatManager._is_dying(h)
+	for k in card.icons.size():
+		var ic: TextureRect = card.icons[k]
+		# while dying the icon row holds just the heart, followed by the death-save pips
+		var show: bool = k < ids.size() and (not dying or k == 0)
+		ic.visible = show
+		if show:
+			(ic.texture as AtlasTexture).region = Condition.icon_rect(ids[k])
+			ic.tooltip_text = Condition.tooltip(h, ids[k])
+	for k in card.dpips.size():
+		var dp: ColorRect = card.dpips[k]
+		dp.visible = dying
+		if k < 3:
+			dp.color = Color8(110, 210, 120) if k < h.death_successes else Color8(36, 60, 40)
+		else:
+			dp.color = Color8(220, 60, 60) if (k - 3) < h.death_failures else Color8(70, 26, 30)
 	card.pic.modulate = Color.WHITE if h.is_alive() else Color(0.45, 0.45, 0.55)
 	for p: Dictionary in card.pips:
 		var left: int = h.slots_left[p.level] if p.level < h.slots_left.size() else 0
@@ -515,6 +557,13 @@ func _on_card_input(event: InputEvent, h: Hero) -> void:
 
 ## Esc or a click outside the popup (on the map) closes it.
 func _unhandled_input(event: InputEvent) -> void:
+	if reaction_open() and event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode in [KEY_Y, KEY_ENTER, KEY_KP_ENTER]:
+			_answer(true)
+		elif event.keycode in [KEY_N, KEY_ESCAPE]:
+			_answer(false)
+		get_viewport().set_input_as_handled()
+		return
 	if not _popup or not _popup.visible:
 		return
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
@@ -523,3 +572,49 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseButton and event.pressed:
 		_close_popup()
 		get_viewport().set_input_as_handled()    # the click only closes the menu
+
+
+# --- reaction prompt (Shield) -------------------------------------------------------------------
+
+var _react: Panel
+var _react_text: Label
+
+
+func _build_reaction(root: Control) -> void:
+	_react = Panel.new()
+	_react.add_theme_stylebox_override("panel", _box(COL_BG, COL_ACTIVE))
+	_react.size = Vector2(300, 64)
+	_react.position = ((SCREEN - _react.size) / 2.0 - Vector2(0, 30)).round()
+	_react.mouse_filter = Control.MOUSE_FILTER_STOP
+	_react.visible = false
+	root.add_child(_react)
+	var title := _label(_react, Vector2(6, 4), COL_BANNER)
+	title.text = "REACTION"
+	_react_text = _label(_react, Vector2(6, 15), COL_TEXT)
+	_react_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_react_text.size = Vector2(288, 0)
+	for i in 2:
+		var b := Button.new()
+		b.text = "Yes (Y)" if i == 0 else "No (N)"
+		b.focus_mode = Control.FOCUS_NONE
+		b.position = Vector2(_react.size.x - 118 + i * 58, _react.size.y - 17)
+		_react.add_child(b)
+		b.pressed.connect(_answer.bind(i == 0))
+		b.set_deferred("size", Vector2(54, 13))
+	combat.reaction_prompt.connect(_on_reaction_prompt)
+
+
+func _on_reaction_prompt(text: String) -> void:
+	_close_popup()
+	_react_text.text = text
+	_react.visible = true
+	Sfx.play("ui_select")
+
+
+func _answer(yes: bool) -> void:
+	_react.visible = false
+	combat.answer_reaction(yes)
+
+
+func reaction_open() -> bool:
+	return _react != null and _react.visible

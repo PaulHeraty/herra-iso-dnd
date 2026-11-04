@@ -65,6 +65,9 @@ func _on_down() -> void:
 ## Back on their feet with `amount` HP (stand up, colour back).
 func revive(amount: int) -> void:
 	hp = clampi(amount, 1, stats.max_hp)
+	death_successes = 0
+	death_failures = 0
+	stable = false
 	_on_revived()
 
 
@@ -72,3 +75,9 @@ func _on_revived() -> void:
 	var tw := create_tween()
 	tw.tween_property(sprite, "rotation_degrees", 0.0, 0.25)
 	sprite.modulate = Color.WHITE
+
+
+## Three failed death saves (or massive damage): stays down for good, darker.
+func on_died() -> void:
+	sprite.rotation_degrees = -90.0
+	sprite.modulate = Color(0.32, 0.3, 0.36)

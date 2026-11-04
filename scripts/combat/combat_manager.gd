@@ -19,6 +19,9 @@ signal defeat
 signal log_line(text: String)
 ## Short status for the HUD hint line (movement left, controls).
 signal status_changed(text: String)
+## A reaction could change the outcome: the HUD asks the player and calls answer_reaction().
+signal reaction_prompt(text: String)
+signal reaction_answered(yes: bool)
 
 const DETECT_INTERVAL := 0.2
 const MONSTER_TURN_PAUSE := 0.8     ## step 3 placeholder: monsters "wait" this long
@@ -91,6 +94,8 @@ func _process(delta: float) -> void:
 			return
 		var c := IsoGrid.world_to_cell(map.get_local_mouse_position())
 		if map.hud and map.hud.mouse_over_ui():
+			c = Vector2i(-99999, -99999)
+		if map.hud and map.hud.reaction_open():
 			c = Vector2i(-99999, -99999)
 		if targeting:
 			if c != _hover:
@@ -215,6 +220,9 @@ func perform_attack(attacker: Actor, target: Actor, opt: Dictionary) -> void:
 	var ac := target.stats.armor_class + Condition.ac_bonus(target)
 	var crit := roll.is_crit()
 	var hit := crit or (not roll.is_fumble() and roll.total >= ac)
+	if hit and not crit and await _offer_shield(target, attacker, a.name, roll.total, ac):
+		ac += 5
+		hit = false
 	var adv_txt := "" if adv == 0 else (" (disadvantage%s)" % (": " + opt.note if opt.note != "" else "") if adv < 0 else " (advantage)")
 	adv_txt += bless_txt
 	_detail("%s attacks %s with %s: %s vs AC %d%s - %s" % [attacker.display_name(), target.display_name(),
@@ -243,7 +251,7 @@ func perform_attack(attacker: Actor, target: Actor, opt: Dictionary) -> void:
 			parts += " + %d %s (%s; %s save %s vs DC %d: %s)" % [rd, a.rider_damage_type, rr.describe(),
 					a.rider_save, save.describe(), a.rider_dc, "half" if saved else "failed"]
 			short = " (+%s)" % a.rider_damage_type
-		target.take_damage(dmg)
+		apply_damage(target, dmg)
 		_detail("  %s takes %s." % [target.display_name(), parts])
 		_say("%s %s %s: %d%s" % [attacker.display_name(), "CRITS" if crit else "hits", target.display_name(), dmg, short])
 		Sfx.play("crit_hit" if crit else _hit_sound(a.damage_type))
@@ -371,7 +379,7 @@ func _victory_pause() -> void:
 	await get_tree().create_timer(2.2).timeout
 	# Simplified until death saves + healing (Phase 3): the fallen come to with 1 HP.
 	for h in map.party:
-		if not h.is_alive():
+		if not h.is_alive() and not h.dead:
 			h.revive(1)
 			_say("%s comes to (1 HP)." % h.display_name())
 	end_combat()
@@ -502,7 +510,8 @@ func _next_turn() -> void:
 			_turn_index = 0
 			round_number += 1
 			_say("-- Round %d --" % round_number)
-		if order[_turn_index].is_alive():
+		var who := order[_turn_index]
+		if who.is_alive() or (who is Hero and _is_dying(who)):
 			break
 	current = order[_turn_index]
 	move_left = current.stats.speed_cells()
@@ -524,6 +533,8 @@ func _next_turn() -> void:
 	if current is Monster:
 		_emit_status()
 		_monster_turn(current)
+	elif _is_dying(current):
+		_death_save_turn(current)
 	else:
 		_show_range()
 
@@ -1157,7 +1168,7 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 	match p.resolve:
 		SpellData.Resolve.ATTACK:
 			for a in affected:
-				_spell_attack(caster, p, slot, a, char_level)
+				await _spell_attack(caster, p, slot, a, char_level)
 		SpellData.Resolve.SAVE:
 			var dmg_roll: DiceRoll = Dice.roll(p.damage_for(char_level, slot)) if p.damage != "" else null
 			if dmg_roll:
@@ -1216,6 +1227,9 @@ func _spell_attack(caster: Actor, p: SpellData, slot: int, target: Actor, char_l
 	var ac := target.stats.armor_class + Condition.ac_bonus(target)
 	var crit := r.is_crit()
 	var hit := crit or (not r.is_fumble() and r.total >= ac)
+	if hit and not crit and await _offer_shield(target, caster, p.display_name, r.total, ac):
+		ac += 5
+		hit = false
 	_detail("%s: %s vs AC %d - %s" % [p.display_name, r.describe(), ac, "crit" if crit else ("hit" if hit else "miss")])
 	if not hit:
 		_say("%s misses %s" % [caster.display_name(), target.display_name()])
@@ -1295,7 +1309,7 @@ func _contest(caster: Actor, p: SpellData, target: Actor) -> void:
 ## Damage + number + sound + down/slain message.
 func _deal(src: Actor, target: Actor, amount: int, dtype: String, crit: bool, note := "", by := "") -> void:
 	var dmg := _adjust(maxi(1, amount), dtype, target)
-	target.take_damage(dmg)
+	apply_damage(target, dmg)
 	_say("%s %s %s: %d%s" % [by if by != "" else src.display_name(), "CRITS" if crit else "hits", target.display_name(), dmg, note])
 	Sfx.play("crit_hit" if crit else _hit_sound(dtype))
 	FloatText.spawn(map, target.body_position() + Vector2(0, -10), ("CRIT %d" if crit else "%d") % dmg,
@@ -1347,3 +1361,133 @@ static func _unique(arr: Array[Actor]) -> Array[Actor]:
 		if not a in out:
 			out.append(a)
 	return out
+
+
+# --- damage, concentration, death saves (Phase 3 step 4) --------------------------------------
+
+## All combat damage goes through here: concentration saves, dropping to 0, death-save failures
+## for a hero already down, and massive damage (damage left over >= max HP kills outright).
+func apply_damage(target: Actor, dmg: int) -> void:
+	if not target.is_alive():
+		if target is Hero and not target.dead:
+			if dmg >= target.stats.max_hp:
+				_die(target, "massive damage")
+			else:
+				target.stable = false
+				_death_fail(target, 1, "takes damage while down")
+		return
+	var before := target.hp
+	target.take_damage(dmg)
+	if target.concentrating:
+		if not target.is_alive():
+			end_concentration(target)
+		else:
+			var dc := maxi(10, dmg / 2)
+			var s := roll_save(target, "CON")
+			_detail("  %s concentration (CON) save: %s vs DC %d" % [target.display_name(), s.describe(), dc])
+			if s.total < dc:
+				_say("%s loses concentration!" % target.display_name())
+				end_concentration(target)
+	if not target.is_alive() and target is Hero:
+		target.death_successes = 0
+		target.death_failures = 0
+		target.stable = false
+		if dmg - before >= target.stats.max_hp:
+			_die(target, "massive damage")
+
+
+static func _is_dying(h: Actor) -> bool:
+	return h.hp <= 0 and not h.dead and not h.stable
+
+
+## A downed hero's turn: roll the death save (d20: 10+ success, 1 = two failures, 20 = back up
+## with 1 HP). 3 successes = stable, 3 failures = dead.
+func _death_save_turn(h: Hero) -> void:
+	status_changed.emit("%s is dying: death saving throw..." % h.display_name())
+	await get_tree().create_timer(0.7).timeout
+	if not in_combat or current != h:
+		return
+	var r := Dice.d20()
+	Sfx.play("clack_small")
+	_detail("%s death save: %s" % [h.display_name(), r.describe()])
+	if r.natural == 20:
+		h.heal(1)
+		_say("%s rolls a 20 on the death save and gets back up!" % h.display_name())
+		FloatText.spawn(map, h.body_position() + Vector2(0, -10), "20!", COL_ACTIVE, 20)
+		await get_tree().create_timer(0.5).timeout
+		_show_range()          # back up: the rest of the turn is theirs
+		return
+	if r.natural >= 10:
+		h.death_successes += 1
+		_say("%s death save: %d - success (%d/3)" % [h.display_name(), r.natural, h.death_successes])
+		FloatText.spawn(map, h.body_position() + Vector2(0, -10), "%d OK" % r.natural, COL_ALLY, 10)
+		if h.death_successes >= 3:
+			h.stable = true
+			_say("%s is stable." % h.display_name())
+	else:
+		_death_fail(h, 2 if r.natural == 1 else 1, "rolls %d" % r.natural)
+	await get_tree().create_timer(0.8).timeout
+	if in_combat and current == h:
+		end_turn()
+
+
+func _death_fail(h: Actor, n: int, why: String) -> void:
+	h.death_failures = mini(3, h.death_failures + n)
+	_say("%s %s - death save failure%s (%d/3)" % [h.display_name(), why, "s" if n > 1 else "", h.death_failures])
+	FloatText.spawn(map, h.body_position() + Vector2(0, -10), "FAIL" if n == 1 else "FAIL x2", Color8(240, 110, 100), 10)
+	if h.death_failures >= 3:
+		_die(h, "")
+
+
+func _die(h: Actor, why: String) -> void:
+	h.dead = true
+	h.stable = false
+	h.hp = 0
+	if h.concentrating:
+		end_concentration(h)
+	_say("%s has died%s." % [h.display_name(), (" (" + why + ")") if why != "" else ""])
+	Sfx.play("fail_sting", -6.0)
+	if h.has_method("on_died"):
+		h.on_died()
+
+
+# --- reactions (Shield) ------------------------------------------------------------------------
+
+## -1 = ask the player, 0 = always no, 1 = always yes. Automated test runs set the environment
+## variable HERRA_AUTO_REACT=0 or 1 so a prompt can never wait for a human.
+var auto_reaction := int(OS.get_environment("HERRA_AUTO_REACT")) if OS.get_environment("HERRA_AUTO_REACT") != "" else -1
+var reaction_pending := false
+
+
+## `target` is about to be hit by `total` vs AC `ac`. If it can cast Shield and +5 AC would turn
+## the hit into a miss, ask the player. Returns true if Shield was cast (the attack misses).
+func _offer_shield(target: Actor, attacker: Actor, what: String, total: int, ac: int) -> bool:
+	if not target is Hero or target.reaction_used or total >= ac + 5:
+		return false
+	var sh := target.power("shield")
+	if sh == null or not target.can_use(sh):
+		return false
+	var yes := false
+	if auto_reaction >= 0:
+		yes = auto_reaction == 1
+	else:
+		reaction_pending = true
+		reaction_prompt.emit("%s's %s (%d) would hit %s (AC %d).\nCast Shield? +5 AC until their next turn, uses a 1st-level slot (%d left)." % [
+				attacker.display_name(), what, total, target.display_name(), ac, target.slots_left[0]])
+		yes = await reaction_answered
+		reaction_pending = false
+	if not yes:
+		return false
+	target.reaction_used = true
+	target.spend_slot(target.lowest_slot_for(sh))
+	target.add_condition("shielded", 1, target, sh)
+	_say("%s casts Shield! (AC %d)" % [target.display_name(), ac + 5])
+	Sfx.play("charge", -4.0, 1.4)
+	SpellFx.sparkles(map, target.body_position(), Color8(130, 170, 255))
+	FloatText.spawn(map, target.body_position() + Vector2(0, -18), "SHIELD", Color8(150, 180, 255), 10)
+	return true
+
+
+func answer_reaction(yes: bool) -> void:
+	if reaction_pending:
+		reaction_answered.emit(yes)

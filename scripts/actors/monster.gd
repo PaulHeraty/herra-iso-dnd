@@ -74,6 +74,8 @@ func current_animation() -> String:
 
 
 func _process(delta: float) -> void:
+	if show_hp_bar and _bar:
+		_bar.queue_redraw()
 	if _anim == "":
 		return
 	var a: Array = anims[_anim]
@@ -170,3 +172,8 @@ func _draw_hp_bar() -> void:
 	var fill := roundi(w * clampf(float(hp) / stats.max_hp, 0.0, 1.0))
 	if fill > 0:
 		_bar.draw_rect(Rect2(x, y, fill, 2), Color8(214, 60, 52))
+	# Condition icons above the bar (prone, restrained...).
+	var ids := Condition.shown_ids(self)
+	var ix := -(ids.size() * 10 - 1) / 2
+	for i in ids.size():
+		_bar.draw_texture_rect_region(Condition.ICONS, Rect2(ix + i * 10, y - 11, 9, 9), Condition.icon_rect(ids[i]))

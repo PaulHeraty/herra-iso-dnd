@@ -81,7 +81,8 @@ scripts/
   rules/                Dice + DiceRoll (really random, seedable), CreatureStats + AttackData (stat-block Resources),
                         SpellData (spell/ability/monster power), Condition (blessed, prone, restrained, hidden,
                         frightened, shielded: durations + their effects on attacks/saves/AC)
-  combat/combat_manager.gd  CombatManager: LOS detection -> combat, initiative, turns, movement, attacks (d20 vs AC, crits, riders, resist), monster AI (expected-damage plan; groups that see the party join mid-fight) (DungeonMap.combat_reach: 1 sq per step incl. diagonals, pass allies, enemies block)
+  combat/combat_manager.gd  CombatManager: LOS detection -> combat, initiative, turns, movement, attacks (d20 vs AC, crits, riders, resist), apply_damage (concentration saves, death saves,
+                        massive damage), Shield reaction prompt, monster AI (expected-damage plan; groups that see the party join mid-fight) (DungeonMap.combat_reach: 1 sq per step incl. diagonals, pass allies, enemies block)
   ui/combat_hud.gd      CombatHud: mock-up combat UI (turn banner, hint, next turns, colour log; hero cards + action menu,
                         Spell/Ability + weapon popups)
   combat/targeting.gd   Targeting: area (NxN) / line / cone cells. CombatManager: menu_powers, begin_targeting,
@@ -98,6 +99,7 @@ tools/
               gen_spider.gd (procedural Giant Spider sheet: 3D-ish model projected to iso)
               gen_sfx.gd (SFX: hits, miss, bow, hurt, hiss, ray, crit, mm_zip, radiant, heal_chime, fire_impact)
               gen_font.gd (our HerraPixel bitmap font -> assets/fonts/herra_pixel.fnt + .png)
+              gen_icons.gd (9x9 condition icons -> assets/ui/condition_icons.png; order = Condition.ICON_INDEX)
   python/     concept-session generators (reference + future art/audio work)
 docs/previews/  concept mock-ups (.gdignore'd: Godot does not import them)
 _handoff/     original handoff package (.gdignore'd). Can be deleted once the user is happy.
@@ -205,7 +207,7 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
   2. Menus + targeting: Spell list (slot costs), class-ability menu, weapon choice; single/ally/self/
      area (pulsing orange)/line/cone with range + LOS.
   3. Simple spells: Fire Bolt, Magic Missile, Sacred Flame, Cure Wounds (+ VFX/SFX).
-  4. Bless (concentration), Shield (reaction prompt), death saves + stabilise.
+  4. Bless (concentration), Shield (reaction prompt), death saves + stabilise. DONE.
      + condition icons on the hero portraits (small pixel symbols instead of the text; hover shows
        the condition name + effect). User request.)
   5. Class abilities: Sneak Attack, Hide, Second Wind, Shove (prone/push).
