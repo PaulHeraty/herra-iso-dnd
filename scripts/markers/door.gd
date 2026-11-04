@@ -20,6 +20,9 @@ enum WallRun { BACK_RIGHT, BACK_LEFT }
 @export var lock_dc := 15
 @export var key_id := ""
 
+## Runtime: the wall run as seen in the rotated view (-1 = same as wall_run).
+var view_run := -1
+
 const HEIGHT := 30
 const WOOD := Color8(104, 62, 30)
 const WOOD_DARK := Color8(70, 44, 26)
@@ -32,6 +35,14 @@ func _init() -> void:
 	gizmo_label = "DOOR"
 
 
+func apply_view() -> void:
+	super()
+	var axis := Vector2i(1, 0) if wall_run == WallRun.BACK_RIGHT else Vector2i(0, 1)
+	var v := IsoGrid.rotate_dir(axis)
+	view_run = WallRun.BACK_RIGHT if v.y == 0 else WallRun.BACK_LEFT
+	queue_redraw()
+
+
 func blocks_move() -> bool:
 	return not is_open
 
@@ -40,15 +51,16 @@ func _draw() -> void:
 	super()
 	if is_open:
 		return
+	var run := wall_run if view_run < 0 else view_run
 	# The door panel stands on the cell's lower-left (BACK_RIGHT) or lower-right (BACK_LEFT) edge.
-	var a := Vector2(-15, 0.5) if wall_run == WallRun.BACK_RIGHT else Vector2(1, 7.5)
-	var b := Vector2(-1, 7.5) if wall_run == WallRun.BACK_RIGHT else Vector2(15, 0.5)
+	var a := Vector2(-15, 0.5) if run == WallRun.BACK_RIGHT else Vector2(1, 7.5)
+	var b := Vector2(-1, 7.5) if run == WallRun.BACK_RIGHT else Vector2(15, 0.5)
 	var up := Vector2(0, -HEIGHT)
 	var panel := PackedVector2Array([a, b, b + up, a + up])
-	draw_colored_polygon(panel, WOOD if wall_run == WallRun.BACK_RIGHT else WOOD_DARK)
+	draw_colored_polygon(panel, WOOD if run == WallRun.BACK_RIGHT else WOOD_DARK)
 	for t in [0.25, 0.5, 0.75]:                                  # plank seams
 		var p: Vector2 = a.lerp(b, t)
-		draw_line(p, p + up, WOOD_DARK if wall_run == WallRun.BACK_RIGHT else OUTLINE, 1.0)
+		draw_line(p, p + up, WOOD_DARK if run == WallRun.BACK_RIGHT else OUTLINE, 1.0)
 	for h in [0.25, 0.75]:                                       # iron bands
 		draw_line(a + up * h, b + up * h, IRON, 2.0)
 	var knob := a.lerp(b, 0.8) + up * 0.45

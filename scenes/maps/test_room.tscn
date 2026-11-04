@@ -42,8 +42,7 @@ position = Vector2(-24, 20)
 face = 1
 
 [node name="@Node2D@4" parent="World/Entities" unique_id=981184161 instance=ExtResource("3_uokn5")]
-position = Vector2(136, 4)
-face = 1
+position = Vector2(120, 52)
 
 [node name="Torch5" parent="World/Entities" unique_id=1590360501 instance=ExtResource("3_uokn5")]
 position = Vector2(-104, 60)
@@ -82,7 +81,7 @@ texture = ExtResource("14_njwk2")
 centered = false
 offset = Vector2(-7, -6)
 
-[node name="Web" type="Sprite2D" parent="World/Decor" unique_id=117433640]
+[node name="Web" type="Sprite2D" parent="World/Decor" unique_id=117433640 groups=["wall_decor"]]
 position = Vector2(16, 1)
 texture = ExtResource("15_7fapo")
 centered = false

@@ -61,11 +61,11 @@ scenes/
   markers/    party_start, monster_spawn, chest, torch, door, trap (.tscn)
   actors/     hero.tscn (Actor/Hero; spawned by DungeonMap at PartyStart)
 scripts/
-  iso_grid.gd           IsoGrid: cell <-> world maths
-  maps/dungeon_map.gd   DungeonMap: root script of every map (walk grid/A*, spawns party + overlay + controller)
+  iso_grid.gd           IsoGrid: cell <-> world maths, view rotation
+  maps/dungeon_map.gd   DungeonMap: root script of every map (walk grid/A*, view rotation, spawns party + overlay + controllers)
   maps/grid_overlay.gd  GridOverlay: unlit tinted floor diamonds (cursor, path, later ranges/areas)
   maps/camera_controller.gd  CameraController: follow leader, WASD/arrows + middle-drag pan, wheel zoom 1-3x, Space or C recentres, clamped to map
-  maps/wall_fader.gd    WallFader: walls in front of a hero fade to 55% (runtime alternative tiles 101-104)
+  maps/wall_fader.gd    WallFader: walls in front of a hero or revealed overlay cell fade to 55% (runtime alternative tiles 101-104)
   party/party_controller.gd  PartyController: exploration click-to-move, trail-follow, camera follow
   markers/              MapMarker base + one script per marker
   actors/               Actor base (grid cell, shadow, step tween) + Hero
@@ -80,8 +80,15 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
 ## Grid & map conventions
 - TileSet: `tile_shape = ISOMETRIC`, `tile_layout = DIAMOND_DOWN`, `tile_size = 32×16`.
   Cell (0,0) is centred at world (16, 8); +x goes down-right on screen, +y goes down-left.
-  `IsoGrid.cell_to_world()` / `world_to_cell()` match `TileMapLayer.map_to_local()` / `local_to_map()`
-  as long as the layers sit at the map origin.
+  `IsoGrid.view_cell_to_world()` / `view_world_to_cell()` match `TileMapLayer.map_to_local()` /
+  `local_to_map()` as long as the layers sit at the map origin.
+- **View rotation (Q/E, quarter turns):** game logic always uses *map* cells (as painted). At runtime
+  the painted `Floor`/`Walls` layers are hidden and `FloorView`/`WallsView` show the map turned by
+  `IsoGrid.rotation` around `IsoGrid.pivot`. `IsoGrid.cell_to_world()` / `world_to_cell()` convert
+  map cells through the rotation; use them for anything placed by cell. Turned views auto-pick wall
+  rows from exposed faces; the unturned view uses the painted tiles as-is. Markers lock their map
+  cell at start (`MapMarker.lock_cell`) and re-place in `apply_view()` (Torch moves to its face, hides
+  its flame on back faces; Door turns its panel). Decor sprites in group `wall_decor` (webs) hide when turned.
 - Map scene layout (`DungeonMap`):
   `Ambient` (CanvasModulate, 0.34/0.36/0.50) · `Floor` (TileMapLayer) · `World` (y-sort) →
   `Walls` (TileMapLayer, y-sort), `Entities` (y-sort, markers/actors), `Decor` (y-sort, decoration sprites) · `Camera`.

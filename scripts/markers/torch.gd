@@ -25,6 +25,7 @@ const FPS := 8.0
 @onready var light: PointLight2D = $Light
 
 var _t := 0.0
+var _front_facing := true
 var _seed := 0.0
 
 
@@ -43,10 +44,26 @@ func _snap_offset() -> Vector2:
 	return Vector2(-8, 4) if face == Face.LEFT else Vector2(8, 4)
 
 
+## Direction the torch's face points, in map cells (LEFT face looks along +y, RIGHT along +x).
+func face_normal() -> Vector2i:
+	return Vector2i(0, 1) if face == Face.LEFT else Vector2i(1, 0)
+
+
+## Hang on the same face of the block in the rotated view. If that face now points away from the
+## viewer, it sits on the hidden back of the block: the flame is hidden but the light stays.
+func apply_view() -> void:
+	var n := IsoGrid.rotate_dir(face_normal())
+	var off := {Vector2i(0, 1): Vector2(-8, 4), Vector2i(1, 0): Vector2(8, 4),
+			Vector2i(0, -1): Vector2(8, -4), Vector2i(-1, 0): Vector2(-8, -4)}
+	position = _home_position if IsoGrid.rotation == 0 else IsoGrid.cell_to_world(get_cell()) + off[n]
+	_front_facing = n == Vector2i(0, 1) or n == Vector2i(1, 0)
+	_apply_lit()
+
+
 func _apply_lit() -> void:
 	if not is_node_ready():
 		return
-	flame.visible = lit
+	flame.visible = lit and _front_facing
 	light.enabled = lit
 
 

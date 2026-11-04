@@ -63,6 +63,7 @@ func _walk() -> void:
 				party[i].step_to(trail[i - 1], dur)
 		_refresh_overlay()
 		await tw.finished
+		map.apply_pending_rotation()
 	_walking = false
 	_refresh_overlay()
 

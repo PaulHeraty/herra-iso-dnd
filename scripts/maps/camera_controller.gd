@@ -27,6 +27,12 @@ func _ready() -> void:
 		camera.position = _clamped(target.position)
 
 
+## Put the camera straight onto a point (e.g. after the view turns).
+func jump_to(p: Vector2) -> void:
+	camera.position = _clamped(p)
+	camera.reset_smoothing()
+
+
 ## Snap back to following the target (smoothly).
 func recenter() -> void:
 	following = true
@@ -89,6 +95,7 @@ static func _ensure_actions() -> void:
 	var keys := {
 		cam_left = [KEY_A, KEY_LEFT], cam_right = [KEY_D, KEY_RIGHT],
 		cam_up = [KEY_W, KEY_UP], cam_down = [KEY_S, KEY_DOWN], cam_recenter = [KEY_SPACE, KEY_C],
+		view_rotate_left = [KEY_Q], view_rotate_right = [KEY_E],
 	}
 	for action: String in keys:
 		if InputMap.has_action(action):

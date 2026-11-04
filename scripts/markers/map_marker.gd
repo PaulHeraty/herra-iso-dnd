@@ -14,6 +14,10 @@ extends Node2D
 var gizmo_color := Color.WHITE
 var gizmo_label := ""
 
+var _cell_locked := false
+var _locked_cell := Vector2i.ZERO
+var _home_position := Vector2.ZERO
+
 
 func _ready() -> void:
 	set_notify_local_transform(true)
@@ -39,9 +43,25 @@ func _snap() -> void:
 		position = p
 
 
-## The grid cell this marker stands on.
+## The (map) grid cell this marker stands on.
 func get_cell() -> Vector2i:
-	return IsoGrid.world_to_cell(position - _snap_offset())
+	if _cell_locked:
+		return _locked_cell
+	return IsoGrid.view_world_to_cell(position - _snap_offset())
+
+
+## Runtime: remember the map cell as placed in the editor, so it survives view rotation.
+func lock_cell() -> void:
+	_locked_cell = get_cell()
+	_home_position = position
+	_cell_locked = true
+
+
+## Runtime: re-place the marker for the current view rotation (unturned = exactly where it was
+## placed in the editor). Subclasses that hang on a wall face or face a direction (Torch, Door)
+## extend this.
+func apply_view() -> void:
+	position = _home_position if IsoGrid.rotation == 0 else IsoGrid.cell_to_world(get_cell())
 
 
 func _draw() -> void:
