@@ -22,8 +22,18 @@ signal animation_finished(anim: String)
 ## its delay is 0. Set false to leave a corpse.
 @export var vanish_on_death := true
 @export var death_fade_delay := 1.0
+## Combat HP bar: height above the feet (top of the sprite) and width.
+@export var hp_bar_y := -30.0
+@export var hp_bar_w := 16
 
 var group_id := 0
+## Shown while this monster is in a fight (CombatManager sets it).
+var show_hp_bar := false:
+	set(v):
+		show_hp_bar = v
+		if _bar:
+			_bar.queue_redraw()
+var _bar: Node2D
 var _anim := ""
 var _mt := 0.0
 var _back := false
@@ -35,6 +45,14 @@ func _ready() -> void:
 	if stats == null and monster_id != "":
 		stats = load("res://data/monsters/%s.tres" % monster_id)
 	_extra_timer = randf_range(idle_extra_every.x, idle_extra_every.y)
+	_bar = Node2D.new()
+	_bar.name = "HpBar"
+	_bar.z_index = 45
+	var mat := CanvasItemMaterial.new()
+	mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+	_bar.material = mat
+	_bar.draw.connect(_draw_hp_bar)
+	add_child(_bar)
 	super()
 	play("idle")
 	_mt = randf() * 2.0     # don't let every monster of a kind idle in lockstep
@@ -131,3 +149,24 @@ func _fade_out() -> void:
 		tw.tween_interval(death_fade_delay)
 		tw.tween_property(self, "modulate:a", 0.0, 0.6)
 	tw.tween_callback(func(): visible = false)
+
+
+func take_damage(amount: int) -> int:
+	var t := super(amount)
+	if _bar:
+		_bar.queue_redraw()
+	return t
+
+
+## Small bar above the monster: dark frame, red fill for the HP left.
+func _draw_hp_bar() -> void:
+	if not show_hp_bar or not is_alive() or stats == null:
+		return
+	var w := hp_bar_w
+	var x := -w / 2
+	var y := int(hp_bar_y)
+	_bar.draw_rect(Rect2(x - 1, y - 1, w + 2, 4), Color8(20, 16, 24))
+	_bar.draw_rect(Rect2(x, y, w, 2), Color8(58, 22, 28))
+	var fill := roundi(w * clampf(float(hp) / stats.max_hp, 0.0, 1.0))
+	if fill > 0:
+		_bar.draw_rect(Rect2(x, y, fill, 2), Color8(214, 60, 52))

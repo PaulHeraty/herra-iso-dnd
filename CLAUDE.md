@@ -59,6 +59,7 @@ assets/
   tiles/      floor_atlas.png, wall_atlas.png, dungeon_tileset.tres   (generated)
   sprites/    heroes/ (16×24), monsters/ (Eye Tyrant), props/ (chest, bones, torch_sheet, web)
   effects/    fireball_sheet.png (6×16px), explosion_sheet.png (7×32px)
+  fonts/      herra_pixel.fnt/.png: our pixel font (use size 10; scale the Control 2x/3x for big text)
   sfx/        13 WAVs from the concept session (torch_ambience imports as a forward loop)
 scenes/
   maps/       map_template.tscn (copy this for new maps), test_room.tscn (main scene for now)
@@ -75,7 +76,7 @@ scripts/
   actors/               Actor base (grid cell, shadow, step tween) + Hero + Monster (stats, named sheet anims)
   rules/                Dice + DiceRoll (really random, seedable), CreatureStats + AttackData (stat-block Resources)
   combat/combat_manager.gd  CombatManager: LOS detection -> combat, initiative, turns, movement, attacks (d20 vs AC, crits, riders, resist), monster AI (expected-damage plan; groups that see the party join mid-fight) (DungeonMap.combat_reach: 1 sq per step incl. diagonals, pass allies, enemies block)
-  ui/combat_hud.gd      CombatHud: TEMPORARY banner + log (default font) until the real UI (step 7)
+  ui/combat_hud.gd      CombatHud: mock-up combat UI (turn banner, hint, next turns, colour log; hero cards + action menu)
   fx/                   FloatText (damage numbers), Projectile (arrow / beam)
   audio/sfx.gd          Sfx.play("name"): static, self-creating player for assets/sfx/<name>.wav
 data/         heroes/*.tres (level 5 party), monsters/*.tres: CreatureStats + AttackData (from tools/godot/build_data.gd)
@@ -85,6 +86,7 @@ tools/
               build_data.gd (stat blocks -> data/), test_rules.gd (headless rules tests: PASS/FAIL)
               gen_spider.gd (procedural Giant Spider sheet: 3D-ish model projected to iso)
               gen_sfx.gd (combat SFX: hits, miss, bow, hurt, hiss, ray, crit -> assets/sfx/)
+              gen_font.gd (our HerraPixel bitmap font -> assets/fonts/herra_pixel.fnt + .png)
   python/     concept-session generators (reference + future art/audio work)
 docs/previews/  concept mock-ups (.gdignore'd: Godot does not import them)
 _handoff/     original handoff package (.gdignore'd). Can be deleted once the user is happy.

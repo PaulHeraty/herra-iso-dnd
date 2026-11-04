@@ -17,6 +17,8 @@ anims = {
 "walk": [0, 2, 4, 11.0, true]
 }
 back_row_offset = 1
+hp_bar_y = -24.0
+hp_bar_w = 18
 
 [node name="Sprite" type="Sprite2D" parent="."]
 texture = ExtResource("2_t")

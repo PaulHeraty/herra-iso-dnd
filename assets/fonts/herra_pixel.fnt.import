@@ -1,0 +1,17 @@
+[remap]
+
+importer="font_data_bmfont"
+type="FontFile"
+uid="uid://ce2nrf6mofore"
+path="res://.godot/imported/herra_pixel.fnt-b675d4a74dac6d08a3dbe7cdd793261b.fontdata"
+
+[deps]
+
+source_file="res://assets/fonts/herra_pixel.fnt"
+dest_files=["res://.godot/imported/herra_pixel.fnt-b675d4a74dac6d08a3dbe7cdd793261b.fontdata"]
+
+[params]
+
+fallbacks=[]
+compress=true
+scaling_mode=2

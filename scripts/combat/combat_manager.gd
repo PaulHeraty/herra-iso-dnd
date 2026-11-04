@@ -75,6 +75,8 @@ func _process(delta: float) -> void:
 			end_turn()
 			return
 		var c := IsoGrid.world_to_cell(map.get_local_mouse_position())
+		if map.hud and map.hud.mouse_over_ui():
+			c = Vector2i(-99999, -99999)
 		if c != _hover:
 			_hover = c
 			_show_preview()
@@ -166,8 +168,10 @@ func perform_attack(attacker: Actor, target: Actor, opt: Dictionary) -> void:
 	var crit := roll.is_crit()
 	var hit := crit or (not roll.is_fumble() and roll.total >= ac)
 	var adv_txt := "" if opt.adv == 0 else (" (disadvantage: %s)" % opt.note if opt.adv < 0 else " (advantage)")
-	_say("%s attacks %s with %s: %s vs AC %d%s - %s" % [attacker.display_name(), target.display_name(),
+	_detail("%s attacks %s with %s: %s vs AC %d%s - %s" % [attacker.display_name(), target.display_name(),
 			a.name, roll.describe(), ac, adv_txt, "CRITICAL HIT!" if crit else ("hit" if hit else "miss")])
+	if not hit:
+		_say("%s misses %s" % [attacker.display_name(), target.display_name()])
 	if hit:
 		var expr := st.damage_expr(a)
 		if crit:
@@ -175,6 +179,7 @@ func perform_attack(attacker: Actor, target: Actor, opt: Dictionary) -> void:
 		var dr := Dice.roll(expr)
 		var dmg := _adjust(maxi(0, dr.total), a.damage_type, target)
 		var parts := "%d %s (%s)" % [dmg, a.damage_type, dr.describe()]
+		var short := ""
 		if a.rider_damage != "":
 			var rexpr := Dice.crit(a.rider_damage) if crit else a.rider_damage
 			var rr := Dice.roll(rexpr)
@@ -187,16 +192,18 @@ func perform_attack(attacker: Actor, target: Actor, opt: Dictionary) -> void:
 			dmg += rd
 			parts += " + %d %s (%s; %s save %s vs DC %d: %s)" % [rd, a.rider_damage_type, rr.describe(),
 					a.rider_save, save.describe(), a.rider_dc, "half" if saved else "failed"]
+			short = " (+%s)" % a.rider_damage_type
 		target.take_damage(dmg)
-		_say("  %s takes %s." % [target.display_name(), parts])
+		_detail("  %s takes %s." % [target.display_name(), parts])
+		_say("%s %s %s: %d%s" % [attacker.display_name(), "CRITS" if crit else "hits", target.display_name(), dmg, short])
 		Sfx.play("crit_hit" if crit else _hit_sound(a.damage_type))
 		FloatText.spawn(map, target.body_position() + Vector2(0, -10),
-				("CRIT %d" if crit else "%d") % dmg, Color8(255, 220, 90) if crit else Color8(255, 120, 100), 12 if crit else 10)
+				("CRIT %d" if crit else "%d") % dmg, Color8(255, 220, 90) if crit else Color8(255, 120, 100), 20 if crit else 10)
 		if not target.is_alive():
 			_say("%s %s" % [target.display_name(), "is down!" if target is Hero else "is slain!"])
 	else:
 		Sfx.play("miss_swish")
-		FloatText.spawn(map, target.body_position() + Vector2(0, -10), "MISS", Color8(200, 196, 210), 9)
+		FloatText.spawn(map, target.body_position() + Vector2(0, -10), "MISS", Color8(200, 196, 210), 10)
 	await get_tree().create_timer(0.45).timeout
 
 
@@ -332,7 +339,7 @@ func start_combat(spotter: Monster, target: Hero) -> void:
 		var r := Dice.d20(a.stats.initiative_bonus())
 		initiative[a] = r.total
 		tiebreak[a] = randf()
-		_say("%s initiative: %s" % [a.display_name(), r.describe()])
+		_detail("%s initiative: %s" % [a.display_name(), r.describe()])
 	all.sort_custom(func(x: Actor, y: Actor) -> bool:
 		if initiative[x] != initiative[y]:
 			return initiative[x] > initiative[y]
@@ -340,6 +347,10 @@ func start_combat(spotter: Monster, target: Hero) -> void:
 			return x.stats.dex_score > y.stats.dex_score
 		return tiebreak[x] > tiebreak[y])
 	order = all
+	for a in order:
+		if a is Monster:
+			a.show_hp_bar = true
+	_say("Initiative: " + ", ".join(order.map(func(x: Actor): return "%s %d" % [x.display_name(), initiative[x]])))
 	in_combat = true
 	_starting = false
 	round_number = 1
@@ -587,9 +598,10 @@ func _check_join() -> void:
 	if joined.is_empty():
 		return
 	for a in joined:
+		(a as Monster).show_hp_bar = true
 		var r := Dice.d20(a.stats.initiative_bonus())
 		initiative[a] = r.total
-		_say("%s initiative: %s" % [a.display_name(), r.describe()])
+		_detail("%s initiative: %s" % [a.display_name(), r.describe()])
 		a.facing = _dir_to(a.cell, _nearest(a.cell, map.party).cell)
 	var cur := order[_turn_index] if _turn_index >= 0 and _turn_index < order.size() else null
 	order.append_array(joined)
@@ -607,6 +619,9 @@ func end_combat() -> void:
 		return
 	in_combat = false
 	current = null
+	for a in order:
+		if a is Monster:
+			a.show_hp_bar = false
 	order.clear()
 	map.overlay.clear("active")
 	_clear_move_overlay()
@@ -621,6 +636,11 @@ func end_combat() -> void:
 func _say(text: String) -> void:
 	print("[combat] ", text)
 	log_line.emit(text)
+
+
+## Full roll detail: debug console only (the log shows the short version).
+func _detail(text: String) -> void:
+	print("[combat]   ", text)
 
 
 func _anyone_moving() -> bool:

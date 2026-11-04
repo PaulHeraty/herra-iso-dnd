@@ -18,6 +18,7 @@ anims = {
 }
 idle_extras = PackedStringArray("blink")
 death_fade_delay = 0.0
+hp_bar_y = -36.0
 
 [node name="Sprite" type="Sprite2D" parent="."]
 texture = ExtResource("2_t")

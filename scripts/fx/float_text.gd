@@ -1,8 +1,9 @@
 class_name FloatText
 extends Node2D
 ## A floating combat number/word ("12", "MISS", "CRIT 18") that rises and fades, drawn above
-## everything and not darkened by the ambient light. Font: Godot default for now (pixel font in
-## Phase 2 step 7).
+## everything and not darkened by the ambient light. HerraPixel font; size 10 = 1x, 20 = 2x (crits).
+
+const FONT := preload("res://assets/fonts/herra_pixel.fnt")
 
 const RISE := 14.0
 const LIFE := 0.9
@@ -36,12 +37,14 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	var font := ThemeDB.fallback_font
+	var font: Font = FONT
+	var s := maxf(1.0, roundf(size / 10.0))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2(s, s))
 	var k := _t / LIFE
-	var y := -RISE * (1.0 - pow(1.0 - k, 2.0))       # ease out
+	var y := -RISE * (1.0 - pow(1.0 - k, 2.0)) / s       # ease out
 	var a := 1.0 if k < 0.6 else 1.0 - (k - 0.6) / 0.4
-	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
 	var p := Vector2(-w / 2.0, y).round()
 	for o in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]:
-		draw_string(font, p + o, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color(0.08, 0.06, 0.1, a))
-	draw_string(font, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color(color, a))
+		draw_string(font, p + o, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.08, 0.06, 0.1, a))
+	draw_string(font, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(color, a))

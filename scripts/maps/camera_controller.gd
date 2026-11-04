@@ -15,6 +15,9 @@ var target: Node2D
 var bounds := Rect2()
 ## False while the player is panning; set true again by recenter() (e.g. on a move order).
 var following := true
+## Screen pixels covered by UI at the bottom (combat panel): the camera keeps its target centred
+## in the area above it and clamps to the map within that area.
+var ui_bottom := 0.0
 
 var _zoom_i := 0
 var _dragging := false
@@ -48,6 +51,7 @@ func _process(delta: float) -> void:
 	elif following and target:
 		camera.position = camera.position.lerp(target.position, 1.0 - exp(-FOLLOW_RATE * delta))
 	camera.position = _clamped(camera.position)
+	camera.offset = Vector2(0, ui_bottom * 0.5 / camera.zoom.x)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -80,7 +84,7 @@ func _set_zoom(i: int) -> void:
 func _clamped(p: Vector2) -> Vector2:
 	if not bounds.has_area():
 		return p
-	var view := camera.get_viewport_rect().size / camera.zoom
+	var view := (camera.get_viewport_rect().size - Vector2(0, ui_bottom)) / camera.zoom
 	var b := bounds.grow(MARGIN)
 	var out := p
 	for axis in 2:
