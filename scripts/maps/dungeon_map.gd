@@ -287,6 +287,29 @@ func has_line_of_sight(a: Vector2i, b: Vector2i) -> bool:
 	return true
 
 
+## The figure drawn under a world (map-local) point: whose sprite contains it, front-most first
+## (figures stand taller than their tile, so clicking a body should pick that body). Falls back
+## to whoever stands on the cell under the point.
+func actor_under(pos: Vector2, include_down := true) -> Actor:
+	var best: Actor = null
+	for n in entities.get_children():
+		if not n is Actor or not n.visible:
+			continue
+		var a: Actor = n
+		if a.dead or (not include_down and not a.is_alive()):
+			continue
+		if not a.is_alive() and a is Monster:
+			continue
+		var r := a.sprite.get_rect()
+		r.position += a.position + a.sprite.position
+		r = r.grow(-1)
+		if r.has_point(pos) and (best == null or a.position.y > best.position.y):
+			best = a
+	if best:
+		return best
+	return actor_at(IsoGrid.world_to_cell(pos))
+
+
 ## The actor standing on a cell, or null.
 func actor_at(cell: Vector2i) -> Actor:
 	for n in entities.get_children():

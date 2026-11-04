@@ -82,7 +82,10 @@ scripts/
                         SpellData (spell/ability/monster power), Condition (blessed, prone, restrained, hidden,
                         frightened, shielded: durations + their effects on attacks/saves/AC)
   combat/combat_manager.gd  CombatManager: LOS detection -> combat, initiative, turns, movement, attacks (d20 vs AC, crits, riders, resist), monster AI (expected-damage plan; groups that see the party join mid-fight) (DungeonMap.combat_reach: 1 sq per step incl. diagonals, pass allies, enemies block)
-  ui/combat_hud.gd      CombatHud: mock-up combat UI (turn banner, hint, next turns, colour log; hero cards + action menu)
+  ui/combat_hud.gd      CombatHud: mock-up combat UI (turn banner, hint, next turns, colour log; hero cards + action menu,
+                        Spell/Ability + weapon popups)
+  combat/targeting.gd   Targeting: area (NxN) / line / cone cells. CombatManager: menu_powers, begin_targeting,
+                        resolve_power (generic: spell attack / save / auto darts+conditions / heal / contest)
   fx/                   FloatText (damage numbers), Projectile (arrow / beam)
   audio/sfx.gd          Sfx.play("name"): static, self-creating player for assets/sfx/<name>.wav
 data/         heroes/*.tres (level 5 party), monsters/*.tres: CreatureStats + AttackData; spells/*.tres: SpellData
@@ -202,6 +205,8 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
      area (pulsing orange)/line/cone with range + LOS.
   3. Simple spells: Fire Bolt, Magic Missile, Sacred Flame, Cure Wounds (+ VFX/SFX).
   4. Bless (concentration), Shield (reaction prompt), death saves + stabilise.
+     + condition icons on the hero portraits (small pixel symbols instead of the text; hover shows
+       the condition name + effect). User request.)
   5. Class abilities: Sneak Attack, Hide, Second Wind, Shove (prone/push).
   6. Fireball showcase (charge, arc, 3x3 blast + bursts, flash, shake, scorch, smoke).
   7. Dice-roll scene (freeze, spotlight, d20 save panel, damage dice + clacks); full/quick/off.

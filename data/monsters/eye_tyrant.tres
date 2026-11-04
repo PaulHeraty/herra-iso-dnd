@@ -37,19 +37,14 @@ dex_score = 14
 con_score = 14
 int_score = 14
 wis_score = 14
-save_proficiencies = PackedStringArray("WIS")
+save_proficiencies = Array[String](["WIS"])
 max_hp = 52
 hit_dice = "8d8+16"
 armor_class = 14
-resistances = PackedStringArray()
-immunities = PackedStringArray()
 speed_ft = 20
 fly = true
 sight_ft = 60
 attacks = Array[ExtResource("1_axuvi")]([SubResource("Resource_2sic5"), SubResource("Resource_aoay6")])
-skill_proficiencies = PackedStringArray()
-skill_expertise = PackedStringArray()
 skill_overrides = {
 "perception": 4
 }
-spell_slots = PackedInt32Array()

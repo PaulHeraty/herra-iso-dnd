@@ -36,6 +36,7 @@ var bonus_used := false
 var moving := false
 var _reach := {}
 var _hover := Vector2i(-99999, -99999)
+var _hover_actor: Actor
 
 var map: DungeonMap
 var in_combat := false
@@ -83,22 +84,35 @@ func _process(delta: float) -> void:
 		map.overlay.set_cells("active", [current.cell], COL_ACTIVE, 0.15, 0.55 + 0.4 * pulse)
 	if current is Hero and not moving:
 		if Input.is_action_just_pressed("end_turn"):
-			end_turn()
+			if targeting:
+				_confirm_targets()
+			else:
+				end_turn()
 			return
 		var c := IsoGrid.world_to_cell(map.get_local_mouse_position())
 		if map.hud and map.hud.mouse_over_ui():
 			c = Vector2i(-99999, -99999)
-		if c != _hover:
+		if targeting:
+			if c != _hover:
+				_hover = c
+			_show_targeting()       # every frame: the area pulses
+			return
+		var ha := _mouse_actor()
+		if c != _hover or ha != _hover_actor:
 			_hover = c
+			_hover_actor = ha
 			_show_preview()
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not in_combat or not current is Hero or moving:
 		return
+	if targeting:
+		_targeting_input(event)
+		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var c := IsoGrid.world_to_cell(map.get_local_mouse_position())
-		var foe := _enemy_at(c)
+		var foe := _enemy_under_mouse()
 		if foe and attacks_left > 0:
 			var opt := attack_option(current, foe)
 			if not opt.is_empty():
@@ -119,6 +133,8 @@ func attack_option(attacker: Actor, target: Actor) -> Dictionary:
 	var best := {}
 	var best_ev := -1.0
 	for o in attack_options_from(attacker, target, attacker.cell):
+		if attacker == current and chosen_attack and o.attack != chosen_attack:
+			continue
 		var ev := expected_damage(attacker, target, o)
 		if ev > best_ev:
 			best_ev = ev
@@ -314,6 +330,20 @@ func _hit_sound(dtype: String) -> String:
 		_: return "hit_blunt"
 
 
+## The figure under the mouse (by sprite), or null over the UI.
+func _mouse_actor() -> Actor:
+	if map.hud and map.hud.mouse_over_ui():
+		return null
+	return map.actor_under(map.get_local_mouse_position())
+
+
+func _enemy_under_mouse() -> Actor:
+	var a := _mouse_actor()
+	if a and a.is_alive() and current and not DungeonMap._same_side(a, current):
+		return a
+	return null
+
+
 func _enemy_at(c: Vector2i) -> Actor:
 	var a := map.actor_at(c)
 	if a and a.is_alive() and not DungeonMap._same_side(a, current):
@@ -479,6 +509,9 @@ func _next_turn() -> void:
 	action_used = false
 	bonus_used = false
 	attacks_left = current.stats.attacks_per_action()
+	chosen_attack = null
+	targeting = null
+	picked.clear()
 	_start_of_turn(current)
 	moving = false
 	map.camera_controller.target = current
@@ -549,7 +582,7 @@ func _show_preview() -> void:
 	_emit_status()
 	if not map.has_floor(_hover):
 		return
-	var foe := _enemy_at(_hover)
+	var foe := _enemy_under_mouse()
 	if foe:
 		var opt := attack_option(current, foe) if attacks_left > 0 else {}
 		if opt.is_empty():
@@ -763,3 +796,521 @@ func _nearest(from: Vector2i, actors: Array) -> Actor:
 static func _dir_to(from: Vector2i, to: Vector2i) -> Vector2i:
 	var d := (to - from).clampi(-1, 1)
 	return d if d != Vector2i.ZERO else Vector2i(0, 1)
+
+
+# --- spells & abilities (Phase 3) --------------------------------------------------------------
+
+const COL_ALLY := Color8(120, 220, 140)
+const COL_AREA := Color8(255, 110, 40)
+const COL_MAGIC := Color8(214, 120, 230)
+
+## Targeting state while the player picks targets for a power.
+var targeting: SpellData
+var target_slot := 0
+var picked: Array[Actor] = []
+## Weapon chosen from the Attack menu this turn (null = best automatically).
+var chosen_attack: AttackData
+
+
+## Powers for the hero's Spell/Ability menu: [{power, ok, why, tag}].
+func menu_powers(h: Actor) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for p: SpellData in h.stats.powers:
+		if p.kind == SpellData.Kind.MONSTER or p.cast_time in [SpellData.CastTime.REACTION, SpellData.CastTime.FREE]:
+			continue
+		var why := ""
+		match p.cast_time:
+			SpellData.CastTime.ACTION:
+				if action_used or attacks_left < h.stats.attacks_per_action():
+					why = "action used"
+			SpellData.CastTime.BONUS:
+				if bonus_used:
+					why = "bonus action used"
+			SpellData.CastTime.ATTACK:
+				if attacks_left <= 0:
+					why = "no attacks left"
+		if why == "" and not h.can_use(p):
+			why = "no slots left" if p.uses_slot() else "used up"
+		if why == "" and p.target in [SpellData.Target.ENEMY, SpellData.Target.ALLY, SpellData.Target.ANY] \
+				and valid_targets(h, p).is_empty():
+			why = "no target in range"
+		out.append({power = p, ok = why == "", why = why, tag = power_tag(p)})
+	return out
+
+
+## "cantrip", "1st", "3rd", "bonus", "1/rest", "attack"
+static func power_tag(p: SpellData) -> String:
+	if p.kind == SpellData.Kind.SPELL:
+		return power_tag_level(p.level)
+	if p.cast_time == SpellData.CastTime.BONUS:
+		return "bonus" + (" 1/rest" if p.uses > 0 else "")
+	if p.cast_time == SpellData.CastTime.ATTACK:
+		return "attack"
+	return ""
+
+
+static func power_tag_level(lvl: int) -> String:
+	return ["cantrip", "1st", "2nd", "3rd", "4th", "5th"][clampi(lvl, 0, 5)]
+
+
+## Pick a weapon for this turn's attacks (from the Attack menu); null = automatic.
+func choose_weapon(a: AttackData) -> void:
+	chosen_attack = a
+	if current is Hero:
+		_show_range()
+
+
+func begin_targeting(p: SpellData) -> void:
+	if not current is Hero or moving:
+		return
+	if p.target == SpellData.Target.SELF:
+		var me: Array[Actor] = [current]
+		_cast(current, p, current.lowest_slot_for(p), me, current.cell)
+		return
+	targeting = p
+	target_slot = current.lowest_slot_for(p)
+	picked.clear()
+	_clear_move_overlay()
+	_show_targeting()
+
+
+func cancel_targeting() -> void:
+	targeting = null
+	picked.clear()
+	for layer in ["area", "picked", "targets", "cursor"]:
+		map.overlay.clear(layer)
+	if in_combat and current is Hero:
+		_show_range()
+
+
+## Creatures `caster` may target with `p` right now (range, line of sight, side).
+func valid_targets(caster: Actor, p: SpellData) -> Array[Actor]:
+	var out: Array[Actor] = []
+	var rng := maxi(1, p.range_cells())
+	var pool: Array = order if in_combat else map.party
+	for a: Actor in pool:
+		if a.dead:
+			continue
+		var ally := DungeonMap._same_side(a, caster)
+		match p.target:
+			SpellData.Target.ENEMY:
+				if ally or not a.is_alive():
+					continue
+			SpellData.Target.ALLY:
+				if not ally:
+					continue
+				if not a.is_alive() and p.resolve != SpellData.Resolve.HEAL:
+					continue
+			SpellData.Target.ANY:
+				pass
+			_:
+				continue
+		if DungeonMap.grid_distance(caster.cell, a.cell) > rng:
+			continue
+		if p.needs_los and a != caster and not map.has_line_of_sight(caster.cell, a.cell):
+			continue
+		out.append(a)
+	return out
+
+
+## Cells a shaped power would cover if aimed at `aim` (AREA: centred there; LINE/CONE: toward it).
+func shape_cells(caster: Actor, p: SpellData, aim: Vector2i) -> Array[Vector2i]:
+	match p.target:
+		SpellData.Target.AREA:
+			return Targeting.area_cells(aim, p.area_size)
+		SpellData.Target.LINE:
+			return Targeting.line_cells(caster.cell, aim, p.range_cells())
+		SpellData.Target.CONE:
+			return Targeting.cone_cells(caster.cell, aim, p.range_cells())
+	var none: Array[Vector2i] = []
+	return none
+
+
+func _aim_ok(caster: Actor, p: SpellData, aim: Vector2i) -> bool:
+	if not map.has_floor(aim):
+		return false
+	if p.target == SpellData.Target.AREA:
+		return DungeonMap.grid_distance(caster.cell, aim) <= p.range_cells() \
+				and (not p.needs_los or map.has_line_of_sight(caster.cell, aim))
+	return aim != caster.cell
+
+
+func _max_picks(p: SpellData) -> int:
+	return p.darts_for(target_slot) if p.darts > 0 else p.targets_for(target_slot)
+
+
+func _is_shaped(p: SpellData) -> bool:
+	return p.target in [SpellData.Target.AREA, SpellData.Target.LINE, SpellData.Target.CONE]
+
+
+func _show_targeting() -> void:
+	var p := targeting
+	var pulse := 0.5 + 0.5 * sin(_pulse_t * TAU / 0.9)
+	map.overlay.clear("cursor")
+	if _is_shaped(p):
+		map.overlay.clear("targets")
+		if _aim_ok(current, p, _hover):
+			map.overlay.set_cells("area", shape_cells(current, p, _hover), COL_AREA, 0.32 + 0.16 * pulse, 0.85, true)
+		else:
+			map.overlay.clear("area")
+			if map.has_floor(_hover):
+				map.overlay.set_cells("cursor", [_hover], COL_BLOCKED, 0.08, 0.5)
+	else:
+		var vt := valid_targets(current, p)
+		var cells: Array[Vector2i] = []
+		for a in vt:
+			cells.append(a.cell)
+		map.overlay.set_cells("targets", cells, COL_ALLY if p.target == SpellData.Target.ALLY else COL_TARGET, 0.2, 0.7)
+		var pc: Array[Vector2i] = []
+		for a in picked:
+			pc.append(a.cell)
+		if pc.is_empty():
+			map.overlay.clear("picked")
+		else:
+			map.overlay.set_cells("picked", pc, COL_ACTIVE, 0.3, 0.9)
+		var h := hover_card if hover_card else _mouse_actor()
+		if h and h in vt:
+			map.overlay.set_cells("cursor", [_hover], COL_ACTIVE, 0.25, 0.9, true)
+	status_changed.emit(_targeting_hint())
+
+
+func _targeting_hint() -> String:
+	var p := targeting
+	var slot := ""
+	if p.uses_slot():
+		slot = " (%s slot, +/- to change)" % power_tag_level(target_slot)
+	var what := ""
+	match p.target:
+		SpellData.Target.AREA:
+			what = "click where to aim"
+		SpellData.Target.LINE, SpellData.Target.CONE:
+			what = "click a direction"
+		_:
+			var n := _max_picks(p)
+			what = "click a target" if n == 1 else "pick %d/%d (Enter casts)" % [picked.size(), n]
+	return "%s%s: %s. Right-click cancels." % [p.display_name, slot, what]
+
+
+func _targeting_input(event: InputEvent) -> void:
+	var p := targeting
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_ESCAPE:
+			cancel_targeting()
+		elif p.uses_slot() and event.keycode in [KEY_EQUAL, KEY_PLUS, KEY_KP_ADD]:
+			_change_slot(1)
+		elif p.uses_slot() and event.keycode in [KEY_MINUS, KEY_KP_SUBTRACT]:
+			_change_slot(-1)
+		return
+	if not (event is InputEventMouseButton and event.pressed):
+		return
+	if event.button_index == MOUSE_BUTTON_RIGHT:
+		get_viewport().set_input_as_handled()
+		if picked.is_empty():
+			cancel_targeting()
+		else:
+			picked.pop_back()
+		return
+	if event.button_index != MOUSE_BUTTON_LEFT:
+		return
+	if map.hud and map.hud.mouse_over_ui():
+		return
+	get_viewport().set_input_as_handled()
+	var c := IsoGrid.world_to_cell(map.get_local_mouse_position())
+	if _is_shaped(p):
+		if _aim_ok(current, p, c):
+			var slot := target_slot
+			targeting = null
+			for layer in ["area", "cursor"]:
+				map.overlay.clear(layer)
+			var none: Array[Actor] = []
+			_cast(current, p, slot, none, c)
+		return
+	pick_target(_mouse_actor())
+
+
+## Add a target while targeting (from a click on the map or on a hero's portrait). Returns true if
+## it was accepted. Casts once the limit is reached (or every valid creature is picked).
+func pick_target(a: Actor) -> bool:
+	var p := targeting
+	if p == null or a == null or moving or _is_shaped(p) or not a in valid_targets(current, p):
+		return false
+	if p.darts == 0 and a in picked:
+		return false                            # Bless etc.: each creature once
+	picked.append(a)
+	var limit := _max_picks(p)
+	if p.darts == 0:
+		limit = mini(limit, valid_targets(current, p).size())
+	if picked.size() >= limit:
+		_confirm_targets()
+	else:
+		_show_targeting()
+	return true
+
+
+## While targeting: would `a` be a valid pick right now? (HUD frames portraits with this.)
+func is_valid_pick(a: Actor) -> bool:
+	return targeting != null and not _is_shaped(targeting) and a in valid_targets(current, targeting) \
+			and (targeting.darts > 0 or not a in picked)
+
+
+## The HUD reports which hero card the mouse is over (null when none), so the map shows that
+## hero as the hovered target.
+var hover_card: Actor
+
+
+func _change_slot(d: int) -> void:
+	var lvl := target_slot + d
+	while lvl >= targeting.level and lvl <= current.slots_left.size():
+		if lvl >= 1 and current.slots_left[lvl - 1] > 0:
+			target_slot = lvl
+			while picked.size() > _max_picks(targeting):
+				picked.pop_back()
+			return
+		lvl += d
+
+
+func _confirm_targets() -> void:
+	if targeting == null or picked.is_empty():
+		return
+	var p := targeting
+	var slot := target_slot
+	var t: Array[Actor] = picked.duplicate()
+	targeting = null
+	picked.clear()
+	for layer in ["picked", "targets", "cursor"]:
+		map.overlay.clear(layer)
+	_cast(current, p, slot, t, t[0].cell)
+
+
+## Use a power: spend the slot / use / action, then resolve it. Awaitable.
+func _cast(caster: Actor, p: SpellData, slot: int, targets: Array[Actor], aim: Vector2i) -> void:
+	moving = true
+	_clear_move_overlay()
+	if p.uses_slot():
+		caster.spend_slot(slot)
+	if p.uses > 0 or p.recharge == SpellData.Recharge.DICE:
+		caster.spend_use(p)
+	match p.cast_time:
+		SpellData.CastTime.ACTION:
+			action_used = true
+			attacks_left = 0
+		SpellData.CastTime.BONUS:
+			bonus_used = true
+		SpellData.CastTime.ATTACK:
+			attacks_left -= 1
+			if attacks_left <= 0:
+				action_used = true
+	await resolve_power(caster, p, slot, targets, aim)
+	moving = false
+	if _check_end():
+		return
+	if in_combat and current is Hero:
+		_show_range()
+
+
+## Apply a power's effect (generic, from its data). Visuals are simple here; Phase 3 steps 3/6
+## give individual spells their own effects.
+func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor], aim: Vector2i) -> void:
+	var lvl_txt := " (%s)" % power_tag_level(slot) if p.uses_slot() and slot > p.level else ""
+	var verb := "casts" if p.kind == SpellData.Kind.SPELL else "uses"
+	_say("%s %s %s%s" % [caster.display_name(), verb, p.display_name, lvl_txt])
+	if p.concentration:
+		_start_concentration(caster, p)
+	if aim != caster.cell:
+		caster.facing = _dir_to(caster.cell, aim)
+	if caster is Monster:
+		caster.play("attack")
+	Sfx.play(p.sfx)
+	var char_level := maxi(1, caster.stats.level)
+	var affected: Array[Actor] = targets.duplicate()
+	if _is_shaped(p):
+		affected.clear()
+		var cells := shape_cells(caster, p, aim)
+		for a in order:
+			if a.is_alive() and a.cell in cells and (p.hits_allies or not DungeonMap._same_side(a, caster)):
+				affected.append(a)
+		var bolt := Projectile.fire(map, caster.body_position(), IsoGrid.cell_to_world(aim), Projectile.Style.BEAM, _spell_colour(p))
+		await bolt.done
+		await _area_flash(cells)
+	elif p.target != SpellData.Target.SELF and (p.resolve in [SpellData.Resolve.ATTACK, SpellData.Resolve.SAVE] or p.darts > 0):
+		for a in _unique(affected):
+			var beam := Projectile.fire(map, caster.body_position(), a.body_position(), Projectile.Style.BEAM, _spell_colour(p))
+			await beam.done
+	match p.resolve:
+		SpellData.Resolve.ATTACK:
+			for a in affected:
+				_spell_attack(caster, p, slot, a, char_level)
+		SpellData.Resolve.SAVE:
+			var dmg_roll: DiceRoll = Dice.roll(p.damage_for(char_level, slot)) if p.damage != "" else null
+			if dmg_roll:
+				_detail("  %s damage: %s" % [p.display_name, dmg_roll.describe()])
+			for a in affected:
+				_spell_save(caster, p, a, dmg_roll)
+		SpellData.Resolve.AUTO:
+			if p.darts > 0:
+				for a in affected:
+					if a.is_alive():
+						var r := Dice.roll(p.damage_for(char_level, slot))
+						_deal(caster, a, r.total, p.damage_type, false)
+						await get_tree().create_timer(0.12).timeout
+			if p.condition != "":
+				for a in _unique(affected):
+					a.add_condition(p.condition, p.condition_rounds, caster, p)
+					_say("  %s is %s." % [a.display_name(), Condition.display(p.condition).to_lower()])
+					FloatText.spawn(map, a.body_position() + Vector2(0, -10), Condition.display(p.condition).to_upper(), COL_ALLY, 10)
+		SpellData.Resolve.HEAL:
+			for a in affected:
+				var r := Dice.roll(p.heal_for(char_level, slot))
+				var amount := r.total
+				if p.add_ability_mod:
+					amount += caster.stats.mod(caster.stats.spell_ability)
+				if p.add_level:
+					amount += caster.stats.level
+				var was_down := not a.is_alive()
+				var got := a.heal(amount)
+				_detail("  heal %s: %s -> %d" % [a.display_name(), r.describe(), amount])
+				_say("%s regains %d HP%s" % [a.display_name(), got, " and gets back up!" if was_down else ""])
+				FloatText.spawn(map, a.body_position() + Vector2(0, -10), "+%d" % got, COL_ALLY, 10)
+		SpellData.Resolve.CONTEST:
+			for a in affected:
+				_contest(caster, p, a)
+	await get_tree().create_timer(0.4).timeout
+
+
+func _spell_attack(caster: Actor, p: SpellData, slot: int, target: Actor, char_level: int) -> void:
+	if not target.is_alive():
+		return
+	var dist := DungeonMap.grid_distance(caster.cell, target.cell)
+	var adv := Condition.attack_advantage(caster, target, p.range_cells() <= 1, dist)
+	if p.range_cells() > 1 and _enemy_adjacent(caster):
+		adv = combine_advantage(adv, -1)     # ranged spell attack with an enemy next to you
+	var r := Dice.d20(p.attack_bonus_for(caster.stats), adv)
+	_add_bonus_dice(r, caster)
+	caster.remove_condition("hidden")
+	var ac := target.stats.armor_class + Condition.ac_bonus(target)
+	var crit := r.is_crit()
+	var hit := crit or (not r.is_fumble() and r.total >= ac)
+	_detail("%s: %s vs AC %d - %s" % [p.display_name, r.describe(), ac, "crit" if crit else ("hit" if hit else "miss")])
+	if not hit:
+		_say("%s misses %s" % [caster.display_name(), target.display_name()])
+		Sfx.play("miss_swish")
+		FloatText.spawn(map, target.body_position() + Vector2(0, -10), "MISS", Color8(200, 196, 210), 10)
+		return
+	if p.damage != "":
+		var expr := p.damage_for(char_level, slot)
+		var d := Dice.roll(Dice.crit(expr) if crit else expr)
+		_deal(caster, target, d.total, p.damage_type, crit)
+	if p.condition != "" and target.is_alive():
+		target.add_condition(p.condition, p.condition_rounds, caster, p)
+		_say("  %s is %s!" % [target.display_name(), Condition.display(p.condition).to_lower()])
+		FloatText.spawn(map, target.body_position() + Vector2(0, -18), Condition.display(p.condition).to_upper(), COL_MAGIC, 10)
+
+
+func _spell_save(caster: Actor, p: SpellData, target: Actor, dmg_roll: DiceRoll) -> void:
+	if not target.is_alive():
+		return
+	var dc := p.dc_for(caster.stats)
+	var s := roll_save(target, p.save_ability)
+	var saved := s.total >= dc
+	_detail("  %s %s save: %s vs DC %d - %s" % [target.display_name(), p.save_ability, s.describe(), dc, "success" if saved else "FAILED"])
+	if dmg_roll:
+		var dmg := dmg_roll.total
+		if saved:
+			dmg = dmg / 2 if p.half_on_save else 0
+		if dmg > 0:
+			_deal(caster, target, dmg, p.damage_type, false, " (half, saved)" if saved else "", p.display_name)
+		else:
+			_say("%s dodges the %s" % [target.display_name(), p.display_name])
+			FloatText.spawn(map, target.body_position() + Vector2(0, -10), "SAVED", Color8(200, 196, 210), 10)
+	if not saved and p.condition != "" and target.is_alive():
+		target.add_condition(p.condition, p.condition_rounds, caster, p)
+		_say("  %s is %s!" % [target.display_name(), Condition.display(p.condition).to_lower()])
+
+
+## Skill contest: Shove (athletics vs athletics/acrobatics) or Hide (stealth vs passive perception).
+func _contest(caster: Actor, p: SpellData, target: Actor) -> void:
+	var mine := Dice.d20(caster.stats.skill_bonus(p.contest_skill))
+	if p.id == "hide":
+		var best := 0
+		for a in order:
+			if a.is_alive() and not DungeonMap._same_side(a, caster):
+				best = maxi(best, a.stats.passive_perception())
+		_detail("  Stealth %s vs passive Perception %d" % [mine.describe(), best])
+		if mine.total > best:
+			caster.add_condition("hidden", -1, caster, p)
+			_say("%s hides! (next attack has advantage)" % caster.display_name())
+			FloatText.spawn(map, caster.body_position() + Vector2(0, -10), "HIDDEN", COL_ALLY, 10)
+		else:
+			_say("%s fails to hide" % caster.display_name())
+		return
+	var theirs := -99
+	for sk in p.resist_skills:
+		theirs = maxi(theirs, target.stats.skill_bonus(sk))
+	var their_roll := Dice.d20(theirs)
+	_detail("  %s %s vs %s" % [p.contest_skill, mine.describe(), their_roll.describe()])
+	caster.lunge(target.position, 5.0)
+	if mine.total >= their_roll.total and target.stats.fly:
+		_say("%s shoves %s, but it just floats back" % [caster.display_name(), target.display_name()])
+	elif mine.total >= their_roll.total:
+		target.add_condition(p.condition, p.condition_rounds, caster, p)
+		_say("%s shoves %s prone!" % [caster.display_name(), target.display_name()])
+		FloatText.spawn(map, target.body_position() + Vector2(0, -10), "PRONE", COL_MAGIC, 10)
+	else:
+		_say("%s fails to shove %s" % [caster.display_name(), target.display_name()])
+
+
+## Damage + number + sound + down/slain message.
+func _deal(src: Actor, target: Actor, amount: int, dtype: String, crit: bool, note := "", by := "") -> void:
+	var dmg := _adjust(maxi(1, amount), dtype, target)
+	target.take_damage(dmg)
+	_say("%s %s %s: %d%s" % [by if by != "" else src.display_name(), "CRITS" if crit else "hits", target.display_name(), dmg, note])
+	Sfx.play("crit_hit" if crit else _hit_sound(dtype))
+	FloatText.spawn(map, target.body_position() + Vector2(0, -10), ("CRIT %d" if crit else "%d") % dmg,
+			Color8(255, 220, 90) if crit else Color8(255, 120, 100), 20 if crit else 10)
+	if not target.is_alive():
+		_say("%s %s" % [target.display_name(), "is down!" if target is Hero else "is slain!"])
+
+
+func _spell_colour(p: SpellData) -> Color:
+	match p.damage_type:
+		"fire": return Color8(255, 140, 50)
+		"radiant": return Color8(255, 236, 150)
+		"force": return Color8(150, 170, 255)
+		"necrotic": return Color8(200, 90, 210)
+	return Color8(220, 220, 230)
+
+
+## Quick flash over an area (Fireball gets its full sequence in step 6).
+func _area_flash(cells: Array[Vector2i]) -> void:
+	for k in 6:
+		var a := 0.55 if k % 2 == 0 else 0.25
+		map.overlay.set_cells("blast", cells, Color8(255, 200, 90), a, 0.9, true)
+		await get_tree().create_timer(0.05).timeout
+	map.overlay.clear("blast")
+
+
+## Concentration: a new concentration spell ends the old one (its conditions on everyone).
+func _start_concentration(caster: Actor, p: SpellData) -> void:
+	if caster.concentrating:
+		end_concentration(caster)
+	caster.concentrating = p
+
+
+func end_concentration(caster: Actor) -> void:
+	var p := caster.concentrating
+	if p == null:
+		return
+	caster.concentrating = null
+	for a in order:
+		for c in a.conditions.duplicate():
+			if c.spell == p and c.source == caster:
+				a.remove_condition(c.id)
+	_say("%s's %s ends." % [caster.display_name(), p.display_name])
+
+
+static func _unique(arr: Array[Actor]) -> Array[Actor]:
+	var out: Array[Actor] = []
+	for a in arr:
+		if not a in out:
+			out.append(a)
+	return out

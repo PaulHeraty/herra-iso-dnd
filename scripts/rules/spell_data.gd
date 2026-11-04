@@ -39,7 +39,7 @@ enum Recharge { NONE, SHORT_REST, LONG_REST, DICE }       ## DICE = "Recharge 5-
 ## CONTEST: the caster's skill vs the target's best of these skills (Shove: athletics vs
 ## athletics/acrobatics). Hide: stealth vs passive perception.
 @export var contest_skill := ""
-@export var resist_skills: PackedStringArray = []
+@export var resist_skills: Array[String] = []
 @export var damage := ""                     ## dice, e.g. "8d6"; per dart for missiles
 @export var damage_type := ""
 @export var add_ability_mod := false         ## add the spellcasting modifier (Cure Wounds)
@@ -51,7 +51,7 @@ enum Recharge { NONE, SHORT_REST, LONG_REST, DICE }       ## DICE = "Recharge 5-
 @export var upcast_darts := 0
 @export var upcast_targets := 0
 ## Cantrips: dice count at character levels 5 / 11 / 17 (index 0 = levels 1-4).
-@export var cantrip_dice: PackedInt32Array = []
+@export var cantrip_dice: Array[int] = []
 @export_group("Conditions")
 @export var condition := ""                  ## applied on a failed save / hit / always (AUTO): "blessed"...
 @export var condition_rounds := 0

@@ -78,7 +78,11 @@ func _ready() -> void:
 
 ## True if the mouse is over the bottom panel (map input should ignore it).
 func mouse_over_ui() -> bool:
-	return visible and _panel.get_global_rect().has_point(_panel.get_global_mouse_position())
+	if not visible:
+		return false
+	if _panel.get_global_rect().has_point(_panel.get_global_mouse_position()):
+		return true
+	return _popup.visible and _popup.get_global_rect().has_point(_popup.get_global_mouse_position())
 
 
 func _process(_delta: float) -> void:
@@ -90,8 +94,13 @@ func _process(_delta: float) -> void:
 	for card in _cards:
 		_update_card(card, cur)
 	var hero_turn := cur is Hero and not combat.moving
-	_set_button(_buttons.attack, hero_turn and combat.attacks_left > 0, hero_turn and combat.attacks_left > 0)
-	_set_button(_buttons.spell, false, false)
+	var busy := combat.targeting != null
+	_set_button(_buttons.attack, hero_turn and combat.attacks_left > 0, hero_turn and combat.attacks_left > 0 and not busy and _popup_kind != "spell")
+	if cur:
+		_buttons.spell.text = _buttons.spell.text.replace("Spell", "Ability") if cur.stats.spell_ability == "" else _buttons.spell.text.replace("Ability", "Spell")
+	_set_button(_buttons.spell, hero_turn and not cur.stats.powers.is_empty(), hero_turn and (busy or _popup_kind == "spell"))
+	if not hero_turn and _popup.visible:
+		_close_popup()
 	_set_button(_buttons.item, false, false)
 	_set_button(_buttons.wait, hero_turn, false)
 
@@ -163,7 +172,12 @@ func _build_panel(root: Control) -> void:
 		var card := Panel.new()
 		card.position = Vector2(4 + i * (card_w + 3), 3)
 		card.size = Vector2(card_w, PANEL_H - 6)
-		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# Clicking a portrait picks that hero while targeting (or centres the camera on them).
+		card.mouse_filter = Control.MOUSE_FILTER_STOP
+		card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		card.gui_input.connect(_on_card_input.bind(h))
+		card.mouse_entered.connect(func(): combat.hover_card = h)
+		card.mouse_exited.connect(func(): if combat.hover_card == h: combat.hover_card = null)
 		_panel.add_child(card)
 		var frame := Panel.new()
 		frame.position = Vector2(3, 3)
@@ -228,8 +242,9 @@ func _build_panel(root: Control) -> void:
 		_buttons[labels[i][0]] = b
 	_fix_button_sizes.call_deferred(SCREEN.x - mx - 4)
 	_buttons.wait.pressed.connect(func(): if combat.current is Hero and not combat.moving: combat.end_turn())
-	_buttons.attack.pressed.connect(func(): _hint.text = "Click an enemy marked in orange to attack.")
-	_buttons.spell.tooltip_text = "Spells arrive in Phase 3"
+	_buttons.attack.pressed.connect(_open_weapons)
+	_buttons.spell.pressed.connect(_open_powers)
+	_build_popup(root)
 	_buttons.item.tooltip_text = "Items arrive in Phase 4"
 
 
@@ -238,7 +253,17 @@ func _build_panel(root: Control) -> void:
 func _update_card(card: Dictionary, cur: Actor) -> void:
 	var h: Hero = card.hero
 	var active := h == cur
-	card.panel.add_theme_stylebox_override("panel", _box(COL_CARD, COL_ACTIVE if active else COL_EDGE))
+	# Frame: picked target (bright, 2px) > valid target while targeting (green) > active hero (yellow).
+	var edge := COL_ACTIVE if active else COL_EDGE
+	var width := 1
+	if combat.targeting:
+		if h in combat.picked:
+			edge = Color8(255, 244, 170)
+			width = 2
+		elif combat.is_valid_pick(h):
+			edge = Color8(120, 220, 140)
+			width = 2 if combat.hover_card == h else 1
+	card.panel.add_theme_stylebox_override("panel", _box(COL_CARD, edge, width))
 	card.hp.text = "%d/%d" % [h.hp, h.stats.max_hp]
 	card.bar.size.x = roundf(card.bar_w * clampf(float(h.hp) / h.stats.max_hp, 0.0, 1.0))
 	var conds: PackedStringArray = []
@@ -369,3 +394,119 @@ func _on_defeat() -> void:
 	_centre(_end_big, "THE PARTY HAS FALLEN", 130, 2)
 	_centre(_end_small, "Press R to try again", 164, 1)
 	_end_layer.visible = true
+
+
+# --- submenus: spells/abilities and weapon choice -----------------------------------------------
+
+const POPUP_W := 196
+const ROW_H := 13
+
+var _popup: Panel
+var _popup_rows: VBoxContainer
+var _popup_kind := ""
+
+
+func _build_popup(root: Control) -> void:
+	_popup = Panel.new()
+	_popup.add_theme_stylebox_override("panel", _box(COL_BG, COL_EDGE))
+	_popup.mouse_filter = Control.MOUSE_FILTER_STOP
+	_popup.visible = false
+	root.add_child(_popup)
+	_popup_rows = VBoxContainer.new()
+	_popup_rows.position = Vector2(3, 3)
+	_popup_rows.add_theme_constant_override("separation", 1)
+	_popup.add_child(_popup_rows)
+
+
+func _close_popup() -> void:
+	_popup.visible = false
+	_popup_kind = ""
+
+
+## Popup rows: [{text, tag, ok, why, desc, pick: Callable}]
+func _show_popup(kind: String, rows: Array) -> void:
+	if _popup.visible and _popup_kind == kind:
+		_close_popup()
+		return
+	for c in _popup_rows.get_children():
+		c.queue_free()
+	for r: Dictionary in rows:
+		var b := Button.new()
+		b.text = r.text
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(POPUP_W - 6, ROW_H)
+		b.disabled = not r.ok
+		var tag := Label.new()
+		tag.text = r.tag
+		tag.add_theme_color_override("font_color", COL_DIM if r.ok else Color8(84, 80, 96))
+		tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		tag.size = Vector2(POPUP_W - 12, ROW_H)
+		tag.position = Vector2(0, 1)
+		tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(tag)
+		var hint: String = r.desc if r.ok else "%s: %s" % [r.text, r.why]
+		b.mouse_entered.connect(func(): _hint.text = hint)
+		var pick: Callable = r.pick
+		b.pressed.connect(func():
+			_close_popup()
+			pick.call())
+		_popup_rows.add_child(b)
+	var h := rows.size() * (ROW_H + 1) + 5
+	_popup.size = Vector2(POPUP_W, h)
+	_popup.position = Vector2(SCREEN.x - POPUP_W - 4, SCREEN.y - PANEL_H - h - 2)
+	_popup_kind = kind
+	_popup.visible = true
+
+
+func _open_powers() -> void:
+	var h := combat.current
+	if not h is Hero or combat.moving:
+		return
+	if combat.targeting:
+		combat.cancel_targeting()
+	var rows := []
+	for m: Dictionary in combat.menu_powers(h):
+		var p: SpellData = m.power
+		var tag: String = m.tag
+		if p.uses_slot():
+			var lvl := h.lowest_slot_for(p)
+			tag = "%s  %d left" % [tag, h.slots_left[p.level - 1] if p.level <= h.slots_left.size() else 0] if lvl == p.level or lvl == 0 else "%s (%s)" % [tag, CombatManager.power_tag_level(lvl)]
+		rows.append({text = p.display_name, tag = tag, ok = m.ok, why = m.why, desc = p.description,
+				pick = func(): combat.begin_targeting(p)})
+	if rows.is_empty():
+		return
+	_show_popup("spell", rows)
+
+
+func _open_weapons() -> void:
+	var h := combat.current
+	if not h is Hero or combat.moving:
+		return
+	if combat.targeting:
+		combat.cancel_targeting()
+	var attacks: Array = h.stats.attacks
+	if attacks.size() <= 1:
+		_hint.text = "Click an enemy marked in orange to attack."
+		return
+	var rows := [{text = "Best weapon", tag = "auto", ok = true, why = "", desc = "Use whichever attack does the most expected damage.",
+			pick = func(): combat.choose_weapon(null)}]
+	for a: AttackData in attacks:
+		var rng := "reach" if a.kind == AttackData.Kind.MELEE else "%d/%d ft" % [a.range_ft, a.long_range_ft]
+		var tag := "%+d %s" % [h.stats.attack_bonus(a), h.stats.damage_expr(a)]
+		var chosen := combat.chosen_attack == a
+		rows.append({text = ("> " if chosen else "") + a.name, tag = tag, ok = true, why = "",
+				desc = "%s: %s %s, %s" % [a.name, h.stats.damage_expr(a), a.damage_type, rng],
+				pick = func(): combat.choose_weapon(a)})
+	_show_popup("attack", rows)
+
+
+func _on_card_input(event: InputEvent, h: Hero) -> void:
+	if not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
+		return
+	if combat.targeting:
+		if not combat.pick_target(h):
+			_hint.text = "%s can't be targeted with %s (out of range or already picked)." % [h.display_name(), combat.targeting.display_name]
+	else:
+		combat.map.camera_controller.following = false
+		combat.map.camera_controller.jump_to(h.position)

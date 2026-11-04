@@ -72,7 +72,7 @@ func _hero(s: CreatureStats, class_id: String, hp: int, hit_dice: String, ac: in
 	s.max_hp = hp
 	s.hit_dice = hit_dice
 	s.armor_class = ac
-	s.save_proficiencies = PackedStringArray(saves)
+	s.save_proficiencies = _s(saves)
 	s.speed_ft = 30
 
 
@@ -83,7 +83,7 @@ func _fighter() -> CreatureStats:
 	_hero(s, "fighter", 44, "5d10", 18, ["STR", "CON"])      # chain mail + shield
 	s.extra_attacks = 1                                       # Extra Attack (level 5)
 	s.powers = [sp.second_wind, sp.shove]
-	s.skill_proficiencies = PackedStringArray(["athletics", "perception"])
+	s.skill_proficiencies = _s(["athletics", "perception"])
 	s.attacks = [
 		_attack("Longsword", AttackData.Kind.MELEE, AttackData.Ability.STR, "1d8", "slashing"),
 		_ranged(_attack("Handaxe", AttackData.Kind.RANGED, AttackData.Ability.STR, "1d6", "slashing"), 20, 60),
@@ -95,8 +95,8 @@ func _rogue() -> CreatureStats:
 	var s := _stats("rogue", "Rogue", [8, 18, 12, 12, 12, 10])
 	_hero(s, "rogue", 33, "5d8", 15, ["DEX", "INT"])          # leather armour
 	s.powers = [sp.sneak_attack, sp.hide]
-	s.skill_proficiencies = PackedStringArray(["acrobatics", "athletics"])
-	s.skill_expertise = PackedStringArray(["stealth", "perception"])
+	s.skill_proficiencies = _s(["acrobatics", "athletics"])
+	s.skill_expertise = _s(["stealth", "perception"])
 	s.attacks = [
 		_attack("Shortsword", AttackData.Kind.MELEE, AttackData.Ability.FINESSE, "1d6", "piercing"),
 		_ranged(_attack("Shortbow", AttackData.Kind.RANGED, AttackData.Ability.DEX, "1d6", "piercing"), 80, 320),
@@ -108,9 +108,9 @@ func _cleric() -> CreatureStats:
 	var s := _stats("cleric", "Cleric", [14, 10, 14, 10, 18, 12])
 	_hero(s, "cleric", 38, "5d8", 18, ["WIS", "CHA"])         # chain mail + shield (Life domain)
 	s.spell_ability = "WIS"
-	s.spell_slots = PackedInt32Array([4, 3, 2])
+	s.spell_slots = _i([4, 3, 2])
 	s.powers = [sp.sacred_flame, sp.cure_wounds, sp.bless]
-	s.skill_proficiencies = PackedStringArray(["insight", "medicine"])
+	s.skill_proficiencies = _s(["insight", "medicine"])
 	s.attacks = [
 		_attack("Mace", AttackData.Kind.MELEE, AttackData.Ability.STR, "1d6", "bludgeoning"),
 	]
@@ -121,9 +121,9 @@ func _wizard() -> CreatureStats:
 	var s := _stats("wizard", "Mage", [8, 14, 12, 18, 12, 10])
 	_hero(s, "wizard", 27, "5d6", 12, ["INT", "WIS"])
 	s.spell_ability = "INT"
-	s.spell_slots = PackedInt32Array([4, 3, 2])
+	s.spell_slots = _i([4, 3, 2])
 	s.powers = [sp.fire_bolt, sp.magic_missile, sp.shield, sp.fireball]
-	s.skill_proficiencies = PackedStringArray(["arcana", "investigation"])
+	s.skill_proficiencies = _s(["arcana", "investigation"])
 	s.attacks = [
 		_attack("Quarterstaff", AttackData.Kind.MELEE, AttackData.Ability.STR, "1d6", "bludgeoning"),
 		_ranged(_attack("Light Crossbow", AttackData.Kind.RANGED, AttackData.Ability.DEX, "1d8", "piercing"), 80, 320),
@@ -173,7 +173,7 @@ func _eye_tyrant() -> CreatureStats:
 	s.speed_ft = 20
 	s.fly = true
 	s.sight_ft = 60
-	s.save_proficiencies = PackedStringArray(["WIS"])
+	s.save_proficiencies = _s(["WIS"])
 	var bite := _attack("Bite", AttackData.Kind.MELEE, AttackData.Ability.DEX, "2d6", "piercing")
 	bite.to_hit_override = 4
 	var ray := _ranged(_attack("Gaze Ray", AttackData.Kind.RANGED, AttackData.Ability.DEX, "2d8+2", "necrotic"), 60, 0)
@@ -212,7 +212,7 @@ func _build_spells() -> void:
 			"Hurl a mote of fire. Ranged spell attack, 1d10 fire (2d10 at 5th level).")
 	fb.damage = "1d10"
 	fb.damage_type = "fire"
-	fb.cantrip_dice = PackedInt32Array([1, 2, 3, 4])
+	fb.cantrip_dice = _i([1, 2, 3, 4])
 	fb.sfx = "cast_whoosh"
 	fb.vfx = "fire_bolt"
 
@@ -251,7 +251,7 @@ func _build_spells() -> void:
 	sf.save_ability = "DEX"
 	sf.damage = "1d8"
 	sf.damage_type = "radiant"
-	sf.cantrip_dice = PackedInt32Array([1, 2, 3, 4])
+	sf.cantrip_dice = _i([1, 2, 3, 4])
 	sf.sfx = "cast_whoosh"
 	sf.vfx = "sacred_flame"
 
@@ -287,7 +287,7 @@ func _build_spells() -> void:
 	var sv := _spell("shove", "Shove", A, 0, C.ATTACK, T.ENEMY, 5, R.CONTEST,
 			"Instead of one attack: Athletics vs the target's Athletics or Acrobatics. Win: knock it prone (or push it 5 ft).")
 	sv.contest_skill = "athletics"
-	sv.resist_skills = PackedStringArray(["athletics", "acrobatics"])
+	sv.resist_skills = _s(["athletics", "acrobatics"])
 	sv.condition = "prone"
 	sv.condition_rounds = -1
 	sv.sfx = "hit_blunt"
@@ -319,3 +319,17 @@ func _build_spells() -> void:
 		var err := ResourceSaver.save(s, path, ResourceSaver.FLAG_CHANGE_PATH)
 		print("wrote ", path, " err=", err)
 		sp[s.id] = load(path)
+
+
+## Typed arrays for the data files. (Not PackedStringArray/PackedInt32Array: the editor once
+## re-saved these files and silently dropped every packed-array export.)
+static func _s(a: Array) -> Array[String]:
+	var o: Array[String] = []
+	o.assign(a)
+	return o
+
+
+static func _i(a: Array) -> Array[int]:
+	var o: Array[int] = []
+	o.assign(a)
+	return o

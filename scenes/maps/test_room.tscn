@@ -46,7 +46,7 @@ face = 1
 position = Vector2(120, 52)
 
 [node name="Torch5" parent="World/Entities" unique_id=1590360501 instance=ExtResource("3_uokn5")]
-position = Vector2(-104, 60)
+position = Vector2(24, 44)
 face = 1
 
 [node name="Torch7" parent="World/Entities" unique_id=1590360503 instance=ExtResource("3_uokn5")]

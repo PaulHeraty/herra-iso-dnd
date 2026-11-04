@@ -33,18 +33,12 @@ con_score = 12
 int_score = 2
 wis_score = 11
 cha_score = 4
-save_proficiencies = PackedStringArray()
 max_hp = 26
 hit_dice = "4d10+4"
 armor_class = 14
-resistances = PackedStringArray()
-immunities = PackedStringArray()
 attacks = Array[ExtResource("1_lklsm")]([SubResource("Resource_qq5in")])
 powers = Array[ExtResource("2_rb4q6")]([ExtResource("3_nbsmn")])
-skill_proficiencies = PackedStringArray()
-skill_expertise = PackedStringArray()
 skill_overrides = {
 "perception": 0,
 "stealth": 7
 }
-spell_slots = PackedInt32Array()

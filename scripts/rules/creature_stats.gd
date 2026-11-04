@@ -21,13 +21,13 @@ enum Size { TINY, SMALL, MEDIUM, LARGE, HUGE }
 @export var int_score := 10
 @export var wis_score := 10
 @export var cha_score := 10
-@export var save_proficiencies: PackedStringArray = []   ## "STR", "DEX"...
+@export var save_proficiencies: Array[String] = []   ## "STR", "DEX"...
 @export_group("Defence")
 @export var max_hp := 10
 @export var hit_dice := "1d8"           ## e.g. "5d10" (heroes, for short rests) / "4d10+4" (monsters)
 @export var armor_class := 10
-@export var resistances: PackedStringArray = []
-@export var immunities: PackedStringArray = []
+@export var resistances: Array[String] = []
+@export var immunities: Array[String] = []
 @export_group("Movement")
 @export var speed_ft := 30
 @export var fly := false                ## floats/flies: ignores difficult terrain (later)
@@ -39,14 +39,14 @@ enum Size { TINY, SMALL, MEDIUM, LARGE, HUGE }
 ## Spells and abilities this creature can use (data/spells/*.tres).
 @export var powers: Array[SpellData] = []
 @export_group("Skills")
-@export var skill_proficiencies: PackedStringArray = []   ## "stealth", "athletics", "perception"...
-@export var skill_expertise: PackedStringArray = []       ## double proficiency (Rogue)
+@export var skill_proficiencies: Array[String] = []   ## "stealth", "athletics", "perception"...
+@export var skill_expertise: Array[String] = []       ## double proficiency (Rogue)
 ## Monsters: skill bonuses straight from the stat block (e.g. {"stealth": 7}); overrides the maths.
 @export var skill_overrides := {}
 @export_group("Spellcasting")
 @export var spell_ability := ""         ## "INT" (wizard), "WIS" (cleric), "" = none
 ## Slots per spell level: index 0 = 1st level. Level 5 full caster: [4, 3, 2].
-@export var spell_slots: PackedInt32Array = []
+@export var spell_slots: Array[int] = []
 
 const FT_PER_CELL := 5
 

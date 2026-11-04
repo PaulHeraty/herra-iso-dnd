@@ -41,7 +41,7 @@ var hp := 0
 ## Conditions on this creature (Condition), spell slots left per level (index 0 = 1st), uses left
 ## per power id, the spell being concentrated on, and this round's reaction.
 var conditions: Array[Condition] = []
-var slots_left: PackedInt32Array = []
+var slots_left: Array[int] = []
 var uses_left := {}
 var concentrating: SpellData
 var reaction_used := false
@@ -281,3 +281,23 @@ func power(pid: String) -> SpellData:
 			if p.id == pid:
 				return p
 	return null
+
+
+## Regain hit points (not above max). A creature at 0 HP that isn't dead comes back up.
+## Returns the HP actually regained.
+func heal(amount: int) -> int:
+	if dead or stats == null or amount <= 0:
+		return 0
+	var was_down := hp <= 0
+	var before := hp
+	hp = mini(stats.max_hp, hp + amount)
+	if was_down:
+		death_successes = 0
+		death_failures = 0
+		stable = false
+		_on_revived()
+	return hp - before
+
+
+func _on_revived() -> void:
+	pass

@@ -65,6 +65,10 @@ func _on_down() -> void:
 ## Back on their feet with `amount` HP (stand up, colour back).
 func revive(amount: int) -> void:
 	hp = clampi(amount, 1, stats.max_hp)
+	_on_revived()
+
+
+func _on_revived() -> void:
 	var tw := create_tween()
 	tw.tween_property(sprite, "rotation_degrees", 0.0, 0.25)
 	sprite.modulate = Color.WHITE
