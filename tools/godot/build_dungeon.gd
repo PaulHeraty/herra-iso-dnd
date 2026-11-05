@@ -45,7 +45,8 @@ var FLOOR_1 := {
 			"monsters": [["k", Vector2i(2, 2), F.SOUTH_WEST], ["k", Vector2i(6, 1), F.SOUTH_WEST],
 				["k", Vector2i(4, 4), F.SOUTH_EAST]],
 			"props": [["barrel", Vector2i(9, 0)], ["barrel", Vector2i(9, 1)], ["crate", Vector2i(0, 6)]],
-			"bones": [Vector2i(7, 5)]},
+			"bones": [Vector2i(7, 5)],
+			"chests": [[Vector2i(4, 0), 30, ["mace_plus1", "potion_healing"]]]},
 		# C: storeroom - supplies and a chest
 		"C": {"rect": Rect2i(14, 3, 7, 5),
 			"props": [["crate", Vector2i(0, 0)], ["crate", Vector2i(1, 0)], ["barrel", Vector2i(6, 0)],
@@ -58,13 +59,15 @@ var FLOOR_1 := {
 				["urn", Vector2i(8, 0)]],
 			"monsters": [["k", Vector2i(4, 1), F.SOUTH_WEST], ["k", Vector2i(4, 4), F.NORTH_WEST],
 				["k", Vector2i(4, 7), F.NORTH_WEST]],
-			"chests": [[Vector2i(4, 0), 120, ["warhammer", "studded_leather", "scroll_magic_missile"]]], "braziers": [Vector2i(0, 8)]},
+			"chests": [[Vector2i(4, 0), 120, ["longsword_plus1", "studded_leather_plus1", "scroll_magic_missile"]]], "braziers": [Vector2i(0, 8)]},
 		# E: webbed hall - giant spiders among the cocooned dead
 		"E": {"rect": Rect2i(25, 2, 10, 10), "web": true,
 			"monsters": [["S", Vector2i(6, 2), F.SOUTH_WEST], ["S", Vector2i(3, 6), F.SOUTH_WEST]],
 			"props": [["cocoon", Vector2i(1, 1)], ["cocoon", Vector2i(8, 1)], ["cocoon", Vector2i(8, 7)],
 				["cocoon", Vector2i(2, 8)], ["rubble", Vector2i(5, 4)]],
-			"bones": [Vector2i(7, 4), Vector2i(1, 5)]},
+			"bones": [Vector2i(7, 4), Vector2i(1, 5)],
+			# a dead adventurer's pack among the cocoons
+			"chests": [[Vector2i(3, 0), 45, ["ring_free_action", "shortbow_plus1"]]]},
 		# F: stair room - two skeletons guard the way down
 		"F": {"rect": Rect2i(26, 16, 8, 7),
 			"monsters": [["k", Vector2i(2, 3), F.NORTH_EAST], ["k", Vector2i(5, 3), F.NORTH_EAST]],
@@ -91,7 +94,8 @@ var FLOOR_2 := {
 		"G": {"rect": Rect2i(2, 2, 6, 6),
 			"stairs": [Vector2i(1, 0), true, "res://scenes/maps/dungeon_1.tscn", "from_below"],
 			"arrive": [Vector2i(2, 2), "from_above", F.SOUTH_EAST],
-			"braziers": [Vector2i(5, 5)], "props": [["rubble", Vector2i(5, 0)]], "bones": [Vector2i(0, 4)]},
+			"braziers": [Vector2i(5, 5)], "props": [["rubble", Vector2i(5, 0)]], "bones": [Vector2i(0, 4)],
+			"chests": [[Vector2i(3, 0), 20, ["dagger_plus1", "potion_healing"]]]},
 		# H: ossuary - four skeletons among the bones of the dead
 		"H": {"rect": Rect2i(11, 2, 10, 8), "web": true,
 			"monsters": [["k", Vector2i(3, 1), F.SOUTH_WEST], ["k", Vector2i(7, 1), F.SOUTH_WEST],
@@ -99,21 +103,22 @@ var FLOOR_2 := {
 			"props": [["sarcophagus", Vector2i(1, 6)], ["urn", Vector2i(0, 0)], ["urn", Vector2i(9, 0)],
 				["urn", Vector2i(9, 3)], ["rubble", Vector2i(3, 6)]],
 			"bones": [Vector2i(2, 3), Vector2i(6, 2), Vector2i(4, 5), Vector2i(7, 7)],
-			"chests": [[Vector2i(5, 0), 60, ["potion_greater_healing", "lair_key", "scroll_lightning_bolt"]]]},
+			"chests": [[Vector2i(5, 0), 60, ["potion_greater_healing", "lair_key", "scroll_lightning_bolt", "shield_plus1"]]]},
 		# I: the nest - spiders and cocoons
 		"I": {"rect": Rect2i(2, 12, 11, 9), "web": true,
 			"monsters": [["S", Vector2i(4, 3), F.NORTH_EAST], ["S", Vector2i(8, 5), F.NORTH_WEST],
 				["S", Vector2i(3, 7), F.NORTH_EAST]],
 			"props": [["cocoon", Vector2i(0, 1)], ["cocoon", Vector2i(10, 0)], ["cocoon", Vector2i(10, 8)],
 				["cocoon", Vector2i(6, 8)], ["cocoon", Vector2i(0, 7)], ["rubble", Vector2i(6, 1)]],
-			"bones": [Vector2i(2, 2), Vector2i(7, 3), Vector2i(5, 6)]},
+			"bones": [Vector2i(2, 2), Vector2i(7, 3), Vector2i(5, 6)],
+			"chests": [[Vector2i(8, 0), 80, ["ring_resistance", "rapier_plus1", "potion_healing"]]]},
 		# J: the Eye Tyrant's lair - pillars, braziers, and the dungeon's treasure
 		"J": {"rect": Rect2i(16, 13, 12, 10), "web": true,
 			"pillars": [Vector2i(3, 2), Vector2i(8, 2), Vector2i(3, 7), Vector2i(8, 7)],
 			"monsters": [["E", Vector2i(6, 5), F.NORTH_WEST], ["k", Vector2i(2, 4), F.NORTH_WEST],
 				["k", Vector2i(9, 4), F.NORTH_WEST]],
 			"braziers": [Vector2i(0, 0), Vector2i(11, 0), Vector2i(0, 9), Vector2i(11, 9)],
-			"chests": [[Vector2i(10, 8), 300, ["ring_protection", "potion_greater_healing", "scroll_fireball"]]], "props": [["urn", Vector2i(11, 4)]],
+			"chests": [[Vector2i(10, 8), 300, ["ring_protection", "chain_mail_plus1", "potion_greater_healing", "scroll_fireball"]]], "props": [["urn", Vector2i(11, 4)]],
 			"bones": [Vector2i(5, 8), Vector2i(7, 1)]},
 	},
 	"corridors": [

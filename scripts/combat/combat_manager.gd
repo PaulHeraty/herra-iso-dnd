@@ -1437,7 +1437,7 @@ func _spell_attack(caster: Actor, p: SpellData, slot: int, target: Actor, char_l
 		if crit and show_dice(true):
 			await _dice_crit(caster, target, p.display_name, r, ac, d, p.damage_type)
 		_deal(caster, target, d.total, p.damage_type, crit)
-	if p.condition != "" and target.is_alive():
+	if p.condition != "" and target.is_alive() and not _shrugs_off(target, p.condition):
 		target.add_condition(p.condition, p.condition_rounds, caster, p)
 		_say("  %s is %s!" % [target.display_name(), Condition.display(p.condition).to_lower()])
 		FloatText.spawn(map, target.body_position() + Vector2(0, -18), Condition.display(p.condition).to_upper(), COL_MAGIC, 10)
@@ -1464,7 +1464,7 @@ func _spell_save(caster: Actor, p: SpellData, target: Actor, dmg_roll: DiceRoll,
 	elif saved:
 		_say("%s resists the %s" % [target.display_name(), p.display_name])
 		FloatText.spawn(map, target.body_position() + Vector2(0, -10), "RESISTED", Color8(200, 196, 210), 10)
-	if not saved and p.condition != "" and target.is_alive():
+	if not saved and p.condition != "" and target.is_alive() and not _shrugs_off(target, p.condition):
 		target.add_condition(p.condition, p.condition_rounds, caster, p)
 		_say("  %s is %s!" % [target.display_name(), Condition.display(p.condition).to_lower()])
 
@@ -1872,7 +1872,8 @@ const AI_JITTER := 1.5
 
 
 func _power_value(m: Actor, p: SpellData, h: Actor, c: Vector2i) -> float:
-	if p.kind != SpellData.Kind.MONSTER or p.condition == "" or not m.can_use(p) or h.has_condition(p.condition):
+	if p.kind != SpellData.Kind.MONSTER or p.condition == "" or not m.can_use(p) or h.has_condition(p.condition) \
+			or p.condition in h.stats.condition_immunities:
 		return 0.0
 	var dist := DungeonMap.grid_distance(c, h.cell)
 	if dist > maxi(1, p.range_cells()) or (p.needs_los and not map.has_line_of_sight(c, h.cell)):
@@ -1885,6 +1886,24 @@ func _power_value(m: Actor, p: SpellData, h: Actor, c: Vector2i) -> float:
 		SpellData.Resolve.SAVE:
 			chance = clampf((p.dc_for(m.stats) - h.stats.save_bonus(p.save_ability) - 1) / 20.0, 0.05, 0.95)
 	return chance * CONDITION_VALUE.get(p.condition, 3.0)
+
+
+## Is `target` immune to condition `cid` (Ring of Free Action: restrained)? Says so in the log
+## with the item that protects it.
+func _shrugs_off(target: Actor, cid: String) -> bool:
+	if cid not in target.stats.condition_immunities:
+		return false
+	var why := ""
+	var eq = target.get("equipment")
+	if eq is Dictionary:
+		for slot in eq:
+			var it := ItemData.get_item(eq[slot])
+			if it and cid in it.condition_immunities:
+				why = " (%s)" % it.display_name
+				break
+	_say("  %s can't be %s%s." % [target.display_name(), Condition.display(cid).to_lower(), why])
+	FloatText.spawn(map, target.body_position() + Vector2(0, -18), "IMMUNE", Color8(200, 196, 210), 10)
+	return true
 
 
 ## "Break free" from a web (restrained): an action, STR check (Athletics or Acrobatics, whichever is

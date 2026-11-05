@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_2voab"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_b5n2o"]
+
+[sub_resource type="Resource" id="Resource_kfdq4"]
+script = ExtResource("1_2voab")
+name = "Dagger +1"
+ability = 2
+damage = "1d4"
+damage_type = "piercing"
+
+[resource]
+resource_name = "Dagger +1"
+script = ExtResource("2_b5n2o")
+id = "dagger_plus1"
+display_name = "Dagger +1"
+kind = 0
+description = "Perfectly balanced. Its edge hums when drawn.
+Magic: +1 to hit and damage."
+value_gp = 502
+magic_bonus = 1
+attack = SubResource("Resource_kfdq4")

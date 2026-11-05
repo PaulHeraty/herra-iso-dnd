@@ -10,12 +10,12 @@
 [ext_resource type="Script" path="res://scripts/markers/prop.gd" id="8_jvaef"]
 [ext_resource type="PackedScene" path="res://scenes/markers/brazier.tscn" id="9_v171e"]
 [ext_resource type="Script" path="res://scripts/markers/brazier.gd" id="10_0fhl8"]
-[ext_resource type="PackedScene" path="res://scenes/markers/party_start.tscn" id="11_njqyy"]
-[ext_resource type="Script" path="res://scripts/markers/party_start.gd" id="12_tdfbk"]
-[ext_resource type="PackedScene" path="res://scenes/markers/stairs.tscn" id="13_hu04g"]
-[ext_resource type="Script" path="res://scripts/markers/stairs.gd" id="14_mciut"]
-[ext_resource type="PackedScene" path="res://scenes/markers/chest.tscn" id="15_g4gmd"]
-[ext_resource type="Script" path="res://scripts/markers/chest.gd" id="16_gju4c"]
+[ext_resource type="PackedScene" path="res://scenes/markers/chest.tscn" id="11_njqyy"]
+[ext_resource type="Script" path="res://scripts/markers/chest.gd" id="12_tdfbk"]
+[ext_resource type="PackedScene" path="res://scenes/markers/party_start.tscn" id="13_hu04g"]
+[ext_resource type="Script" path="res://scripts/markers/party_start.gd" id="14_mciut"]
+[ext_resource type="PackedScene" path="res://scenes/markers/stairs.tscn" id="15_g4gmd"]
+[ext_resource type="Script" path="res://scripts/markers/stairs.gd" id="16_gju4c"]
 [ext_resource type="PackedScene" path="res://scenes/markers/monster_spawn.tscn" id="17_gs07n"]
 [ext_resource type="Script" path="res://scripts/markers/monster_spawn.gd" id="18_y5fgs"]
 [ext_resource type="Texture2D" path="res://assets/sprites/monsters/skeleton_sheet.png" id="19_206n5"]
@@ -48,42 +48,42 @@ region = Rect2(0, 0, 16, 24)
 atlas = ExtResource("19_206n5")
 region = Rect2(0, 0, 16, 24)
 
-[node name="Dungeon2" type="Node2D" unique_id=907625719]
+[node name="Dungeon2" type="Node2D" unique_id=1028958283]
 script = ExtResource("1_mibic")
 map_title = "The Webbed Deep"
 
-[node name="Ambient" type="CanvasModulate" parent="." unique_id=897094162]
+[node name="Ambient" type="CanvasModulate" parent="." unique_id=541571988]
 color = Color(0.34, 0.36, 0.5, 1)
 
-[node name="Floor" type="TileMapLayer" parent="." unique_id=1906976127]
+[node name="Floor" type="TileMapLayer" parent="." unique_id=2122080867]
 tile_map_data = PackedByteArray("AAACAAIAAAADAAAAAAACAAMAAAAAAAAAAAACAAQAAAAHAAAAAAACAAUAAAACAAAAAAACAAYAAAACAAAAAAACAAcAAAAHAAAAAAADAAIAAAAAAAAAAAADAAMAAAAEAAAAAAADAAQAAAAFAAAAAAADAAUAAAAAAAAAAAADAAYAAAABAAAAAAADAAcAAAAFAAAAAAAEAAIAAAAGAAAAAAAEAAMAAAADAAAAAAAEAAQAAAAAAAAAAAAEAAUAAAADAAAAAAAEAAYAAAAHAAAAAAAEAAcAAAAAAAAAAAAFAAIAAAAFAAAAAAAFAAMAAAAGAAAAAAAFAAQAAAAHAAAAAAAFAAUAAAAAAAAAAAAFAAYAAAAEAAAAAAAFAAcAAAABAAAAAAAGAAIAAAADAAAAAAAGAAMAAAAEAAAAAAAGAAQAAAABAAAAAAAGAAUAAAAAAAAAAAAGAAYAAAAAAAAAAAAGAAcAAAADAAAAAAAHAAIAAAAGAAAAAAAHAAMAAAAAAAAAAAAHAAQAAAABAAAAAAAHAAUAAAACAAAAAAAHAAYAAAAGAAAAAAAHAAcAAAACAAAAAAALAAIAAAACAAAAAAALAAMAAAAAAAAAAAALAAQAAAAEAAAAAAALAAUAAAAGAAAAAAALAAYAAAADAAAAAAALAAcAAAAFAAAAAAALAAgAAAAGAAAAAAALAAkAAAACAAAAAAAMAAIAAAAGAAAAAAAMAAMAAAAAAAAAAAAMAAQAAAACAAAAAAAMAAUAAAAHAAAAAAAMAAYAAAAFAAAAAAAMAAcAAAADAAAAAAAMAAgAAAAFAAAAAAAMAAkAAAAGAAAAAAANAAIAAAAAAAAAAAANAAMAAAACAAAAAAANAAQAAAADAAAAAAANAAUAAAADAAAAAAANAAYAAAABAAAAAAANAAcAAAAFAAAAAAANAAgAAAAAAAAAAAANAAkAAAAFAAAAAAAOAAIAAAABAAAAAAAOAAMAAAAHAAAAAAAOAAQAAAADAAAAAAAOAAUAAAAHAAAAAAAOAAYAAAAAAAAAAAAOAAcAAAABAAAAAAAOAAgAAAAAAAAAAAAOAAkAAAAHAAAAAAAPAAIAAAABAAAAAAAPAAMAAAAEAAAAAAAPAAQAAAAFAAAAAAAPAAUAAAAEAAAAAAAPAAYAAAAGAAAAAAAPAAcAAAAHAAAAAAAPAAgAAAADAAAAAAAPAAkAAAABAAAAAAAQAAIAAAAFAAAAAAAQAAMAAAAFAAAAAAAQAAQAAAADAAAAAAAQAAUAAAAGAAAAAAAQAAYAAAAAAAAAAAAQAAcAAAAGAAAAAAAQAAgAAAAHAAAAAAAQAAkAAAAEAAAAAAARAAIAAAAHAAAAAAARAAMAAAAGAAAAAAARAAQAAAAHAAAAAAARAAUAAAAFAAAAAAARAAYAAAAAAAAAAAARAAcAAAAGAAAAAAARAAgAAAACAAAAAAARAAkAAAAFAAAAAAASAAIAAAADAAAAAAASAAMAAAAEAAAAAAASAAQAAAAEAAAAAAASAAUAAAAAAAAAAAASAAYAAAAEAAAAAAASAAcAAAAEAAAAAAASAAgAAAAHAAAAAAASAAkAAAAFAAAAAAATAAIAAAABAAAAAAATAAMAAAAAAAAAAAATAAQAAAACAAAAAAATAAUAAAAEAAAAAAATAAYAAAAEAAAAAAATAAcAAAAEAAAAAAATAAgAAAAHAAAAAAATAAkAAAAAAAAAAAAUAAIAAAAHAAAAAAAUAAMAAAAEAAAAAAAUAAQAAAABAAAAAAAUAAUAAAACAAAAAAAUAAYAAAAFAAAAAAAUAAcAAAABAAAAAAAUAAgAAAAAAAAAAAAUAAkAAAACAAAAAAACAAwAAAAGAAAAAAACAA0AAAAAAAAAAAACAA4AAAAEAAAAAAACAA8AAAAHAAAAAAACABAAAAACAAAAAAACABEAAAAEAAAAAAACABIAAAAHAAAAAAACABMAAAACAAAAAAACABQAAAAHAAAAAAADAAwAAAADAAAAAAADAA0AAAABAAAAAAADAA4AAAAGAAAAAAADAA8AAAADAAAAAAADABAAAAAEAAAAAAADABEAAAACAAAAAAADABIAAAAGAAAAAAADABMAAAABAAAAAAADABQAAAAEAAAAAAAEAAwAAAAFAAAAAAAEAA0AAAAEAAAAAAAEAA4AAAACAAAAAAAEAA8AAAABAAAAAAAEABAAAAAEAAAAAAAEABEAAAAEAAAAAAAEABIAAAABAAAAAAAEABMAAAAFAAAAAAAEABQAAAAEAAAAAAAFAAwAAAABAAAAAAAFAA0AAAABAAAAAAAFAA4AAAAGAAAAAAAFAA8AAAACAAAAAAAFABAAAAAGAAAAAAAFABEAAAAHAAAAAAAFABIAAAAAAAAAAAAFABMAAAADAAAAAAAFABQAAAAAAAAAAAAGAAwAAAAHAAAAAAAGAA0AAAAAAAAAAAAGAA4AAAABAAAAAAAGAA8AAAAGAAAAAAAGABAAAAACAAAAAAAGABEAAAAGAAAAAAAGABIAAAAEAAAAAAAGABMAAAABAAAAAAAGABQAAAAHAAAAAAAHAAwAAAABAAAAAAAHAA0AAAABAAAAAAAHAA4AAAACAAAAAAAHAA8AAAADAAAAAAAHABAAAAAAAAAAAAAHABEAAAAAAAAAAAAHABIAAAAEAAAAAAAHABMAAAADAAAAAAAHABQAAAABAAAAAAAIAAwAAAAGAAAAAAAIAA0AAAAGAAAAAAAIAA4AAAAAAAAAAAAIAA8AAAACAAAAAAAIABAAAAADAAAAAAAIABEAAAAHAAAAAAAIABIAAAAAAAAAAAAIABMAAAAGAAAAAAAIABQAAAAGAAAAAAAJAAwAAAAEAAAAAAAJAA0AAAAFAAAAAAAJAA4AAAAGAAAAAAAJAA8AAAAEAAAAAAAJABAAAAADAAAAAAAJABEAAAAFAAAAAAAJABIAAAAEAAAAAAAJABMAAAAEAAAAAAAJABQAAAADAAAAAAAKAAwAAAACAAAAAAAKAA0AAAABAAAAAAAKAA4AAAAAAAAAAAAKAA8AAAABAAAAAAAKABAAAAABAAAAAAAKABEAAAACAAAAAAAKABIAAAAHAAAAAAAKABMAAAAFAAAAAAAKABQAAAAHAAAAAAALAAwAAAAEAAAAAAALAA0AAAABAAAAAAALAA4AAAACAAAAAAALAA8AAAAHAAAAAAALABAAAAADAAAAAAALABEAAAAFAAAAAAALABIAAAAHAAAAAAALABMAAAAEAAAAAAALABQAAAAEAAAAAAAMAAwAAAAFAAAAAAAMAA0AAAAEAAAAAAAMAA4AAAAFAAAAAAAMAA8AAAAFAAAAAAAMABAAAAADAAAAAAAMABEAAAABAAAAAAAMABIAAAAAAAAAAAAMABMAAAAAAAAAAAAMABQAAAAGAAAAAAAQAA0AAAACAAAAAAAQAA4AAAAGAAAAAAAQAA8AAAAGAAAAAAAQABAAAAADAAAAAAAQABEAAAAHAAAAAAAQABIAAAAEAAAAAAAQABMAAAAGAAAAAAAQABQAAAACAAAAAAAQABUAAAAGAAAAAAAQABYAAAADAAAAAAARAA0AAAACAAAAAAARAA4AAAAGAAAAAAARAA8AAAACAAAAAAARABAAAAAAAAAAAAARABEAAAADAAAAAAARABIAAAAEAAAAAAARABMAAAAAAAAAAAARABQAAAAHAAAAAAARABUAAAAEAAAAAAARABYAAAABAAAAAAASAA0AAAAAAAAAAAASAA4AAAAGAAAAAAASAA8AAAAFAAAAAAASABAAAAABAAAAAAASABEAAAAEAAAAAAASABIAAAABAAAAAAASABMAAAAFAAAAAAASABQAAAAEAAAAAAASABUAAAACAAAAAAASABYAAAAGAAAAAAATAA0AAAAFAAAAAAATAA4AAAAFAAAAAAATABAAAAAEAAAAAAATABEAAAACAAAAAAATABIAAAAFAAAAAAATABMAAAABAAAAAAATABUAAAACAAAAAAATABYAAAAAAAAAAAAUAA0AAAAAAAAAAAAUAA4AAAAHAAAAAAAUAA8AAAAGAAAAAAAUABAAAAABAAAAAAAUABEAAAAFAAAAAAAUABIAAAAFAAAAAAAUABMAAAAGAAAAAAAUABQAAAAFAAAAAAAUABUAAAAGAAAAAAAUABYAAAADAAAAAAAVAA0AAAAFAAAAAAAVAA4AAAABAAAAAAAVAA8AAAAEAAAAAAAVABAAAAAAAAAAAAAVABEAAAADAAAAAAAVABIAAAAAAAAAAAAVABMAAAACAAAAAAAVABQAAAAAAAAAAAAVABUAAAAAAAAAAAAVABYAAAABAAAAAAAWAA0AAAAHAAAAAAAWAA4AAAABAAAAAAAWAA8AAAADAAAAAAAWABAAAAAAAAAAAAAWABEAAAAHAAAAAAAWABIAAAACAAAAAAAWABMAAAABAAAAAAAWABQAAAAGAAAAAAAWABUAAAAFAAAAAAAWABYAAAABAAAAAAAXAA0AAAABAAAAAAAXAA4AAAAFAAAAAAAXAA8AAAAGAAAAAAAXABAAAAAFAAAAAAAXABEAAAAAAAAAAAAXABIAAAAGAAAAAAAXABMAAAABAAAAAAAXABQAAAACAAAAAAAXABUAAAABAAAAAAAXABYAAAAAAAAAAAAYAA0AAAADAAAAAAAYAA4AAAABAAAAAAAYABAAAAAEAAAAAAAYABEAAAADAAAAAAAYABIAAAAFAAAAAAAYABMAAAABAAAAAAAYABUAAAACAAAAAAAYABYAAAAAAAAAAAAZAA0AAAAFAAAAAAAZAA4AAAAFAAAAAAAZAA8AAAAAAAAAAAAZABAAAAAGAAAAAAAZABEAAAAHAAAAAAAZABIAAAACAAAAAAAZABMAAAAHAAAAAAAZABQAAAABAAAAAAAZABUAAAADAAAAAAAZABYAAAAHAAAAAAAaAA0AAAAFAAAAAAAaAA4AAAAGAAAAAAAaAA8AAAAEAAAAAAAaABAAAAABAAAAAAAaABEAAAADAAAAAAAaABIAAAABAAAAAAAaABMAAAADAAAAAAAaABQAAAAEAAAAAAAaABUAAAADAAAAAAAaABYAAAAFAAAAAAAbAA0AAAACAAAAAAAbAA4AAAAFAAAAAAAbAA8AAAACAAAAAAAbABAAAAABAAAAAAAbABEAAAABAAAAAAAbABIAAAAGAAAAAAAbABMAAAADAAAAAAAbABQAAAAAAAAAAAAbABUAAAACAAAAAAAbABYAAAACAAAAAAAIAAQAAAABAAEAAAAJAAQAAAABAAAAAAAKAAQAAAAFAAEAAAAEAAgAAAAFAAEAAAAEAAkAAAAEAAAAAAAEAAoAAAACAAAAAAAEAAsAAAAFAAEAAAASAAoAAAAEAAEAAAASAAsAAAAHAAAAAAASAAwAAAAHAAEAAAANABEAAAACAAEAAAAOABEAAAAAAAAAAAAPABEAAAAHAAEAAAA=")
 tile_set = ExtResource("2_l0h8i")
 
-[node name="World" type="Node2D" parent="." unique_id=1960081798]
+[node name="World" type="Node2D" parent="." unique_id=2144564605]
 y_sort_enabled = true
 
-[node name="Walls" type="TileMapLayer" parent="World" unique_id=1553121106]
+[node name="Walls" type="TileMapLayer" parent="World" unique_id=1881189546]
 y_sort_enabled = true
 tile_map_data = PackedByteArray("AAABAAEAAQABAAMAAAABAAIAAQAAAAEAAAABAAMAAQADAAEAAAACAAEAAQADAAAAAAADAAEAAQAAAAAAAAABAAQAAQAAAAEAAAABAAUAAQACAAEAAAABAAYAAQABAAEAAAABAAcAAQABAAEAAAABAAgAAQADAAAAAAACAAgAAQAAAAAAAAADAAgAAQADAAEAAAAEAAEAAQABAAAAAAAFAAEAAQABAAAAAAAFAAgAAQACAAMAAAAGAAEAAQAAAAAAAAAGAAgAAQAAAAAAAAAHAAEAAQAAAAAAAAAHAAgAAQAAAAAAAAAIAAEAAQABAAEAAAAIAAIAAQABAAEAAAAIAAMAAQACAAAAAAAIAAUAAQAAAAMAAAAIAAYAAQABAAEAAAAIAAcAAQAAAAEAAAAIAAgAAQAAAAIAAAAKAAEAAQABAAMAAAAKAAIAAQAAAAEAAAAKAAMAAQABAAIAAAALAAEAAQAAAAAAAAAMAAEAAQADAAAAAAAKAAUAAQADAAEAAAAKAAYAAQACAAEAAAAKAAcAAQAAAAEAAAAKAAgAAQAAAAEAAAAKAAkAAQACAAEAAAAKAAoAAQAAAAMAAAALAAoAAQACAAMAAAAMAAoAAQAAAAMAAAANAAEAAQABAAAAAAANAAoAAQABAAMAAAAOAAEAAQACAAAAAAAOAAoAAQABAAAAAAAPAAEAAQACAAAAAAAPAAoAAQAAAAAAAAAQAAEAAQABAAAAAAAQAAoAAQADAAAAAAARAAEAAQABAAAAAAARAAoAAQAAAAEAAAASAAEAAQAAAAAAAAATAAEAAQADAAAAAAATAAoAAQADAAMAAAAUAAEAAQABAAAAAAAUAAoAAQABAAAAAAAVAAEAAQABAAEAAAAVAAIAAQACAAEAAAAVAAMAAQACAAEAAAAVAAQAAQADAAEAAAAVAAUAAQABAAEAAAAVAAYAAQABAAEAAAAVAAcAAQABAAEAAAAVAAgAAQAAAAEAAAAVAAkAAQACAAEAAAAVAAoAAQACAAIAAAABAAsAAQACAAMAAAABAAwAAQADAAEAAAABAA0AAQACAAEAAAACAAsAAQADAAAAAAADAAsAAQACAAIAAAABAA4AAQABAAEAAAABAA8AAQAAAAEAAAABABAAAQABAAEAAAABABEAAQADAAEAAAABABIAAQAAAAEAAAABABMAAQADAAEAAAABABQAAQADAAEAAAABABUAAQAAAAAAAAACABUAAQABAAAAAAADABUAAQADAAAAAAAEABUAAQADAAAAAAAFAAsAAQAAAAAAAAAFABUAAQABAAAAAAAGAAsAAQAAAAAAAAAGABUAAQABAAAAAAAHAAsAAQAAAAAAAAAHABUAAQACAAAAAAAIAAsAAQACAAAAAAAIABUAAQADAAAAAAAJAAsAAQAAAAAAAAAJABUAAQABAAAAAAAKAAsAAQACAAAAAAAKABUAAQAAAAAAAAALAAsAAQABAAAAAAALABUAAQABAAAAAAAMAAsAAQABAAAAAAAMABUAAQABAAAAAAANAAsAAQABAAEAAAANAAwAAQABAAEAAAANAA0AAQADAAEAAAANAA4AAQAAAAEAAAANAA8AAQADAAEAAAANABAAAQABAAAAAAANABIAAQABAAMAAAANABMAAQACAAEAAAANABQAAQADAAEAAAANABUAAQABAAIAAAAPAAwAAQAAAAMAAAAPAA0AAQABAAEAAAAPAA4AAQAAAAEAAAAQAAwAAQACAAAAAAARAAwAAQAAAAIAAAAPAA8AAQAAAAEAAAAPABAAAQAAAAIAAAAPABIAAQACAAEAAAAPABMAAQACAAEAAAAPABQAAQAAAAEAAAAPABUAAQADAAEAAAAPABYAAQABAAEAAAAPABcAAQAAAAAAAAAQABcAAQAAAAAAAAARABcAAQABAAAAAAASABcAAQADAAAAAAATAAwAAQABAAAAAAATAA8AAQADAAIAAAATABQAAQACAAIAAAATABcAAQAAAAAAAAAUAAwAAQAAAAAAAAAUABcAAQACAAAAAAAVAAwAAQABAAAAAAAVABcAAQAAAAAAAAAWAAwAAQADAAAAAAAWABcAAQABAAAAAAAXAAwAAQACAAAAAAAXABcAAQABAAAAAAAYAAwAAQAAAAAAAAAYAA8AAQABAAIAAAAYABQAAQADAAIAAAAYABcAAQABAAAAAAAZAAwAAQADAAAAAAAZABcAAQABAAAAAAAaAAwAAQAAAAAAAAAaABcAAQAAAAAAAAAbAAwAAQABAAAAAAAbABcAAQAAAAAAAAAcAAwAAQADAAEAAAAcAA0AAQAAAAEAAAAcAA4AAQACAAEAAAAcAA8AAQADAAEAAAAcABAAAQAAAAEAAAAcABEAAQAAAAEAAAAcABIAAQABAAEAAAAcABMAAQACAAEAAAAcABQAAQAAAAEAAAAcABUAAQADAAEAAAAcABYAAQABAAEAAAAcABcAAQACAAIAAAAJAAMAAQADAAAAAAAJAAUAAQABAAAAAAADAAkAAQAAAAEAAAAFAAkAAQACAAEAAAADAAoAAQACAAEAAAAFAAoAAQAAAAEAAAARAAsAAQAAAAEAAAATAAsAAQADAAEAAAAOABAAAQAAAAAAAAAOABIAAQACAAAAAAA=")
 tile_set = ExtResource("2_l0h8i")
 
-[node name="Entities" type="Node2D" parent="World" unique_id=53422537]
+[node name="Entities" type="Node2D" parent="World" unique_id=968615923]
 y_sort_enabled = true
 
-[node name="Door_10_4" type="Node2D" parent="World/Entities" unique_id=1681815424 instance=ExtResource("3_re0dq")]
+[node name="Door_10_4" type="Node2D" parent="World/Entities" unique_id=1806210890 instance=ExtResource("3_re0dq")]
 position = Vector2(112, 120)
 script = ExtResource("4_8h1ka")
 wall_run = 1
 
-[node name="Door_4_11" type="Node2D" parent="World/Entities" unique_id=497945473 instance=ExtResource("3_re0dq")]
+[node name="Door_4_11" type="Node2D" parent="World/Entities" unique_id=195073799 instance=ExtResource("3_re0dq")]
 position = Vector2(-96, 128)
 script = ExtResource("4_8h1ka")
 
-[node name="Door_18_12" type="Node2D" parent="World/Entities" unique_id=467818637 instance=ExtResource("3_re0dq")]
+[node name="Door_18_12" type="Node2D" parent="World/Entities" unique_id=1194614835 instance=ExtResource("3_re0dq")]
 position = Vector2(112, 248)
 script = ExtResource("4_8h1ka")
 
-[node name="Door_15_17" type="Node2D" parent="World/Entities" unique_id=680150239 instance=ExtResource("3_re0dq")]
+[node name="Door_15_17" type="Node2D" parent="World/Entities" unique_id=1413322594 instance=ExtResource("3_re0dq")]
 position = Vector2(-16, 264)
 script = ExtResource("4_8h1ka")
 wall_run = 1
@@ -91,107 +91,113 @@ locked = true
 lock_dc = 0
 key_id = "lair"
 
-[node name="Torch_G_3_1" type="Node2D" parent="World/Entities" unique_id=1388041484 instance=ExtResource("5_kw0u4")]
+[node name="Torch_G_3_1" type="Node2D" parent="World/Entities" unique_id=222935583 instance=ExtResource("5_kw0u4")]
 position = Vector2(40, 44)
 script = ExtResource("6_fn686")
 
-[node name="Torch_G_1_3" type="Node2D" parent="World/Entities" unique_id=1437314964 instance=ExtResource("5_kw0u4")]
+[node name="Torch_G_1_3" type="Node2D" parent="World/Entities" unique_id=247464250 instance=ExtResource("5_kw0u4")]
 position = Vector2(-8, 44)
 script = ExtResource("6_fn686")
 face = 1
 
-[node name="Torch_G_6_8" type="Node2D" parent="World/Entities" unique_id=1862932822 instance=ExtResource("5_kw0u4")]
+[node name="Torch_G_6_8" type="Node2D" parent="World/Entities" unique_id=670037568 instance=ExtResource("5_kw0u4")]
 position = Vector2(-8, 116)
 script = ExtResource("6_fn686")
 face = 3
 
-[node name="Torch_G_8_6" type="Node2D" parent="World/Entities" unique_id=1573423325 instance=ExtResource("5_kw0u4")]
+[node name="Torch_G_8_6" type="Node2D" parent="World/Entities" unique_id=1259736305 instance=ExtResource("5_kw0u4")]
 position = Vector2(40, 116)
 script = ExtResource("6_fn686")
 face = 2
 
-[node name="Rubble_G_5_0" type="Node2D" parent="World/Entities" unique_id=1763276798 instance=ExtResource("7_fjv6c")]
+[node name="Rubble_G_5_0" type="Node2D" parent="World/Entities" unique_id=1250965681 instance=ExtResource("7_fjv6c")]
 position = Vector2(96, 80)
 script = ExtResource("8_jvaef")
 kind = 3
 
-[node name="Brazier_G_5_5" type="Node2D" parent="World/Entities" unique_id=1260354782 instance=ExtResource("9_v171e")]
+[node name="Brazier_G_5_5" type="Node2D" parent="World/Entities" unique_id=814229689 instance=ExtResource("9_v171e")]
 position = Vector2(16, 120)
 script = ExtResource("10_0fhl8")
 
-[node name="PartyStart_from_above" type="Node2D" parent="World/Entities" unique_id=107478206 instance=ExtResource("11_njqyy")]
-position = Vector2(16, 72)
+[node name="Chest_G" type="Node2D" parent="World/Entities" unique_id=101881640 instance=ExtResource("11_njqyy")]
+position = Vector2(64, 64)
 script = ExtResource("12_tdfbk")
+gold = 20
+items = Array[String](["dagger_plus1", "potion_healing"])
+
+[node name="PartyStart_from_above" type="Node2D" parent="World/Entities" unique_id=1005822898 instance=ExtResource("13_hu04g")]
+position = Vector2(16, 72)
+script = ExtResource("14_mciut")
 entry_id = "from_above"
 facing = 1
 
-[node name="Stairs_Up" type="Node2D" parent="World/Entities" unique_id=1488078709 instance=ExtResource("13_hu04g")]
+[node name="Stairs_Up" type="Node2D" parent="World/Entities" unique_id=868544671 instance=ExtResource("15_g4gmd")]
 position = Vector2(32, 48)
-script = ExtResource("14_mciut")
+script = ExtResource("16_gju4c")
 up = true
 target_map = "res://scenes/maps/dungeon_1.tscn"
 target_entry = "from_below"
 
-[node name="Torch_H_12_1" type="Node2D" parent="World/Entities" unique_id=291001143 instance=ExtResource("5_kw0u4")]
+[node name="Torch_H_12_1" type="Node2D" parent="World/Entities" unique_id=341509036 instance=ExtResource("5_kw0u4")]
 position = Vector2(184, 116)
 script = ExtResource("6_fn686")
 
-[node name="Torch_H_16_1" type="Node2D" parent="World/Entities" unique_id=669445447 instance=ExtResource("5_kw0u4")]
+[node name="Torch_H_16_1" type="Node2D" parent="World/Entities" unique_id=1338471484 instance=ExtResource("5_kw0u4")]
 position = Vector2(248, 148)
 script = ExtResource("6_fn686")
 
-[node name="Torch_H_10_2" type="Node2D" parent="World/Entities" unique_id=1682921505 instance=ExtResource("5_kw0u4")]
+[node name="Torch_H_10_2" type="Node2D" parent="World/Entities" unique_id=1431730957 instance=ExtResource("5_kw0u4")]
 position = Vector2(152, 108)
 script = ExtResource("6_fn686")
 face = 1
 
-[node name="Torch_H_10_7" type="Node2D" parent="World/Entities" unique_id=1986549860 instance=ExtResource("5_kw0u4")]
+[node name="Torch_H_10_7" type="Node2D" parent="World/Entities" unique_id=971049633 instance=ExtResource("5_kw0u4")]
 position = Vector2(72, 148)
 script = ExtResource("6_fn686")
 face = 1
 
-[node name="Torch_H_16_10" type="Node2D" parent="World/Entities" unique_id=642437991 instance=ExtResource("5_kw0u4")]
+[node name="Torch_H_16_10" type="Node2D" parent="World/Entities" unique_id=1442107833 instance=ExtResource("5_kw0u4")]
 position = Vector2(120, 212)
 script = ExtResource("6_fn686")
 face = 3
 
-[node name="Torch_H_21_6" type="Node2D" parent="World/Entities" unique_id=1027002196 instance=ExtResource("5_kw0u4")]
+[node name="Torch_H_21_6" type="Node2D" parent="World/Entities" unique_id=1280737768 instance=ExtResource("5_kw0u4")]
 position = Vector2(248, 220)
 script = ExtResource("6_fn686")
 face = 2
 
-[node name="Sarcophagus_H_1_6" type="Node2D" parent="World/Entities" unique_id=101451551 instance=ExtResource("7_fjv6c")]
+[node name="Sarcophagus_H_1_6" type="Node2D" parent="World/Entities" unique_id=1370572734 instance=ExtResource("7_fjv6c")]
 position = Vector2(80, 168)
 script = ExtResource("8_jvaef")
 kind = 2
 
-[node name="Urn_H_0_0" type="Node2D" parent="World/Entities" unique_id=1823545403 instance=ExtResource("7_fjv6c")]
+[node name="Urn_H_0_0" type="Node2D" parent="World/Entities" unique_id=1207024432 instance=ExtResource("7_fjv6c")]
 position = Vector2(160, 112)
 script = ExtResource("8_jvaef")
 kind = 5
 
-[node name="Urn_H_9_0" type="Node2D" parent="World/Entities" unique_id=1898803171 instance=ExtResource("7_fjv6c")]
+[node name="Urn_H_9_0" type="Node2D" parent="World/Entities" unique_id=1607386303 instance=ExtResource("7_fjv6c")]
 position = Vector2(304, 184)
 script = ExtResource("8_jvaef")
 kind = 5
 
-[node name="Urn_H_9_3" type="Node2D" parent="World/Entities" unique_id=740866183 instance=ExtResource("7_fjv6c")]
+[node name="Urn_H_9_3" type="Node2D" parent="World/Entities" unique_id=1470757522 instance=ExtResource("7_fjv6c")]
 position = Vector2(256, 208)
 script = ExtResource("8_jvaef")
 kind = 5
 
-[node name="Rubble_H_3_6" type="Node2D" parent="World/Entities" unique_id=1494252144 instance=ExtResource("7_fjv6c")]
+[node name="Rubble_H_3_6" type="Node2D" parent="World/Entities" unique_id=830909543 instance=ExtResource("7_fjv6c")]
 position = Vector2(112, 184)
 script = ExtResource("8_jvaef")
 kind = 3
 
-[node name="Chest_H" type="Node2D" parent="World/Entities" unique_id=175519766 instance=ExtResource("15_g4gmd")]
+[node name="Chest_H" type="Node2D" parent="World/Entities" unique_id=755406030 instance=ExtResource("11_njqyy")]
 position = Vector2(240, 152)
-script = ExtResource("16_gju4c")
+script = ExtResource("12_tdfbk")
 gold = 60
-items = Array[String](["potion_greater_healing", "lair_key", "scroll_lightning_bolt"])
+items = Array[String](["potion_greater_healing", "lair_key", "scroll_lightning_bolt", "shield_plus1"])
 
-[node name="Skeleton_H_3_1" type="Node2D" parent="World/Entities" unique_id=582588011 instance=ExtResource("17_gs07n")]
+[node name="Skeleton_H_3_1" type="Node2D" parent="World/Entities" unique_id=874880984 instance=ExtResource("17_gs07n")]
 position = Vector2(192, 144)
 script = ExtResource("18_y5fgs")
 monster_id = "skeleton"
@@ -199,7 +205,7 @@ group_id = 1
 preview = SubResource("AtlasTexture_kcilc")
 preview_offset = Vector2(-8, -22)
 
-[node name="Skeleton_H_7_1" type="Node2D" parent="World/Entities" unique_id=2091985001 instance=ExtResource("17_gs07n")]
+[node name="Skeleton_H_7_1" type="Node2D" parent="World/Entities" unique_id=1039916220 instance=ExtResource("17_gs07n")]
 position = Vector2(256, 176)
 script = ExtResource("18_y5fgs")
 monster_id = "skeleton"
@@ -207,7 +213,7 @@ group_id = 1
 preview = SubResource("AtlasTexture_jhn1f")
 preview_offset = Vector2(-8, -22)
 
-[node name="Skeleton_H_5_4" type="Node2D" parent="World/Entities" unique_id=1616405524 instance=ExtResource("17_gs07n")]
+[node name="Skeleton_H_5_4" type="Node2D" parent="World/Entities" unique_id=1919164019 instance=ExtResource("17_gs07n")]
 position = Vector2(176, 184)
 script = ExtResource("18_y5fgs")
 monster_id = "skeleton"
@@ -215,7 +221,7 @@ group_id = 1
 preview = SubResource("AtlasTexture_nr8gg")
 preview_offset = Vector2(-8, -22)
 
-[node name="Skeleton_H_8_6" type="Node2D" parent="World/Entities" unique_id=358168273 instance=ExtResource("17_gs07n")]
+[node name="Skeleton_H_8_6" type="Node2D" parent="World/Entities" unique_id=327910140 instance=ExtResource("17_gs07n")]
 position = Vector2(192, 224)
 script = ExtResource("18_y5fgs")
 monster_id = "skeleton"
@@ -224,69 +230,75 @@ facing = 3
 preview = SubResource("AtlasTexture_j23l6")
 preview_offset = Vector2(-8, -22)
 
-[node name="Torch_I_2_11" type="Node2D" parent="World/Entities" unique_id=1275115975 instance=ExtResource("5_kw0u4")]
+[node name="Torch_I_2_11" type="Node2D" parent="World/Entities" unique_id=1044856865 instance=ExtResource("5_kw0u4")]
 position = Vector2(-136, 116)
 script = ExtResource("6_fn686")
 
-[node name="Torch_I_7_11" type="Node2D" parent="World/Entities" unique_id=591394320 instance=ExtResource("5_kw0u4")]
+[node name="Torch_I_7_11" type="Node2D" parent="World/Entities" unique_id=1471845665 instance=ExtResource("5_kw0u4")]
 position = Vector2(-56, 156)
 script = ExtResource("6_fn686")
 
-[node name="Torch_I_11_11" type="Node2D" parent="World/Entities" unique_id=909625906 instance=ExtResource("5_kw0u4")]
+[node name="Torch_I_11_11" type="Node2D" parent="World/Entities" unique_id=1832213325 instance=ExtResource("5_kw0u4")]
 position = Vector2(8, 188)
 script = ExtResource("6_fn686")
 
-[node name="Torch_I_1_13" type="Node2D" parent="World/Entities" unique_id=862035278 instance=ExtResource("5_kw0u4")]
+[node name="Torch_I_1_13" type="Node2D" parent="World/Entities" unique_id=1759539696 instance=ExtResource("5_kw0u4")]
 position = Vector2(-168, 124)
 script = ExtResource("6_fn686")
 face = 1
 
-[node name="Torch_I_1_17" type="Node2D" parent="World/Entities" unique_id=2048101882 instance=ExtResource("5_kw0u4")]
+[node name="Torch_I_1_17" type="Node2D" parent="World/Entities" unique_id=1272057311 instance=ExtResource("5_kw0u4")]
 position = Vector2(-232, 156)
 script = ExtResource("6_fn686")
 face = 1
 
-[node name="Torch_I_7_21" type="Node2D" parent="World/Entities" unique_id=560298143 instance=ExtResource("5_kw0u4")]
+[node name="Torch_I_7_21" type="Node2D" parent="World/Entities" unique_id=715722053 instance=ExtResource("5_kw0u4")]
 position = Vector2(-200, 228)
 script = ExtResource("6_fn686")
 face = 3
 
-[node name="Torch_I_13_15" type="Node2D" parent="World/Entities" unique_id=593151125 instance=ExtResource("5_kw0u4")]
+[node name="Torch_I_13_15" type="Node2D" parent="World/Entities" unique_id=1386466781 instance=ExtResource("5_kw0u4")]
 position = Vector2(-24, 228)
 script = ExtResource("6_fn686")
 face = 2
 
-[node name="Cocoon_I_0_1" type="Node2D" parent="World/Entities" unique_id=920282948 instance=ExtResource("7_fjv6c")]
+[node name="Cocoon_I_0_1" type="Node2D" parent="World/Entities" unique_id=730842341 instance=ExtResource("7_fjv6c")]
 position = Vector2(-160, 128)
 script = ExtResource("8_jvaef")
 kind = 4
 
-[node name="Cocoon_I_10_0" type="Node2D" parent="World/Entities" unique_id=459600611 instance=ExtResource("7_fjv6c")]
+[node name="Cocoon_I_10_0" type="Node2D" parent="World/Entities" unique_id=650230585 instance=ExtResource("7_fjv6c")]
 position = Vector2(16, 200)
 script = ExtResource("8_jvaef")
 kind = 4
 
-[node name="Cocoon_I_10_8" type="Node2D" parent="World/Entities" unique_id=1607176211 instance=ExtResource("7_fjv6c")]
+[node name="Cocoon_I_10_8" type="Node2D" parent="World/Entities" unique_id=377024388 instance=ExtResource("7_fjv6c")]
 position = Vector2(-112, 264)
 script = ExtResource("8_jvaef")
 kind = 4
 
-[node name="Cocoon_I_6_8" type="Node2D" parent="World/Entities" unique_id=751714828 instance=ExtResource("7_fjv6c")]
+[node name="Cocoon_I_6_8" type="Node2D" parent="World/Entities" unique_id=364430852 instance=ExtResource("7_fjv6c")]
 position = Vector2(-176, 232)
 script = ExtResource("8_jvaef")
 kind = 4
 
-[node name="Cocoon_I_0_7" type="Node2D" parent="World/Entities" unique_id=1582444692 instance=ExtResource("7_fjv6c")]
+[node name="Cocoon_I_0_7" type="Node2D" parent="World/Entities" unique_id=749302594 instance=ExtResource("7_fjv6c")]
 position = Vector2(-256, 176)
 script = ExtResource("8_jvaef")
 kind = 4
 
-[node name="Rubble_I_6_1" type="Node2D" parent="World/Entities" unique_id=394237876 instance=ExtResource("7_fjv6c")]
+[node name="Rubble_I_6_1" type="Node2D" parent="World/Entities" unique_id=543062433 instance=ExtResource("7_fjv6c")]
 position = Vector2(-64, 176)
 script = ExtResource("8_jvaef")
 kind = 3
 
-[node name="GiantSpider_I_4_3" type="Node2D" parent="World/Entities" unique_id=1155180193 instance=ExtResource("17_gs07n")]
+[node name="Chest_I" type="Node2D" parent="World/Entities" unique_id=1125967049 instance=ExtResource("11_njqyy")]
+position = Vector2(-16, 184)
+script = ExtResource("12_tdfbk")
+gold = 80
+items = Array[String](["ring_resistance", "rapier_plus1", "potion_healing"])
+
+[node name="GiantSpider_I_4_3" type="Node2D" parent="World/Entities" unique_id=1813682922 instance=ExtResource("17_gs07n")]
 position = Vector2(-128, 176)
 script = ExtResource("18_y5fgs")
 monster_id = "giant_spider"
@@ -295,7 +307,7 @@ facing = 0
 preview = ExtResource("20_7ekp7")
 preview_offset = Vector2(-20, -27)
 
-[node name="GiantSpider_I_8_5" type="Node2D" parent="World/Entities" unique_id=394666051 instance=ExtResource("17_gs07n")]
+[node name="GiantSpider_I_8_5" type="Node2D" parent="World/Entities" unique_id=249338501 instance=ExtResource("17_gs07n")]
 position = Vector2(-96, 224)
 script = ExtResource("18_y5fgs")
 monster_id = "giant_spider"
@@ -304,7 +316,7 @@ facing = 3
 preview = ExtResource("20_7ekp7")
 preview_offset = Vector2(-20, -27)
 
-[node name="GiantSpider_I_3_7" type="Node2D" parent="World/Entities" unique_id=1333805098 instance=ExtResource("17_gs07n")]
+[node name="GiantSpider_I_3_7" type="Node2D" parent="World/Entities" unique_id=1010019828 instance=ExtResource("17_gs07n")]
 position = Vector2(-208, 200)
 script = ExtResource("18_y5fgs")
 monster_id = "giant_spider"
@@ -313,73 +325,73 @@ facing = 0
 preview = ExtResource("20_7ekp7")
 preview_offset = Vector2(-20, -27)
 
-[node name="Torch_J_16_12" type="Node2D" parent="World/Entities" unique_id=1980353447 instance=ExtResource("5_kw0u4")]
+[node name="Torch_J_16_12" type="Node2D" parent="World/Entities" unique_id=1642578943 instance=ExtResource("5_kw0u4")]
 position = Vector2(72, 236)
 script = ExtResource("6_fn686")
 
-[node name="Torch_J_21_12" type="Node2D" parent="World/Entities" unique_id=88175004 instance=ExtResource("5_kw0u4")]
+[node name="Torch_J_21_12" type="Node2D" parent="World/Entities" unique_id=586525870 instance=ExtResource("5_kw0u4")]
 position = Vector2(152, 276)
 script = ExtResource("6_fn686")
 
-[node name="Torch_J_25_12" type="Node2D" parent="World/Entities" unique_id=1217958565 instance=ExtResource("5_kw0u4")]
+[node name="Torch_J_25_12" type="Node2D" parent="World/Entities" unique_id=1288918199 instance=ExtResource("5_kw0u4")]
 position = Vector2(216, 308)
 script = ExtResource("6_fn686")
 
-[node name="Torch_J_15_14" type="Node2D" parent="World/Entities" unique_id=762512301 instance=ExtResource("5_kw0u4")]
+[node name="Torch_J_15_14" type="Node2D" parent="World/Entities" unique_id=1545184386 instance=ExtResource("5_kw0u4")]
 position = Vector2(40, 244)
 script = ExtResource("6_fn686")
 face = 1
 
-[node name="Torch_J_15_19" type="Node2D" parent="World/Entities" unique_id=1530990550 instance=ExtResource("5_kw0u4")]
+[node name="Torch_J_15_19" type="Node2D" parent="World/Entities" unique_id=475705074 instance=ExtResource("5_kw0u4")]
 position = Vector2(-40, 284)
 script = ExtResource("6_fn686")
 face = 1
 
-[node name="Torch_J_22_23" type="Node2D" parent="World/Entities" unique_id=1074474896 instance=ExtResource("5_kw0u4")]
+[node name="Torch_J_22_23" type="Node2D" parent="World/Entities" unique_id=56595531 instance=ExtResource("5_kw0u4")]
 position = Vector2(8, 364)
 script = ExtResource("6_fn686")
 face = 3
 
-[node name="Torch_J_28_18" type="Node2D" parent="World/Entities" unique_id=864624571 instance=ExtResource("5_kw0u4")]
+[node name="Torch_J_28_18" type="Node2D" parent="World/Entities" unique_id=506245770 instance=ExtResource("5_kw0u4")]
 position = Vector2(168, 372)
 script = ExtResource("6_fn686")
 face = 2
 
-[node name="Urn_J_11_4" type="Node2D" parent="World/Entities" unique_id=119669692 instance=ExtResource("7_fjv6c")]
+[node name="Urn_J_11_4" type="Node2D" parent="World/Entities" unique_id=1838311483 instance=ExtResource("7_fjv6c")]
 position = Vector2(176, 360)
 script = ExtResource("8_jvaef")
 kind = 5
 
-[node name="Brazier_J_0_0" type="Node2D" parent="World/Entities" unique_id=548043482 instance=ExtResource("9_v171e")]
+[node name="Brazier_J_0_0" type="Node2D" parent="World/Entities" unique_id=460540956 instance=ExtResource("9_v171e")]
 position = Vector2(64, 240)
 script = ExtResource("10_0fhl8")
 
-[node name="Brazier_J_11_0" type="Node2D" parent="World/Entities" unique_id=1559610846 instance=ExtResource("9_v171e")]
+[node name="Brazier_J_11_0" type="Node2D" parent="World/Entities" unique_id=502967175 instance=ExtResource("9_v171e")]
 position = Vector2(240, 328)
 script = ExtResource("10_0fhl8")
 
-[node name="Brazier_J_0_9" type="Node2D" parent="World/Entities" unique_id=453851157 instance=ExtResource("9_v171e")]
+[node name="Brazier_J_0_9" type="Node2D" parent="World/Entities" unique_id=1484844947 instance=ExtResource("9_v171e")]
 position = Vector2(-80, 312)
 script = ExtResource("10_0fhl8")
 
-[node name="Brazier_J_11_9" type="Node2D" parent="World/Entities" unique_id=551739978 instance=ExtResource("9_v171e")]
+[node name="Brazier_J_11_9" type="Node2D" parent="World/Entities" unique_id=639125859 instance=ExtResource("9_v171e")]
 position = Vector2(96, 400)
 script = ExtResource("10_0fhl8")
 
-[node name="Chest_J" type="Node2D" parent="World/Entities" unique_id=133835917 instance=ExtResource("15_g4gmd")]
+[node name="Chest_J" type="Node2D" parent="World/Entities" unique_id=848611225 instance=ExtResource("11_njqyy")]
 position = Vector2(96, 384)
-script = ExtResource("16_gju4c")
+script = ExtResource("12_tdfbk")
 gold = 300
-items = Array[String](["ring_protection", "potion_greater_healing", "scroll_fireball"])
+items = Array[String](["ring_protection", "chain_mail_plus1", "potion_greater_healing", "scroll_fireball"])
 
-[node name="EyeTyrant_J_6_5" type="Node2D" parent="World/Entities" unique_id=1348907263 instance=ExtResource("17_gs07n")]
+[node name="EyeTyrant_J_6_5" type="Node2D" parent="World/Entities" unique_id=1998601956 instance=ExtResource("17_gs07n")]
 position = Vector2(80, 328)
 script = ExtResource("18_y5fgs")
 group_id = 3
 facing = 3
 preview = ExtResource("21_jjrfs")
 
-[node name="Skeleton_J_2_4" type="Node2D" parent="World/Entities" unique_id=1347531896 instance=ExtResource("17_gs07n")]
+[node name="Skeleton_J_2_4" type="Node2D" parent="World/Entities" unique_id=593961208 instance=ExtResource("17_gs07n")]
 position = Vector2(32, 288)
 script = ExtResource("18_y5fgs")
 monster_id = "skeleton"
@@ -388,7 +400,7 @@ facing = 3
 preview = SubResource("AtlasTexture_pxn5a")
 preview_offset = Vector2(-8, -22)
 
-[node name="Skeleton_J_9_4" type="Node2D" parent="World/Entities" unique_id=66691578 instance=ExtResource("17_gs07n")]
+[node name="Skeleton_J_9_4" type="Node2D" parent="World/Entities" unique_id=1320460332 instance=ExtResource("17_gs07n")]
 position = Vector2(144, 344)
 script = ExtResource("18_y5fgs")
 monster_id = "skeleton"
@@ -397,86 +409,86 @@ facing = 3
 preview = SubResource("AtlasTexture_vrb80")
 preview_offset = Vector2(-8, -22)
 
-[node name="Decor" type="Node2D" parent="World" unique_id=253792006]
+[node name="Decor" type="Node2D" parent="World" unique_id=298696475]
 y_sort_enabled = true
 
-[node name="Bones_G_0_4" type="Sprite2D" parent="World/Decor" unique_id=1714407061]
+[node name="Bones_G_0_4" type="Sprite2D" parent="World/Decor" unique_id=1225305788]
 position = Vector2(-48, 72)
 texture = ExtResource("22_mx6me")
 centered = false
 offset = Vector2(-7, -6)
 
-[node name="Web_H" type="Sprite2D" parent="World/Decor" unique_id=1052321204 groups=["wall_decor"]]
+[node name="Web_H" type="Sprite2D" parent="World/Decor" unique_id=583840814 groups=["wall_decor"]]
 position = Vector2(160, 105)
 texture = ExtResource("23_myiaw")
 centered = false
 offset = Vector2(-27, -34)
 
-[node name="Bones_H_2_3" type="Sprite2D" parent="World/Decor" unique_id=1253927302]
+[node name="Bones_H_2_3" type="Sprite2D" parent="World/Decor" unique_id=1620730966]
 position = Vector2(144, 152)
 texture = ExtResource("22_mx6me")
 centered = false
 offset = Vector2(-7, -6)
 
-[node name="Bones_H_6_2" type="Sprite2D" parent="World/Decor" unique_id=331723809]
+[node name="Bones_H_6_2" type="Sprite2D" parent="World/Decor" unique_id=1363843857]
 position = Vector2(224, 176)
 texture = ExtResource("22_mx6me")
 centered = false
 offset = Vector2(-7, -6)
 
-[node name="Bones_H_4_5" type="Sprite2D" parent="World/Decor" unique_id=1481496005]
+[node name="Bones_H_4_5" type="Sprite2D" parent="World/Decor" unique_id=749301385]
 position = Vector2(144, 184)
 texture = ExtResource("22_mx6me")
 centered = false
 offset = Vector2(-7, -6)
 
-[node name="Bones_H_7_7" type="Sprite2D" parent="World/Decor" unique_id=1061175939]
+[node name="Bones_H_7_7" type="Sprite2D" parent="World/Decor" unique_id=359553559]
 position = Vector2(160, 224)
 texture = ExtResource("22_mx6me")
 centered = false
 offset = Vector2(-7, -6)
 
-[node name="Web_I" type="Sprite2D" parent="World/Decor" unique_id=969786800 groups=["wall_decor"]]
+[node name="Web_I" type="Sprite2D" parent="World/Decor" unique_id=694642645 groups=["wall_decor"]]
 position = Vector2(-144, 113)
 texture = ExtResource("23_myiaw")
 centered = false
 offset = Vector2(-27, -34)
 
-[node name="Bones_I_2_2" type="Sprite2D" parent="World/Decor" unique_id=1343916297]
+[node name="Bones_I_2_2" type="Sprite2D" parent="World/Decor" unique_id=1209215592]
 position = Vector2(-144, 152)
 texture = ExtResource("22_mx6me")
 centered = false
 offset = Vector2(-7, -6)
 
-[node name="Bones_I_7_3" type="Sprite2D" parent="World/Decor" unique_id=1184068123]
+[node name="Bones_I_7_3" type="Sprite2D" parent="World/Decor" unique_id=2069947603]
 position = Vector2(-80, 200)
 texture = ExtResource("22_mx6me")
 centered = false
 offset = Vector2(-7, -6)
 
-[node name="Bones_I_5_6" type="Sprite2D" parent="World/Decor" unique_id=2119784613]
+[node name="Bones_I_5_6" type="Sprite2D" parent="World/Decor" unique_id=1462965020]
 position = Vector2(-160, 208)
 texture = ExtResource("22_mx6me")
 centered = false
 offset = Vector2(-7, -6)
 
-[node name="Web_J" type="Sprite2D" parent="World/Decor" unique_id=1991300573 groups=["wall_decor"]]
+[node name="Web_J" type="Sprite2D" parent="World/Decor" unique_id=989295981 groups=["wall_decor"]]
 position = Vector2(64, 233)
 texture = ExtResource("23_myiaw")
 centered = false
 offset = Vector2(-27, -34)
 
-[node name="Bones_J_5_8" type="Sprite2D" parent="World/Decor" unique_id=1428559124]
+[node name="Bones_J_5_8" type="Sprite2D" parent="World/Decor" unique_id=353376703]
 position = Vector2(16, 344)
 texture = ExtResource("22_mx6me")
 centered = false
 offset = Vector2(-7, -6)
 
-[node name="Bones_J_7_1" type="Sprite2D" parent="World/Decor" unique_id=1721044813]
+[node name="Bones_J_7_1" type="Sprite2D" parent="World/Decor" unique_id=1966894126]
 position = Vector2(160, 304)
 texture = ExtResource("22_mx6me")
 centered = false
 offset = Vector2(-7, -6)
 
-[node name="Camera" type="Camera2D" parent="." unique_id=468718586]
+[node name="Camera" type="Camera2D" parent="." unique_id=400995705]
 position = Vector2(16, 72)

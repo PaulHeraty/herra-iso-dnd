@@ -414,7 +414,7 @@ func _hover_none() -> void:
 func _describe(it: ItemData, slot: String, count: int) -> void:
 	_info_icon.texture = it.icon_texture()
 	_info_title.text = it.display_name + ("  x%d" % count if count > 1 else "")
-	_info_title.add_theme_color_override("font_color", COL_MAGIC if it.magic_bonus > 0 or it.kind == ItemData.Kind.RING else CombatHud.COL_TEXT)
+	_info_title.add_theme_color_override("font_color", COL_MAGIC if it.is_magic() else CombatHud.COL_TEXT)
 	_info_sub.text = it.summary()
 	var lines: PackedStringArray = [it.description]
 	if it.is_equipment():
@@ -459,6 +459,18 @@ func _compare(h: Hero, it: ItemData) -> PackedStringArray:
 		changes.append(_delta("Saves %+d" % before.item_save_bonus, "%+d" % after.item_save_bonus, after.item_save_bonus > before.item_save_bonus))
 	if after.speed_ft != before.speed_ft:
 		changes.append(_delta("Speed %d" % before.speed_ft, "%d ft" % after.speed_ft, after.speed_ft > before.speed_ft))
+	for t in after.resistances:
+		if t not in before.resistances:
+			changes.append(_c("+ resist %s" % t, COL_GOOD))
+	for t in before.resistances:
+		if t not in after.resistances:
+			changes.append(_c("- resist %s" % t, COL_BAD))
+	for c in after.condition_immunities:
+		if c not in before.condition_immunities:
+			changes.append(_c("+ never %s" % c, COL_GOOD))
+	for c in before.condition_immunities:
+		if c not in after.condition_immunities:
+			changes.append(_c("- never %s" % c, COL_BAD))
 	if it.kind == ItemData.Kind.WEAPON:
 		var ranged := it.ranged_slot
 		var old_a := _attack_of(before, ranged)
@@ -527,7 +539,7 @@ func _refresh() -> void:
 			d.icon.texture = it.icon_texture()
 			d.icon.modulate = Color.WHITE
 			d.name.text = it.display_name
-			d.name.add_theme_color_override("font_color", COL_MAGIC if it.magic_bonus > 0 or it.kind == ItemData.Kind.RING else CombatHud.COL_TEXT)
+			d.name.add_theme_color_override("font_color", COL_MAGIC if it.is_magic() else CombatHud.COL_TEXT)
 		else:
 			# a dark silhouette of what goes there
 			var ghost := {main = "longsword", off = "shield", ranged = "shortbow", armor = "leather_armor", ring1 = "ring", ring2 = "ring"}
@@ -563,6 +575,13 @@ func _stats_text(h: Hero) -> String:
 		lines.append("%s  %s %s%s%s" % [_c(a.name, CombatHud.COL_TEXT), _c(_atk(s, a), COL_GOOD), a.damage_type, rng, prof])
 	if s.stealth_disadvantage:
 		lines.append(_c("Stealth at disadvantage (armour)", COL_WARN))
+	var guards: PackedStringArray = []
+	if not s.resistances.is_empty():
+		guards.append("Resists " + ", ".join(s.resistances))
+	if not s.condition_immunities.is_empty():
+		guards.append("Can't be " + ", ".join(s.condition_immunities))
+	if not guards.is_empty():
+		lines.append(_c(". ".join(guards), COL_MAGIC))
 	var arm := ", ".join(h.base_stats.armor_training) if not h.base_stats.armor_training.is_empty() else "none"
 	lines.append(_c("Armour: " + arm.replace("shield", "shields"), CombatHud.COL_DIM))
 	lines.append(_c("Weapons: " + ", ".join(h.base_stats.weapon_training).replace("_", " "), CombatHud.COL_DIM))

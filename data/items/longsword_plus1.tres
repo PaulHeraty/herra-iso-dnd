@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_w5hur"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_7iocd"]
+
+[sub_resource type="Resource" id="Resource_3wgtp"]
+script = ExtResource("1_w5hur")
+name = "Longsword +1"
+damage = "1d8"
+
+[resource]
+resource_name = "Longsword +1"
+script = ExtResource("2_7iocd")
+id = "longsword_plus1"
+display_name = "Longsword +1"
+kind = 0
+description = "The blade never dulls and gleams faintly blue in the dark.
+Magic: +1 to hit and damage."
+value_gp = 515
+magic_bonus = 1
+attack = SubResource("Resource_3wgtp")
+category = "martial"

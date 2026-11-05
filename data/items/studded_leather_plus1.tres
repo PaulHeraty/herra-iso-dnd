@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_fygmp"]
+
+[resource]
+resource_name = "Studded Leather +1"
+script = ExtResource("1_fygmp")
+id = "studded_leather_plus1"
+display_name = "Studded Leather +1"
+kind = 1
+description = "Dark leather set with silver studs. Moves like a second skin.
+Magic: +1 AC."
+value_gp = 1045
+magic_bonus = 1
+armor_type = "light"
+base_ac = 12

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_kwuw5"]
+
+[resource]
+resource_name = "Shield +1"
+script = ExtResource("1_kwuw5")
+id = "shield_plus1"
+display_name = "Shield +1"
+kind = 2
+description = "A steel shield with a sunburst boss. Blows glance off it.
+Magic: +1 AC."
+value_gp = 1010
+magic_bonus = 1
+base_ac = 2

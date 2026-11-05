@@ -77,6 +77,24 @@ func _init() -> void:
 	rp.ac_bonus = 1
 	rp.save_bonus = 1
 	_save(rp)
+	var rf := _item("ring_free_action", "Ring of Free Action", ItemData.Kind.RING, 500,
+			"A band of woven silver wire, light as thread. Webs and bonds slide off its wearer: you can't be restrained.")
+	rf.condition_immunities.assign(["restrained"])
+	_save(rf)
+	var rr := _item("ring_resistance", "Ring of Resistance (poison)", ItemData.Kind.RING, 500,
+			"A gold ring set with a green stone. Poison does half damage to its wearer.")
+	rr.resistances.assign(["poison"])
+	_save(rr)
+
+	# --- magic weapons and armour (SRD Weapon / Armor / Shield, +1): a copy of the plain item ---
+	_plus1("longsword", "The blade never dulls and gleams faintly blue in the dark.")
+	_plus1("mace", "Holy runes run round its flanges. Bones crack like eggshell under it.")
+	_plus1("rapier", "A whisper-thin blade that finds the gaps in any guard.")
+	_plus1("dagger", "Perfectly balanced. Its edge hums when drawn.")
+	_plus1("shortbow", "Pale yew strung with spider silk. Arrows fly true.")
+	_plus1("chain_mail", "Rings of bright mithral-silvered steel. Never rusts.")
+	_plus1("studded_leather", "Dark leather set with silver studs. Moves like a second skin.")
+	_plus1("shield", "A steel shield with a sunburst boss. Blows glance off it.")
 	print("%d items written" % _written.size())
 	quit()
 
@@ -151,6 +169,23 @@ func _scroll(spell_id: String, value: int, flavour: String) -> void:
 				flavour, sp.display_name, lvl, what, who, SpellData.scroll_dc(sp.level), SpellData.scroll_attack_bonus(sp.level)])
 	it.spell = sp
 	it.stackable = true
+	_save(it)
+
+
+## "<id>_plus1": the plain item (already written above) with +1 to hit and damage (weapons) or
+## +1 AC (armour, shields), 1st-tier SRD value.
+func _plus1(base_id: String, flavour: String) -> void:
+	var base: ItemData = ResourceLoader.load(DIR + base_id + ".tres", "", ResourceLoader.CACHE_MODE_IGNORE)
+	var it: ItemData = base.duplicate(true)
+	it.id = base_id + "_plus1"
+	it.display_name = base.display_name + " +1"
+	it.resource_name = it.display_name
+	it.magic_bonus = 1
+	it.value_gp = base.value_gp + (500 if base.kind == ItemData.Kind.WEAPON else 1000)
+	var bonus := "Magic: +1 to hit and damage." if base.kind == ItemData.Kind.WEAPON else "Magic: +1 AC."
+	it.description = "%s\n%s" % [flavour, bonus]
+	if it.attack:
+		it.attack.name = it.display_name
 	_save(it)
 
 

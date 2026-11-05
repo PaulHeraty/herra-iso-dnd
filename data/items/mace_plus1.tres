@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_ud62p"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_dsxuk"]
+
+[sub_resource type="Resource" id="Resource_684sx"]
+script = ExtResource("1_ud62p")
+name = "Mace +1"
+damage_type = "bludgeoning"
+
+[resource]
+resource_name = "Mace +1"
+script = ExtResource("2_dsxuk")
+id = "mace_plus1"
+display_name = "Mace +1"
+kind = 0
+description = "Holy runes run round its flanges. Bones crack like eggshell under it.
+Magic: +1 to hit and damage."
+value_gp = 505
+magic_bonus = 1
+attack = SubResource("Resource_684sx")

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_f76ck"]
+
+[resource]
+resource_name = "Ring of Resistance (poison)"
+script = ExtResource("1_f76ck")
+id = "ring_resistance"
+display_name = "Ring of Resistance (poison)"
+kind = 6
+description = "A gold ring set with a green stone. Poison does half damage to its wearer."
+value_gp = 500
+resistances = Array[String](["poison"])

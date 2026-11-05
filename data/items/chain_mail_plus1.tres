@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_8mcc5"]
+
+[resource]
+resource_name = "Chain Mail +1"
+script = ExtResource("1_8mcc5")
+id = "chain_mail_plus1"
+display_name = "Chain Mail +1"
+kind = 1
+description = "Rings of bright mithral-silvered steel. Never rusts.
+Magic: +1 AC."
+value_gp = 1075
+magic_bonus = 1
+armor_type = "heavy"
+base_ac = 16
+dex_cap = 0
+str_required = 13
+stealth_disadvantage = true

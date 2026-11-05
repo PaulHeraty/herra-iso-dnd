@@ -272,5 +272,30 @@ func _run() -> void:
 	_check(not m.inventory.has("scroll_lightning_bolt") and mage.slots_left == slots0 and cm.action_used, "scroll used up, no slot spent, action spent")
 	cm.order.clear()
 	cm.current = null
+
+	# --- magic items: Ring of Free Action stops the spider's Web; the AI knows it ---
+	m.inventory.add("ring_free_action")
+	_check(rogue.equip_from(m.inventory, "ring_free_action") == "" and "restrained" in rogue.stats.condition_immunities,
+			"the rogue puts on the Ring of Free Action")
+	var spider: Actor = null
+	for mo in m.monsters:
+		if mo.is_alive() and mo.stats.id == "giant_spider":
+			spider = mo
+			break
+	var web: SpellData = null
+	if spider:
+		for p in spider.stats.powers:
+			if p.condition == "restrained":
+				web = p
+	_check(spider != null and web != null, "a giant spider with Web")
+	if spider and web:
+		spider.place_at(Vector2i(28, 18))
+		rogue.place_at(Vector2i(30, 18))
+		f2.place_at(Vector2i(30, 20))
+		_check(cm._power_value(spider, web, f2, spider.cell) > 0.0, "the spider would web the fighter")
+		_check(cm._power_value(spider, web, rogue, spider.cell) == 0.0, "but not the rogue with the ring")
+		_check(cm._shrugs_off(rogue, "restrained") and not cm._shrugs_off(f2, "restrained"), "only the ring-wearer shrugs off restrained")
+	rogue.unequip_to(m.inventory, "ring1")
+	_check("restrained" not in rogue.stats.condition_immunities and m.inventory.has("ring_free_action"), "ring off: no immunity, back in the bag")
 	print("test_dungeon: %s (%d failed)" % ["ALL PASS" if fails == 0 else "FAILURES", fails])
 	quit(1 if fails else 0)

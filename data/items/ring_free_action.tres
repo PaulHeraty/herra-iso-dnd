@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_sg25h"]
+
+[resource]
+resource_name = "Ring of Free Action"
+script = ExtResource("1_sg25h")
+id = "ring_free_action"
+display_name = "Ring of Free Action"
+kind = 6
+description = "A band of woven silver wire, light as thread. Webs and bonds slide off its wearer: you can't be restrained."
+value_gp = 500
+condition_immunities = Array[String](["restrained"])

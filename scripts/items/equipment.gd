@@ -42,7 +42,7 @@ static func is_trained(base: CreatureStats, item: ItemData) -> bool:
 	if tag == "":
 		return true
 	if item.kind == ItemData.Kind.WEAPON:
-		return tag in base.weapon_training or item.id.trim_suffix("_plus1") in base.weapon_training
+		return tag in base.weapon_training or item.base_id() in base.weapon_training
 	return tag in base.armor_training
 
 
@@ -119,11 +119,22 @@ static func build_stats(base: CreatureStats, eq: Dictionary) -> CreatureStats:
 	var shield := _item(eq, "off")
 	if shield:
 		ac += shield.base_ac + shield.magic_bonus
+	# own copies of the lists (a duplicate() may share them with the base stat block)
+	var resist: Array[String] = base.resistances.duplicate()
+	var cimm: Array[String] = base.condition_immunities.duplicate()
 	for slot in ["ring1", "ring2"]:
 		var r := _item(eq, slot)
 		if r:
 			ac += r.ac_bonus
 			save_b += r.save_bonus
+			for t in r.resistances:
+				if t not in resist:
+					resist.append(t)
+			for c in r.condition_immunities:
+				if c not in cimm:
+					cimm.append(c)
+	s.resistances = resist
+	s.condition_immunities = cimm
 	s.armor_class = ac
 	s.item_save_bonus = save_b
 	s.attacks = attacks

@@ -33,6 +33,8 @@ const DIR := "res://data/items/"
 @export var stealth_disadvantage := false
 @export var ac_bonus := 0               ## rings (Ring of Protection +1)
 @export var save_bonus := 0             ## rings (Ring of Protection +1 to all saves)
+@export var resistances: Array[String] = []           ## rings: damage types halved (Ring of Resistance)
+@export var condition_immunities: Array[String] = []  ## rings: conditions blocked (Ring of Free Action)
 @export_group("Use")
 @export var heal := ""                  ## potion: dice healed ("2d4+2")
 @export var spell: SpellData            ## scroll: the spell it casts
@@ -45,6 +47,7 @@ const ICON_ORDER := [
 	"greatsword", "handaxe", "light_crossbow", "shortbow", "longbow",
 	"leather_armor", "studded_leather", "chain_shirt", "scale_mail", "chain_mail", "plate_armor",
 	"shield", "potion_healing", "potion_greater_healing", "ring_protection", "ring",
+	"ring_free_action", "ring_resistance",
 	"scroll", "key", "gem", "gold",
 ]
 const KIND_ICON := {
@@ -63,21 +66,33 @@ static var _icons: Texture2D
 func icon_index() -> int:
 	if icon >= 0:
 		return icon
-	var i := ICON_ORDER.find(id.trim_suffix("_plus1"))
+	var i := ICON_ORDER.find(base_id())
 	return i if i >= 0 else ICON_ORDER.find(KIND_ICON.get(kind, "gem"))
+
+
+## The plain item a magic "+1" version is made from ("longsword_plus1" -> "longsword").
+func base_id() -> String:
+	return id.trim_suffix("_plus1")
+
+
+## Magic items: +N weapons / armour / shields and every ring. Their names show in the magic
+## colour and their icons come from the sheet's second row (a blue glimmer around the picture).
+func is_magic() -> bool:
+	return magic_bonus > 0 or kind == Kind.RING
 
 
 ## A 16x16 texture of the icon (a fresh AtlasTexture on the icon sheet).
 func icon_texture() -> AtlasTexture:
-	return icon_texture_at(icon_index())
+	return icon_texture_at(icon_index(), is_magic())
 
 
-static func icon_texture_at(index: int) -> AtlasTexture:
+## Row 0 = plain icons, row 1 = the same pictures with the magic glimmer.
+static func icon_texture_at(index: int, magic := false) -> AtlasTexture:
 	if _icons == null:
 		_icons = load(ICONS_PATH)
 	var at := AtlasTexture.new()
 	at.atlas = _icons
-	at.region = Rect2(index * ICON_SIZE, 0, ICON_SIZE, ICON_SIZE)
+	at.region = Rect2(index * ICON_SIZE, ICON_SIZE if magic else 0, ICON_SIZE, ICON_SIZE)
 	return at
 
 
@@ -136,6 +151,10 @@ func summary() -> String:
 				parts.append("%+d AC" % ac_bonus)
 			if save_bonus:
 				parts.append("%+d saves" % save_bonus)
+			if not resistances.is_empty():
+				parts.append("resist " + ", ".join(resistances))
+			for c in condition_immunities:
+				parts.append("never %s" % c)
 			return ", ".join(parts)
 		Kind.POTION:
 			return "Heals %s" % heal if heal != "" else ""

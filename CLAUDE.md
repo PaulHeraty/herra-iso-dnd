@@ -69,7 +69,7 @@ assets/
   effects/    fireball_sheet.png (6×16px), explosion_sheet.png (7×32px)
   fonts/      herra_pixel.fnt/.png: our pixel font (use size 10; scale the Control 2x/3x for big text)
   sfx/        13 WAVs from the concept session (torch_ambience imports as a forward loop) + generated ones (gen_sfx.gd)
-  ui/         condition_icons.png (gen_icons.gd), item_icons.png (16x16 per item, columns = ItemData.ICON_ORDER; gen_item_art.gd)
+  ui/         condition_icons.png (gen_icons.gd), item_icons.png (16x16 per item, columns = ItemData.ICON_ORDER; row 0 plain, row 1 = magic glimmer (ItemData.is_magic); gen_item_art.gd)
 scenes/
   maps/       map_template.tscn (copy this for new maps), test_room.tscn, dungeon_1.tscn (main scene) + dungeon_2.tscn
   markers/    party_start, monster_spawn, chest, torch, door, trap, prop, brazier, stairs (.tscn)
@@ -265,7 +265,7 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
   8. Monster abilities (spider Web: restrained, recharge; Eye Tyrant fear ray) + short/long rests. DONE
      (AI scores condition powers; Recharge 5-6 rolled at turn start; "Break free" action; Rest.gd;
      the party panel stays visible while exploring, with Short/Long rest buttons).
-- [ ] **Phase 4 — Items:** chests, loot, gold, inventory, equipment changing stats, potions, scrolls, keys.
+- [x] **Phase 4 — Items:** chests, loot, gold, inventory, equipment changing stats, potions, scrolls, keys.
   Inventory model (user's choice): **one shared party bag** (gold + items) + per-hero equipment slots
   (main hand, off hand = shield, ranged, armour, 2 rings). Steps:
   1. Items core: ItemData (data/items/, tools/godot/build_items.gd: SRD weapons, armour, shield,
@@ -290,7 +290,11 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
      bolt VFX + lightning_crack.wav, scroll_read.wav). Keys: Iron Key (crypt door, floor 1, also
      pickable) in the storeroom chest; Bone Key (lair door, floor 2, key only) in the ossuary chest;
      keys are kept; in combat unlocking with a key = the free door interaction; hover hints name the key.)
-  6. Magic items (+1 weapons/armour, rings) + stocking both floors with loot.
+  6. Magic items (+1 weapons/armour, rings) + stocking both floors with loot. DONE (`<id>_plus1` = copy of
+     the plain item, magic_bonus 1, build_items.gd `_plus1()`: Longsword/Mace/Rapier/Dagger/Shortbow +1, Chain Mail/
+     Studded Leather/Shield +1; Ring of Free Action (`ItemData.condition_immunities` -> `CreatureStats.condition_immunities`:
+     never restrained; `CombatManager._shrugs_off`, the AI skips webbing them), Ring of Resistance (poison) (`resistances`).
+     Magic names in blue, glimmer icons. 8 chests, 4 per floor. No attunement yet.)
 - [ ] **Phase 5 — Progression:** XP, levels 1–5, SRD class features, character sheet.
 - [ ] **Phase 6 — Dungeon features:** doors/locks/keys (doors, locks and stairs/level transitions done early for the first dungeon; keys wait for Phase 4), traps (Rogue detect/disarm), secret walls,
   levers, room descriptions, triggers, level transitions, more monsters.

@@ -201,7 +201,7 @@ class Canvas:
 
 func _icons() -> Image:
 	var order: Array = ItemData.ICON_ORDER
-	var img := Image.create(16 * order.size(), 16, false, Image.FORMAT_RGBA8)
+	var img := Image.create(16 * order.size(), 32, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
 	for i in order.size():
 		var cv := Canvas.new()
@@ -211,16 +211,46 @@ func _icons() -> Image:
 		else:
 			push_warning("no icon drawing for %s" % order[i])
 		_blit(img, cv, i * 16 + 1, 1)
+		_blit(img, cv, i * 16 + 1, 17, MAGIC_OUTLINE)
+		_glimmer(img, i * 16, 16)
 	return img
 
 
+## Row 1 (magic items): the outline turns deep blue, a soft blue glow rings it where the cell has
+## room, and two tiny sparkles sit in the corners.
+const MAGIC_OUTLINE := Color8(40, 40, 120)
+const GLOW := Color(0.45, 0.58, 1.0, 0.45)
+const SPARKLE := Color8(220, 232, 255)
+
+func _glimmer(img: Image, x0: int, y0: int) -> void:
+	var glow: Array[Vector2i] = []
+	for y in 16:
+		for x in 16:
+			if img.get_pixel(x0 + x, y0 + y).a > 0.0:
+				continue
+			for d: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var q := Vector2i(x, y) + d
+				if q.x >= 0 and q.x < 16 and q.y >= 0 and q.y < 16 \
+						and img.get_pixelv(Vector2i(x0, y0) + q) == MAGIC_OUTLINE:
+					glow.append(Vector2i(x, y))
+					break
+	for p in glow:
+		img.set_pixel(x0 + p.x, y0 + p.y, GLOW)
+	for s: Vector2i in [Vector2i(1, 1), Vector2i(14, 13)]:
+		if img.get_pixel(x0 + s.x, y0 + s.y).a < 0.9:
+			for d: Vector2i in [Vector2i(0, 0), Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var q := s + d
+				if q.x >= 0 and q.x < 16 and q.y >= 0 and q.y < 16 and img.get_pixelv(Vector2i(x0, y0) + q).a < 0.9:
+					img.set_pixelv(Vector2i(x0, y0) + q, SPARKLE if d == Vector2i.ZERO else GLOW)
+
+
 ## Copy a canvas into the sheet and add the 1px outline (4-neighbours of drawn pixels).
-func _blit(img: Image, cv: Canvas, ox: int, oy: int) -> void:
+func _blit(img: Image, cv: Canvas, ox: int, oy: int, outline := OUTLINE) -> void:
 	for p: Vector2i in cv.px:
 		for d: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
 			var q: Vector2i = p + d
 			if not cv.px.has(q):
-				img.set_pixel(ox + q.x, oy + q.y, OUTLINE)
+				img.set_pixel(ox + q.x, oy + q.y, outline)
 	for p: Vector2i in cv.px:
 		img.set_pixel(ox + p.x, oy + p.y, ICON_PAL[cv.px[p]])
 
@@ -576,3 +606,18 @@ func _icon_gem(cv: Canvas) -> void:
 
 func _icon_gold(cv: Canvas) -> void:
 	cv.rows(COINS)
+
+
+## Woven silver wire (alternating light / dark pixels round the band) with a small pearl.
+func _icon_ring_free_action(cv: Canvas) -> void:
+	_ring(cv, "w", "g", "G")
+	for p: Vector2i in cv.px.keys():
+		if (p.x + p.y) % 2 == 0 and cv.px[p] == "g":
+			cv.px[p] = "s"
+	cv.rows([".w.", "wnw", ".P."], 5, 2)
+
+
+## Gold band with a green stone.
+func _icon_ring_resistance(cv: Canvas) -> void:
+	_ring(cv, "Y", "y", "o")
+	cv.rows([".e.", "eeE", ".E."], 5, 2)

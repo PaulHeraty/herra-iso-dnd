@@ -218,6 +218,54 @@ func _test_conditions() -> void:
 	fighter.free()
 
 
+## Phase 4 step 6: +1 weapons / armour / shield, Rings of Free Action and Resistance, loot.
+func _test_magic_items(fb: CreatureStats, rb: CreatureStats, wb: CreatureStats, cb: CreatureStats) -> void:
+	var I := ItemData.get_item
+	for iid in ["longsword_plus1", "mace_plus1", "rapier_plus1", "dagger_plus1", "shortbow_plus1",
+			"chain_mail_plus1", "studded_leather_plus1", "shield_plus1", "ring_free_action", "ring_resistance"]:
+		var it: ItemData = I.call(iid)
+		check(it != null and it.is_magic(), "%s loads and is magic" % iid)
+		if it:
+			var tex := it.icon_texture()
+			check(tex.region.position.y == 16 and it.icon_index() == ItemData.ICON_ORDER.find(it.base_id()),
+					"%s: glimmer icon of its plain version" % iid)
+	check(not I.call("longsword").is_magic() and I.call("longsword").icon_texture().region.position.y == 0, "plain longsword: plain icon")
+	check(I.call("longsword_plus1").display_name == "Longsword +1" and I.call("longsword").magic_bonus == 0, "+1 name; plain one untouched")
+	# +1 weapon: +1 to hit and damage. Fighter longsword +6 / 1d8+3 -> +7 / 1d8+4.
+	var plain := Equipment.build_stats(fb, {main = "longsword"})
+	var magic := Equipment.build_stats(fb, {main = "longsword_plus1"})
+	check(magic.attack_bonus(magic.attacks[0]) == plain.attack_bonus(plain.attacks[0]) + 1
+			and is_equal_approx(Dice.average(magic.damage_expr(magic.attacks[0])), Dice.average(plain.damage_expr(plain.attacks[0])) + 1.0) and magic.attacks[0].name == "Longsword +1",
+			"Longsword +1: +1 to hit and damage (%s)" % magic.damage_expr(magic.attacks[0]))
+	check(Equipment.is_trained(rb, I.call("rapier_plus1")) and Equipment.is_trained(wb, I.call("dagger_plus1")),
+			"single-weapon training covers the +1 version")
+	check(Equipment.build_stats(rb, {ranged = "shortbow_plus1"}).attacks[1].magic_bonus == 1, "Shortbow +1 in the ranged slot")
+	# +1 armour / shield: +1 AC.
+	check(Equipment.build_stats(cb, {armor = "chain_mail_plus1", off = "shield_plus1"}).armor_class == 20, "Chain Mail +1 + Shield +1: 17 + 3")
+	check(Equipment.build_stats(rb, {armor = "studded_leather_plus1"}).armor_class == 17, "Studded Leather +1: 12 + 1 + DEX 4")
+	check(I.call("chain_mail_plus1").summary().begins_with("AC 17"), "armour summary shows the +1")
+	# Rings: resistance and condition immunity on the hero's copy only.
+	var rr := Equipment.build_stats(rb, {ring1 = "ring_resistance"})
+	check("poison" in rr.resistances and rb.resistances.is_empty(), "Ring of Resistance: poison; base block untouched")
+	var rf := Equipment.build_stats(rb, {ring1 = "ring_free_action", ring2 = "ring_resistance"})
+	check("restrained" in rf.condition_immunities and "poison" in rf.resistances and rb.condition_immunities.is_empty(),
+			"Free Action + Resistance together")
+	check(Equipment.build_stats(rb, {}).condition_immunities.is_empty(), "no ring, no immunity")
+	check(I.call("ring_free_action").summary().contains("restrained") and I.call("ring_resistance").summary().contains("poison"),
+			"ring summaries name their effect")
+	# Loot: every chest item on both floors exists.
+	for path in ["res://scenes/maps/dungeon_1.tscn", "res://scenes/maps/dungeon_2.tscn"]:
+		var st := (load(path) as PackedScene).get_state()
+		var n_chests := 0
+		for ni in st.get_node_count():
+			for pi in st.get_node_property_count(ni):
+				if st.get_node_property_name(ni, pi) == "items":
+					n_chests += 1
+					for iid in st.get_node_property_value(ni, pi):
+						check(ItemData.get_item(iid) != null, "%s: chest item %s exists" % [path.get_file(), iid])
+		check(n_chests >= 4, "%s: %d stocked chests" % [path.get_file(), n_chests])
+
+
 func _test_items() -> void:
 	var ids := ["dagger", "mace", "quarterstaff", "shortsword", "longsword", "rapier", "warhammer",
 			"greatsword", "handaxe", "light_crossbow", "shortbow", "longbow", "leather_armor",
@@ -277,6 +325,7 @@ func _test_items() -> void:
 	odd.id = "longsword_plus1"
 	odd.kind = ItemData.Kind.WEAPON
 	check(odd.icon_index() == ItemData.ICON_ORDER.find("longsword"), "+1 longsword uses the longsword icon")
+	_test_magic_items(fb, rb, wb, cb)
 	# Equip from / take off to the bag.
 	var hf := _hero(Hero.HeroClass.FIGHTER)
 	hf.base_stats = fb

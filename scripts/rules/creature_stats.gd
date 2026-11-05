@@ -29,6 +29,8 @@ enum Size { TINY, SMALL, MEDIUM, LARGE, HUGE }
 @export var resistances: Array[String] = []
 @export var vulnerabilities: Array[String] = []   ## double damage (e.g. skeletons: bludgeoning)
 @export var immunities: Array[String] = []
+## Conditions that can't be put on it ("restrained"...; heroes: from rings, Equipment.build_stats).
+@export var condition_immunities: Array[String] = []
 @export_group("Movement")
 @export var speed_ft := 30
 @export var fly := false                ## floats/flies: ignores difficult terrain (later)
