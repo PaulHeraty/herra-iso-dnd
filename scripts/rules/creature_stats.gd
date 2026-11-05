@@ -48,6 +48,19 @@ enum Size { TINY, SMALL, MEDIUM, LARGE, HUGE }
 @export var spell_ability := ""         ## "INT" (wizard), "WIS" (cleric), "" = none
 ## Slots per spell level: index 0 = 1st level. Level 5 full caster: [4, 3, 2].
 @export var spell_slots: Array[int] = []
+@export_group("Equipment")
+## SRD class proficiencies: armour tags ("light", "medium", "heavy", "shield") and weapon tags
+## ("simple", "martial") or single weapon ids ("rapier", "light_crossbow"). See Equipment.
+@export var armor_training: Array[String] = []
+@export var weapon_training: Array[String] = []
+## Item ids the hero starts wearing / wielding (data/items/). Heroes only: their armor_class and
+## attacks here are replaced by what Equipment.build_stats() works out from the equipment.
+@export var starting_equipment: Array[String] = []
+
+## Runtime only (set by Equipment.build_stats on a hero's own copy): ring bonus to every save,
+## armour that gives disadvantage on Stealth.
+var item_save_bonus := 0
+var stealth_disadvantage := false
 
 const FT_PER_CELL := 5
 
@@ -77,7 +90,7 @@ func initiative_bonus() -> int:
 
 
 func save_bonus(ability: String) -> int:
-	var b := mod(ability)
+	var b := mod(ability) + item_save_bonus
 	if ability.to_upper() in save_proficiencies:
 		b += proficiency_bonus
 	return b

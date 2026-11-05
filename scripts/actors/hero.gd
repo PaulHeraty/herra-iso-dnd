@@ -40,11 +40,18 @@ const CAST_HOLD_MAX := 6.0          ## safety: a cast pose never sticks longer t
 
 @export var hero_class := HeroClass.FIGHTER:
 	set(v):
+		if v != hero_class:
+			equipment.clear()
 		hero_class = v
 		if is_node_ready():
 			_apply_class()
 
 var hero_name := ""
+## The class stat block as written in data/heroes/ (before equipment). `stats` is this hero's own
+## copy with AC, attacks, speed and save bonus worked out from `equipment` (Equipment.build_stats).
+var base_stats: CreatureStats
+## slot -> item id (Equipment.SLOTS). Empty at spawn = the class's starting equipment.
+var equipment := {}
 var _walk_tex: Texture2D
 var _action_tex: Texture2D
 var _action := ""
@@ -69,7 +76,10 @@ func _apply_class() -> void:
 	_action_tex = load(act_path) if walk_sheet and ResourceLoader.exists(act_path) else null
 	_use_walk_sheet()
 	sprite.frame = 0
-	stats = load(STATS[hero_class])
+	base_stats = load(STATS[hero_class])
+	if equipment.is_empty():
+		equipment = Equipment.starting(base_stats)
+	refresh_stats()
 	if hero_name == "":
 		hero_name = key.capitalize()
 	name = hero_name
@@ -258,3 +268,33 @@ func cast_point() -> Vector2:
 ## The walk sheet (portraits crop its front idle frame, whatever the sprite shows right now).
 func walk_texture() -> Texture2D:
 	return _walk_tex
+
+
+# --- equipment ---------------------------------------------------------------------------------
+
+## Work `stats` out again from the base stat block + equipment (after equipping something).
+func refresh_stats() -> void:
+	stats = Equipment.build_stats(base_stats, equipment)
+
+
+## Put item `item_id` in `slot`. Returns the item ids taken off to make room (they go back in the
+## bag), or null if it can't go there (Equipment.cannot_equip says why).
+func equip(slot: String, item_id: String) -> Variant:
+	var it := ItemData.get_item(item_id)
+	if Equipment.cannot_equip(base_stats, it, slot) != "":
+		return null
+	var off: Array[String] = []
+	for s in Equipment.displaced_by(equipment, it, slot):
+		off.append(equipment[s])
+		equipment.erase(s)
+	equipment[slot] = item_id
+	refresh_stats()
+	return off
+
+
+## Take off whatever is in `slot`; returns its item id ("" if the slot was empty).
+func unequip(slot: String) -> String:
+	var iid: String = equipment.get(slot, "")
+	equipment.erase(slot)
+	refresh_stats()
+	return iid

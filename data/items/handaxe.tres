@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_t5a8w"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_f5dtp"]
+
+[sub_resource type="Resource" id="Resource_a3ts7"]
+script = ExtResource("1_t5a8w")
+name = "Handaxe"
+kind = 1
+range_ft = 20
+long_range_ft = 60
+
+[resource]
+resource_name = "Handaxe"
+script = ExtResource("2_f5dtp")
+id = "handaxe"
+display_name = "Handaxe"
+kind = 0
+description = "A small axe made for throwing."
+value_gp = 5
+attack = SubResource("Resource_a3ts7")
+ranged_slot = true

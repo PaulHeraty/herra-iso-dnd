@@ -1420,7 +1420,8 @@ func _contest(caster: Actor, p: SpellData, target: Actor) -> void:
 	if p.id == "escape":
 		_escape(caster)
 		return
-	var mine := Dice.d20(caster.stats.skill_bonus(p.contest_skill))
+	var mine := Dice.d20(caster.stats.skill_bonus(p.contest_skill),
+			-1 if p.contest_skill == "stealth" and caster.stats.stealth_disadvantage else 0)
 	if p.id == "hide":
 		var best := 0
 		for a in order:

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_1jkdm"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_vgppd"]
+
+[sub_resource type="Resource" id="Resource_s3owl"]
+script = ExtResource("1_1jkdm")
+name = "Longsword"
+damage = "1d8"
+
+[resource]
+resource_name = "Longsword"
+script = ExtResource("2_vgppd")
+id = "longsword"
+display_name = "Longsword"
+kind = 0
+description = "A knight's straight blade."
+value_gp = 15
+attack = SubResource("Resource_s3owl")
+category = "martial"

@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_ot0gu"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_xtasb"]
+
+[sub_resource type="Resource" id="Resource_hcgab"]
+script = ExtResource("1_ot0gu")
+name = "Light Crossbow"
+kind = 1
+ability = 1
+range_ft = 80
+long_range_ft = 320
+damage = "1d8"
+damage_type = "piercing"
+
+[resource]
+resource_name = "Light Crossbow"
+script = ExtResource("2_xtasb")
+id = "light_crossbow"
+display_name = "Light Crossbow"
+kind = 0
+description = "A light crossbow."
+value_gp = 25
+attack = SubResource("Resource_hcgab")
+ranged_slot = true
+two_handed = true

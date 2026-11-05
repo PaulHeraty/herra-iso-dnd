@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_y0pkd"]
+
+[resource]
+resource_name = "Ring of Protection"
+script = ExtResource("1_y0pkd")
+id = "ring_protection"
+display_name = "Ring of Protection"
+kind = 6
+description = "A plain silver band that hums faintly. +1 to AC and to every saving throw."
+value_gp = 500
+ac_bonus = 1
+save_bonus = 1

@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_35pn3"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_p83d1"]
+
+[sub_resource type="Resource" id="Resource_ylwur"]
+script = ExtResource("1_35pn3")
+name = "Mace"
+damage_type = "bludgeoning"
+
+[resource]
+resource_name = "Mace"
+script = ExtResource("2_p83d1")
+id = "mace"
+display_name = "Mace"
+kind = 0
+description = "A flanged iron head on a haft. Good against skeletons."
+value_gp = 5
+attack = SubResource("Resource_ylwur")

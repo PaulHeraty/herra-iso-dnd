@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_ce1lo"]
+
+[resource]
+resource_name = "Studded Leather"
+script = ExtResource("1_ce1lo")
+id = "studded_leather"
+display_name = "Studded Leather"
+kind = 1
+description = "Leather set with rivets. AC 12 + DEX."
+value_gp = 45
+armor_type = "light"
+base_ac = 12

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_5nbkm"]
+
+[resource]
+resource_name = "Potion of Healing"
+script = ExtResource("1_5nbkm")
+id = "potion_healing"
+display_name = "Potion of Healing"
+kind = 3
+description = "A red liquid that glimmers when shaken. Drink it to regain 2d4 + 2 hit points."
+value_gp = 50
+stackable = true
+heal = "2d4+2"

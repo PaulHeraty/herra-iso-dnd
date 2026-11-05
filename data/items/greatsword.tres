@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_doxyr"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_32qfq"]
+
+[sub_resource type="Resource" id="Resource_luhs3"]
+script = ExtResource("1_doxyr")
+name = "Greatsword"
+damage = "2d6"
+
+[resource]
+resource_name = "Greatsword"
+script = ExtResource("2_32qfq")
+id = "greatsword"
+display_name = "Greatsword"
+kind = 0
+description = "A huge two-handed blade."
+value_gp = 50
+attack = SubResource("Resource_luhs3")
+category = "martial"
+two_handed = true

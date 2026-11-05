@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_3s2mi"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_14jv6"]
+
+[sub_resource type="Resource" id="Resource_ees1l"]
+script = ExtResource("1_3s2mi")
+name = "Longbow"
+kind = 1
+ability = 1
+range_ft = 150
+long_range_ft = 600
+damage = "1d8"
+damage_type = "piercing"
+
+[resource]
+resource_name = "Longbow"
+script = ExtResource("2_14jv6")
+id = "longbow"
+display_name = "Longbow"
+kind = 0
+description = "A tall war bow."
+value_gp = 50
+attack = SubResource("Resource_ees1l")
+category = "martial"
+ranged_slot = true
+two_handed = true

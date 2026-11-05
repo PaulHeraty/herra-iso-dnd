@@ -97,13 +97,20 @@ scripts/
                         resolve_power (generic: spell attack / save / auto darts+conditions / heal / contest)
   fx/                   FloatText (damage numbers), Projectile (arrow / beam), SpellFx (bolt, dart, column,
                         sparkles, burst, charge; pixel particles + PointLight2D)
+  items/item_data.gd   ItemData: one item kind (weapon: AttackData + category/slot; armour: base AC, DEX cap, STR;
+                        shield; potion heal; scroll spell; key_id; ring AC/save bonus). ItemData.get_item(id), cached
+  items/equipment.gd   Equipment (static): slots, training, build_stats(base, eq) -> the hero's own CreatureStats copy.
+                        Hero.base_stats = data/heroes/ file, Hero.stats = derived; Hero.equip()/unequip()
+  items/inventory.gd   Inventory: the shared bag (gold, stacks), on DungeonMap.inventory; PartyState carries it
   audio/sfx.gd          Sfx.play("name"): static, self-creating player for assets/sfx/<name>.wav
 data/         heroes/*.tres (level 5 party), monsters/*.tres: CreatureStats + AttackData; spells/*.tres: SpellData
-              (spells, class abilities, monster powers) — all from tools/godot/build_data.gd
+              (spells, class abilities, monster powers) — all from tools/godot/build_data.gd;
+              items/*.tres: ItemData — from tools/godot/build_items.gd
 tools/
   godot/      gen_art.gd -> build_tileset.gd -> build_test_room.gd   (run in that order, import between)
               gen_hero_sheets.gd (hero walk sheets), gen_hero_actions.gd (hero action sheets, from the walk drawings),
               preview_hero_walk.gd / preview_hero_actions.gd + gif_writer.gd (GIF previews)
+              build_items.gd (items -> data/items/; hero kits in build_data.gd refer to these ids)
               build_data.gd (stat blocks -> data/), test_rules.gd (headless rules tests: PASS/FAIL)
               gen_spider.gd (procedural Giant Spider sheet: 3D-ish model projected to iso)
               gen_sfx.gd (SFX: hits, miss, bow, hurt, hiss, ray, crit, mm_zip, radiant, heal_chime, fire_impact)
@@ -253,6 +260,18 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
      (AI scores condition powers; Recharge 5-6 rolled at turn start; "Break free" action; Rest.gd;
      the party panel stays visible while exploring, with Short/Long rest buttons).
 - [ ] **Phase 4 — Items:** chests, loot, gold, inventory, equipment changing stats, potions, scrolls, keys.
+  Inventory model (user's choice): **one shared party bag** (gold + items) + per-hero equipment slots
+  (main hand, off hand = shield, ranged, armour, 2 rings). Steps:
+  1. Items core: ItemData (data/items/, tools/godot/build_items.gd: SRD weapons, armour, shield,
+     potions, Ring of Protection), Inventory (bag), Equipment (base stat block + kit -> AC, attacks,
+     save bonus, speed; SRD class training: no armour for the Mage, light only for the Rogue...),
+     carried over the stairs (PartyState), tests. DONE.
+  2. Chests: open sprite, walk up + open (locked: pick / force like doors), loot popup, gold.
+  3. Inventory screen (I): bag grid with generated pixel icons, hero equipment slots, equip/unequip
+     (outside combat only), tooltips, training rules.
+  4. Potions + the Item action in combat (drink, or feed an adjacent ally).
+  5. Scrolls (cast from a scroll, class spell list check) + keys (locked doors / chests).
+  6. Magic items (+1 weapons/armour, rings) + stocking both floors with loot.
 - [ ] **Phase 5 — Progression:** XP, levels 1–5, SRD class features, character sheet.
 - [ ] **Phase 6 — Dungeon features:** doors/locks/keys (doors, locks and stairs/level transitions done early for the first dungeon; keys wait for Phase 4), traps (Rogue detect/disarm), secret walls,
   levers, room descriptions, triggers, level transitions, more monsters.

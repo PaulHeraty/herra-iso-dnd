@@ -44,6 +44,8 @@ var party: Array[Hero] = []
 var monsters: Array[Monster] = []
 ## XP the party has earned (levelling comes in Phase 5).
 var party_xp := 0
+## The party's shared bag: gold + items (carried between floors by PartyState).
+var inventory: Inventory
 var overlay: GridOverlay
 var controller: PartyController
 var camera_controller: CameraController
@@ -100,6 +102,7 @@ func _ready() -> void:
 	refresh_navigation()
 	_spawn_party()
 	party_xp = PartyState.party_xp
+	inventory = Inventory.from_dict(PartyState.bag) if not PartyState.bag.is_empty() else Inventory.starting()
 	_compute_fog()
 	refresh_navigation()
 	camera_controller = CameraController.new()

@@ -12,6 +12,7 @@ func _init() -> void:
 	_test_stats()
 	_test_spells()
 	_test_conditions()
+	_test_items()
 	print("%d checks, %d failed" % [_checks, _fails])
 	print("PASS" if _fails == 0 else "FAIL")
 	quit(1 if _fails > 0 else 0)
@@ -92,6 +93,16 @@ func _test_stats() -> void:
 	check(f and r and c and w and sp and et, "data files load")
 	if not (f and r and c and w and sp and et):
 		return
+	# Heroes fight with their equipment: base stat block + starting kit.
+	f = Equipment.build_stats(f, Equipment.starting(f))
+	r = Equipment.build_stats(r, Equipment.starting(r))
+	c = Equipment.build_stats(c, Equipment.starting(c))
+	w = Equipment.build_stats(w, Equipment.starting(w))
+	check(f.armor_class == 18 and r.armor_class == 15 and c.armor_class == 18 and w.armor_class == 12,
+			"hero AC from kit 18/15/18/12 (%d/%d/%d/%d)" % [f.armor_class, r.armor_class, c.armor_class, w.armor_class])
+	check(f.attacks.size() == 2 and f.attacks[1].name == "Handaxe" and f.attacks[1].range_cells() == 4, "Fighter longsword + handaxe")
+	check(c.attacks.size() == 1 and c.attacks[0].damage_type == "bludgeoning", "Cleric mace only")
+	check(w.attacks[1].name == "Light Crossbow" and w.damage_expr(w.attacks[1]) == "1d8+2", "Mage light crossbow 1d8+2")
 	check(f.attack_bonus(f.attacks[0]) == 6, "Fighter longsword +6 (%d)" % f.attack_bonus(f.attacks[0]))
 	check(f.damage_expr(f.attacks[0]) == "1d8+3", "Fighter longsword 1d8+3 (%s)" % f.damage_expr(f.attacks[0]))
 	check(f.attacks_per_action() == 2, "Fighter Extra Attack")
@@ -108,7 +119,7 @@ func _test_stats() -> void:
 	check(sp.attack_bonus(sp.attacks[0]) == 5 and sp.damage_expr(sp.attacks[0]) == "1d8+3", "Spider bite +5, 1d8+3")
 	check(sp.attacks[0].rider_dc == 11, "Spider poison DC 11")
 	# Packed-array exports once got dropped by an editor re-save: guard every one of them.
-	check(Array(c.spell_slots) == [4, 3, 2], "Cleric slots 4/3/2 (%s)" % c.spell_slots)
+	check(Array(c.spell_slots) == [4, 3, 2], "Cleric slots 4/3/2 (%s)" % str(c.spell_slots))
 	check(c.save_bonus("WIS") == 7 and c.save_bonus("CHA") == 4, "Cleric WIS/CHA saves")
 	check(r.save_bonus("DEX") == 7 and w.save_bonus("INT") == 7, "Rogue DEX / Wizard INT saves")
 	check(et.save_bonus("WIS") == 4, "Eye Tyrant WIS save +4")
@@ -204,3 +215,69 @@ func _test_conditions() -> void:
 	a.free()
 	b.free()
 	fighter.free()
+
+
+func _test_items() -> void:
+	var ids := ["dagger", "mace", "quarterstaff", "shortsword", "longsword", "rapier", "warhammer",
+			"greatsword", "handaxe", "light_crossbow", "shortbow", "longbow", "leather_armor",
+			"studded_leather", "chain_shirt", "scale_mail", "chain_mail", "plate_armor", "shield",
+			"potion_healing", "potion_greater_healing", "ring_protection"]
+	for iid in ids:
+		var it := ItemData.get_item(iid)
+		check(it != null and it.id == iid, "item %s loads" % iid)
+		if it and it.kind == ItemData.Kind.WEAPON:
+			check(it.attack != null and Dice.parse(it.attack.damage).size() > 0, "%s has an attack" % iid)
+	var fb: CreatureStats = load("res://data/heroes/fighter.tres")
+	var rb: CreatureStats = load("res://data/heroes/rogue.tres")
+	var wb: CreatureStats = load("res://data/heroes/wizard.tres")
+	var cb: CreatureStats = load("res://data/heroes/cleric.tres")
+	check(Array(fb.starting_equipment).size() == 4 and Array(wb.weapon_training).has("light_crossbow"),
+			"hero training / kit arrays survived (%s)" % str(fb.starting_equipment))
+	var I := ItemData.get_item
+	# Training: the Wizard can't wear armour, the Rogue no shield; anyone can swing a weapon.
+	check(Equipment.cannot_equip(wb, I.call("leather_armor"), "armor") != "", "Wizard can't wear armour")
+	check(Equipment.cannot_equip(rb, I.call("shield"), "off") != "", "Rogue can't use a shield")
+	check(Equipment.cannot_equip(rb, I.call("studded_leather"), "armor") == "", "Rogue wears studded leather")
+	check(Equipment.cannot_equip(fb, I.call("shield"), "main") != "", "shield not in the main hand")
+	check(Equipment.cannot_equip(fb, I.call("potion_healing"), "main") != "", "potion isn't equipment")
+	check(Equipment.cannot_equip(wb, I.call("longsword"), "main") == "", "Wizard can hold a longsword")
+	var wl := Equipment.build_stats(wb, {main = "longsword"})
+	check(not wl.attacks[0].proficient and wl.attack_bonus(wl.attacks[0]) == -1, "untrained weapon: no proficiency (-1)")
+	check(Equipment.build_stats(rb, {main = "rapier"}).attack_bonus(Equipment.build_stats(rb, {main = "rapier"}).attacks[0]) == 7,
+			"Rogue rapier: finesse + proficient +7")
+	# AC maths: DEX cap, shield, ring; no armour = 10 + DEX; heavy armour without the STR = slower.
+	check(Equipment.build_stats(rb, {}).armor_class == 14, "Rogue unarmoured 10 + 4")
+	check(Equipment.build_stats(rb, {armor = "chain_shirt"}).armor_class == 15, "chain shirt caps DEX at +2")
+	check(Equipment.build_stats(fb, {armor = "plate_armor", off = "shield"}).armor_class == 20, "plate + shield 20")
+	var ringed := Equipment.build_stats(wb, {ring1 = "ring_protection"})
+	check(ringed.armor_class == 13 and ringed.save_bonus("INT") == 8 and ringed.save_bonus("STR") == 0,
+			"Ring of Protection +1 AC / +1 saves")
+	check(wb.save_bonus("INT") == 7, "the base stat block is never changed")
+	check(Equipment.build_stats(wb, {armor = "plate_armor"}).speed_ft == 20, "plate without STR 15: -10 ft")
+	check(Equipment.build_stats(fb, {armor = "chain_mail"}).stealth_disadvantage, "chain mail: stealth disadvantage")
+	var un := Equipment.build_stats(fb, {})
+	check(un.attacks.size() == 1 and un.damage_expr(un.attacks[0]) == "1+3" and is_equal_approx(Dice.average("1+3"), 4.0),
+			"no weapon: unarmed strike 1 + STR")
+	# Two-handed weapon and shield push each other out.
+	var eq := Equipment.starting(fb)
+	check(eq.main == "longsword" and eq.off == "shield" and eq.ranged == "handaxe" and eq.armor == "chain_mail", "Fighter kit slots")
+	check(Array(Equipment.displaced_by(eq, I.call("greatsword"), "main")) == ["main", "off"], "greatsword displaces the shield")
+	check(Array(Equipment.displaced_by({main = "greatsword"}, I.call("shield"), "off")) == ["main"], "shield displaces a greatsword")
+	check(Equipment.default_slot(I.call("ring_protection"), {ring1 = "ring_protection"}) == "ring2", "second ring slot")
+	check(Equipment.starting(cb).has("off"), "Cleric starts with a shield")
+	# The bag: stacks, counts, gold, round trip.
+	var inv := Inventory.starting()
+	check(inv.count("potion_healing") == 3 and inv.stacks.size() == 1, "starting bag: 3 potions in one stack")
+	inv.add("potion_healing", 2)
+	inv.add("dagger")
+	inv.add("dagger")
+	check(inv.count("potion_healing") == 5 and inv.count("dagger") == 2 and inv.stacks.size() == 3, "stack potions, not daggers")
+	check(not inv.remove("dagger", 3) and inv.count("dagger") == 2, "can't take more than there is")
+	check(inv.remove("potion_healing", 5) and not inv.has("potion_healing") and inv.stacks.size() == 2, "used-up stack disappears")
+	inv.add_gold(40)
+	var back := Inventory.from_dict(inv.to_dict())
+	check(back.gold == 40 and back.count("dagger") == 2, "bag survives to_dict / from_dict")
+	back.add("dagger")
+	check(inv.count("dagger") == 2, "restored bag is a copy")
+	check(I.call("chain_mail").summary() == "AC 16, heavy, stealth disadv.", "summary: %s" % I.call("chain_mail").summary())
+	check(I.call("shortbow").summary() == "1d6 piercing, range 80/320 ft, two-handed", "summary: %s" % I.call("shortbow").summary())

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_2eoxw"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_e2lxi"]
+
+[sub_resource type="Resource" id="Resource_xyxum"]
+script = ExtResource("1_2eoxw")
+name = "Shortsword"
+ability = 2
+damage_type = "piercing"
+
+[resource]
+resource_name = "Shortsword"
+script = ExtResource("2_e2lxi")
+id = "shortsword"
+display_name = "Shortsword"
+kind = 0
+description = "A short stabbing blade. Finesse."
+value_gp = 10
+attack = SubResource("Resource_xyxum")
+category = "martial"

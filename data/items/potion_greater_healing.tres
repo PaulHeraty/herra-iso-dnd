@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_p8ncg"]
+
+[resource]
+resource_name = "Potion of Greater Healing"
+script = ExtResource("1_p8ncg")
+id = "potion_greater_healing"
+display_name = "Potion of Greater Healing"
+kind = 3
+description = "A deep red potion. Drink it to regain 4d4 + 4 hit points."
+value_gp = 150
+stackable = true
+heal = "4d4+4"

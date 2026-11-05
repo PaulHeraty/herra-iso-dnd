@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_dlab5"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_m1a5h"]
+
+[sub_resource type="Resource" id="Resource_fnvqx"]
+script = ExtResource("1_dlab5")
+name = "Rapier"
+ability = 2
+damage = "1d8"
+damage_type = "piercing"
+
+[resource]
+resource_name = "Rapier"
+script = ExtResource("2_m1a5h")
+id = "rapier"
+display_name = "Rapier"
+kind = 0
+description = "A slender duelling blade. Finesse."
+value_gp = 25
+attack = SubResource("Resource_fnvqx")
+category = "martial"

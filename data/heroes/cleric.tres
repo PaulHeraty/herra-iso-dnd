@@ -7,12 +7,6 @@
 [ext_resource type="Resource" path="res://data/spells/bless.tres" id="5_qffdq"]
 [ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="6_msbuf"]
 
-[sub_resource type="Resource" id="Resource_ybcvv"]
-resource_name = "Mace"
-script = ExtResource("1_0vm8f")
-name = "Mace"
-damage_type = "bludgeoning"
-
 [resource]
 resource_name = "Cleric"
 script = ExtResource("6_msbuf")
@@ -27,10 +21,11 @@ cha_score = 12
 save_proficiencies = Array[String](["WIS", "CHA"])
 max_hp = 38
 hit_dice = "5d8"
-armor_class = 18
 proficiency_bonus = 3
-attacks = Array[ExtResource("1_0vm8f")]([SubResource("Resource_ybcvv")])
 powers = Array[ExtResource("2_7t45k")]([ExtResource("3_cj410"), ExtResource("4_r1w0a"), ExtResource("5_qffdq")])
 skill_proficiencies = Array[String](["insight", "medicine"])
 spell_ability = "WIS"
 spell_slots = Array[int]([4, 3, 2])
+armor_training = Array[String](["light", "medium", "heavy", "shield"])
+weapon_training = Array[String](["simple"])
+starting_equipment = Array[String](["mace", "shield", "chain_mail"])

@@ -6,20 +6,6 @@
 [ext_resource type="Resource" path="res://data/spells/shove.tres" id="4_clnly"]
 [ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="5_km8d3"]
 
-[sub_resource type="Resource" id="Resource_6dh4b"]
-resource_name = "Longsword"
-script = ExtResource("1_pwjl6")
-name = "Longsword"
-damage = "1d8"
-
-[sub_resource type="Resource" id="Resource_3viyi"]
-resource_name = "Handaxe"
-script = ExtResource("1_pwjl6")
-name = "Handaxe"
-kind = 1
-range_ft = 20
-long_range_ft = 60
-
 [resource]
 resource_name = "Fighter"
 script = ExtResource("5_km8d3")
@@ -35,9 +21,10 @@ cha_score = 8
 save_proficiencies = Array[String](["STR", "CON"])
 max_hp = 44
 hit_dice = "5d10"
-armor_class = 18
 proficiency_bonus = 3
-attacks = Array[ExtResource("1_pwjl6")]([SubResource("Resource_6dh4b"), SubResource("Resource_3viyi")])
 extra_attacks = 1
 powers = Array[ExtResource("2_dv2d3")]([ExtResource("3_qnc6f"), ExtResource("4_clnly")])
 skill_proficiencies = Array[String](["athletics", "perception"])
+armor_training = Array[String](["light", "medium", "heavy", "shield"])
+weapon_training = Array[String](["simple", "martial"])
+starting_equipment = Array[String](["longsword", "shield", "handaxe", "chain_mail"])

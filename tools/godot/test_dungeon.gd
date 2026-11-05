@@ -79,6 +79,16 @@ func _run() -> void:
 	var fighter := m.party[0]
 	fighter.hp = 20
 	m.party[3].slots_left[0] = 1
+	# items: party AC/attacks from the kit; change the bag and an equipment slot before the stairs
+	_check(fighter.stats.armor_class == 18 and fighter.stats.attacks[0].name == "Longsword", "fighter fights with the kit (AC %d)" % fighter.stats.armor_class)
+	_check(m.inventory.count("potion_healing") == 3, "party starts with 3 potions")
+	m.inventory.add_gold(25)
+	m.inventory.add("warhammer")
+	m.inventory.add("longsword")
+	for it in fighter.equip("main", "warhammer"):
+		m.inventory.add(it)
+	m.inventory.remove("warhammer")
+	_check(fighter.stats.attacks[0].name == "Warhammer" and m.inventory.count("longsword") == 2, "fighter swaps to the warhammer")
 	var killed := 0
 	for mo in m.monsters:
 		if mo.cell.x >= 26 and mo.cell.y >= 16:
@@ -98,6 +108,8 @@ func _run() -> void:
 	_check(m.party[0].cell == Vector2i(4, 4), "party at the from_above entry (%s)" % m.party[0].cell)
 	_check(m.party[0].hp == 20, "fighter's HP carried over (%d)" % m.party[0].hp)
 	_check(m.party[3].slots_left[0] == 1, "mage's spent slots carried over")
+	_check(m.inventory.gold == 25 and m.inventory.count("longsword") == 2 and m.inventory.count("potion_healing") == 3, "bag carried over")
+	_check(m.party[0].stats.attacks[0].name == "Warhammer" and m.party[0].stats.armor_class == 18, "equipment carried over")
 
 	# --- back up: floor 1 remembers its doors and dead monsters ---
 	var up := m.stairs_at(Vector2i(3, 2))

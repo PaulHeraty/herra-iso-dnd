@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_ixqqp"]
+
+[resource]
+resource_name = "Plate Armour"
+script = ExtResource("1_ixqqp")
+id = "plate_armor"
+display_name = "Plate Armour"
+kind = 1
+description = "Shaped steel plates. AC 18. Needs STR 15."
+value_gp = 1500
+armor_type = "heavy"
+base_ac = 18
+dex_cap = 0
+str_required = 15
+stealth_disadvantage = true

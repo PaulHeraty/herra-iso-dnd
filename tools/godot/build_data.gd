@@ -65,13 +65,13 @@ func _ranged(a: AttackData, normal_ft: int, long_ft: int) -> AttackData:
 	return a
 
 
-func _hero(s: CreatureStats, class_id: String, hp: int, hit_dice: String, ac: int, saves: Array) -> void:
+func _hero(s: CreatureStats, class_id: String, hp: int, hit_dice: String, _ac_with_kit: int, saves: Array) -> void:
 	s.class_id = class_id
 	s.level = 5
 	s.proficiency_bonus = 3
 	s.max_hp = hp
 	s.hit_dice = hit_dice
-	s.armor_class = ac
+	s.armor_class = 10              # unarmoured; the real AC (_ac_with_kit, for reference) comes from the equipment
 	s.save_proficiencies = _s(saves)
 	s.speed_ft = 30
 
@@ -84,10 +84,9 @@ func _fighter() -> CreatureStats:
 	s.extra_attacks = 1                                       # Extra Attack (level 5)
 	s.powers = [sp.second_wind, sp.shove]
 	s.skill_proficiencies = _s(["athletics", "perception"])
-	s.attacks = [
-		_attack("Longsword", AttackData.Kind.MELEE, AttackData.Ability.STR, "1d8", "slashing"),
-		_ranged(_attack("Handaxe", AttackData.Kind.RANGED, AttackData.Ability.STR, "1d6", "slashing"), 20, 60),
-	]
+	s.armor_training = _s(["light", "medium", "heavy", "shield"])
+	s.weapon_training = _s(["simple", "martial"])
+	s.starting_equipment = _s(["longsword", "shield", "handaxe", "chain_mail"])
 	return s
 
 
@@ -97,10 +96,9 @@ func _rogue() -> CreatureStats:
 	s.powers = [sp.sneak_attack, sp.hide]
 	s.skill_proficiencies = _s(["acrobatics", "athletics", "thieves_tools"])
 	s.skill_expertise = _s(["stealth", "perception"])
-	s.attacks = [
-		_attack("Shortsword", AttackData.Kind.MELEE, AttackData.Ability.FINESSE, "1d6", "piercing"),
-		_ranged(_attack("Shortbow", AttackData.Kind.RANGED, AttackData.Ability.DEX, "1d6", "piercing"), 80, 320),
-	]
+	s.armor_training = _s(["light"])
+	s.weapon_training = _s(["simple", "hand_crossbow", "longsword", "rapier", "shortsword"])
+	s.starting_equipment = _s(["shortsword", "shortbow", "leather_armor"])
 	return s
 
 
@@ -111,9 +109,9 @@ func _cleric() -> CreatureStats:
 	s.spell_slots = _i([4, 3, 2])
 	s.powers = [sp.sacred_flame, sp.cure_wounds, sp.bless]
 	s.skill_proficiencies = _s(["insight", "medicine"])
-	s.attacks = [
-		_attack("Mace", AttackData.Kind.MELEE, AttackData.Ability.STR, "1d6", "bludgeoning"),
-	]
+	s.armor_training = _s(["light", "medium", "heavy", "shield"])
+	s.weapon_training = _s(["simple"])
+	s.starting_equipment = _s(["mace", "shield", "chain_mail"])
 	return s
 
 
@@ -124,10 +122,9 @@ func _wizard() -> CreatureStats:
 	s.spell_slots = _i([4, 3, 2])
 	s.powers = [sp.fire_bolt, sp.magic_missile, sp.shield, sp.fireball]
 	s.skill_proficiencies = _s(["arcana", "investigation"])
-	s.attacks = [
-		_attack("Quarterstaff", AttackData.Kind.MELEE, AttackData.Ability.STR, "1d6", "bludgeoning"),
-		_ranged(_attack("Light Crossbow", AttackData.Kind.RANGED, AttackData.Ability.DEX, "1d8", "piercing"), 80, 320),
-	]
+	s.armor_training = _s([])
+	s.weapon_training = _s(["dagger", "dart", "sling", "quarterstaff", "light_crossbow"])
+	s.starting_equipment = _s(["quarterstaff", "light_crossbow"])
 	return s
 
 

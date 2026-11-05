@@ -8,23 +8,6 @@
 [ext_resource type="Resource" path="res://data/spells/fireball.tres" id="6_85bi8"]
 [ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="7_tayr7"]
 
-[sub_resource type="Resource" id="Resource_px5s8"]
-resource_name = "Quarterstaff"
-script = ExtResource("1_k6p42")
-name = "Quarterstaff"
-damage_type = "bludgeoning"
-
-[sub_resource type="Resource" id="Resource_1vyib"]
-resource_name = "Light Crossbow"
-script = ExtResource("1_k6p42")
-name = "Light Crossbow"
-kind = 1
-ability = 1
-range_ft = 80
-long_range_ft = 320
-damage = "1d8"
-damage_type = "piercing"
-
 [resource]
 resource_name = "Mage"
 script = ExtResource("7_tayr7")
@@ -40,10 +23,10 @@ wis_score = 12
 save_proficiencies = Array[String](["INT", "WIS"])
 max_hp = 27
 hit_dice = "5d6"
-armor_class = 12
 proficiency_bonus = 3
-attacks = Array[ExtResource("1_k6p42")]([SubResource("Resource_px5s8"), SubResource("Resource_1vyib")])
 powers = Array[ExtResource("2_j4fgp")]([ExtResource("3_8h5gq"), ExtResource("4_w4a7k"), ExtResource("5_llyg4"), ExtResource("6_85bi8")])
 skill_proficiencies = Array[String](["arcana", "investigation"])
 spell_ability = "INT"
 spell_slots = Array[int]([4, 3, 2])
+weapon_training = Array[String](["dagger", "dart", "sling", "quarterstaff", "light_crossbow"])
+starting_equipment = Array[String](["quarterstaff", "light_crossbow"])
