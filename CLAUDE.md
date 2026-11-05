@@ -102,6 +102,7 @@ scripts/
   fx/                   FloatText (damage numbers), Projectile (arrow / beam), SpellFx (bolt, dart, column,
                         sparkles, burst, charge; pixel particles + PointLight2D)
   items/item_data.gd   ItemData: one item kind (weapon: AttackData + category/slot; armour: base AC, DEX cap, STR;
+                       Scrolls: `spell` + the readers come from `SpellData.classes`; keys: `key_id` (Door/Chest `key_id`, lock_dc 0 = key only).
                         shield; potion heal; scroll spell; key_id; ring AC/save bonus). ItemData.get_item(id), cached
   items/equipment.gd   Equipment (static): slots, training, build_stats(base, eq) -> the hero's own CreatureStats copy.
                         Hero.base_stats = data/heroes/ file, Hero.stats = derived; Hero.equip()/unequip()
@@ -117,7 +118,7 @@ tools/
               build_items.gd (items -> data/items/; hero kits in build_data.gd refer to these ids)
               build_data.gd (stat blocks -> data/), test_rules.gd (headless rules tests: PASS/FAIL)
               gen_spider.gd (procedural Giant Spider sheet: 3D-ish model projected to iso)
-              gen_sfx.gd (SFX: hits, miss, bow, hurt, hiss, ray, crit, mm_zip, radiant, heal_chime, fire_impact, chest_open, coins, potion_drink)
+              gen_sfx.gd (SFX: hits, miss, bow, hurt, hiss, ray, crit, mm_zip, radiant, heal_chime, fire_impact, chest_open, coins, potion_drink, scroll_read, lightning_crack)
               gen_font.gd (our HerraPixel bitmap font -> assets/fonts/herra_pixel.fnt + .png)
               gen_icons.gd (9x9 condition icons -> assets/ui/condition_icons.png; order = Condition.ICON_INDEX)
               gen_item_art.gd (open chest + item icons; weapons drawn along the diagonal from code)
@@ -281,7 +282,14 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
      bag's potions; an action; targets = self or an adjacent ally that is hurt or downed (revives);
      each potion becomes a runtime heal power, `CombatManager.item_power()`. Exploring: click a potion
      in the inventory (or drag it onto a hero tab) to drink it, no action. potion_drink.wav.)
-  5. Scrolls (cast from a scroll, class spell list check) + keys (locked doors / chests).
+  5. Scrolls (cast from a scroll, class spell list check) + keys (locked doors / chests). DONE
+     (SRD Spell Scroll: `CombatManager.scroll_power()` = a copy of the spell, no slot, the scroll's DC/attack
+     (13/+5 up to 2nd, 15/+7 3rd-4th...), higher than the reader can cast = DC 10+level check or it
+     crumbles; `SpellData.classes` = spell lists; Item menu lists scrolls; healing scrolls can be read
+     from the bag while exploring. New scroll-only spell Lightning Bolt (LINE, stops at walls, own
+     bolt VFX + lightning_crack.wav, scroll_read.wav). Keys: Iron Key (crypt door, floor 1, also
+     pickable) in the storeroom chest; Bone Key (lair door, floor 2, key only) in the ossuary chest;
+     keys are kept; in combat unlocking with a key = the free door interaction; hover hints name the key.)
   6. Magic items (+1 weapons/armour, rings) + stocking both floors with loot.
 - [ ] **Phase 5 — Progression:** XP, levels 1–5, SRD class features, character sheet.
 - [ ] **Phase 6 — Dungeon features:** doors/locks/keys (doors, locks and stairs/level transitions done early for the first dungeon; keys wait for Phase 4), traps (Rogue detect/disarm), secret walls,

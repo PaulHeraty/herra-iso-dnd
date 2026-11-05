@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_hm2rg"]
+[ext_resource type="Resource" path="res://data/spells/lightning_bolt.tres" id="2_u1kku"]
+
+[resource]
+resource_name = "Scroll of Lightning Bolt"
+script = ExtResource("1_hm2rg")
+id = "scroll_lightning_bolt"
+display_name = "Scroll of Lightning Bolt"
+kind = 4
+description = "It crackles. Your hair stands on end.
+Lightning Bolt (3rd level): A 100-ft line of lightning: 8d6 lightning, DEX save for half. Stops at walls.
+Mage only. Crumbles once read. DC 15, attack +7."
+value_gp = 300
+stackable = true
+spell = ExtResource("2_u1kku")

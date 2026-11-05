@@ -13,6 +13,7 @@ func _init() -> void:
 	_test_spells()
 	_test_conditions()
 	_test_items()
+	_test_scrolls()
 	print("%d checks, %d failed" % [_checks, _fails])
 	print("PASS" if _fails == 0 else "FAIL")
 	quit(1 if _fails > 0 else 0)
@@ -321,3 +322,48 @@ func _test_items() -> void:
 	check(inv.count("dagger") == 2, "restored bag is a copy")
 	check(I.call("chain_mail").summary() == "AC 16, heavy, stealth disadv.", "summary: %s" % I.call("chain_mail").summary())
 	check(I.call("shortbow").summary() == "1d6 piercing, range 80/320 ft, two-handed", "summary: %s" % I.call("shortbow").summary())
+
+
+## Spell scrolls + keys (Phase 4 step 5).
+func _test_scrolls() -> void:
+	for iid in ["scroll_magic_missile", "scroll_cure_wounds", "scroll_bless", "scroll_fireball", "scroll_lightning_bolt"]:
+		var it := ItemData.get_item(iid)
+		check(it != null and it.kind == ItemData.Kind.SCROLL and it.spell != null and it.stackable, "%s loads with its spell" % iid)
+	for kid in [["crypt_key", "crypt"], ["lair_key", "lair"]]:
+		var k := ItemData.get_item(kid[0])
+		check(k != null and k.kind == ItemData.Kind.KEY and k.key_id == kid[1], "%s opens '%s'" % kid)
+	var bag := Inventory.new()
+	bag.add("lair_key")
+	check(bag.key_for("lair") == "lair_key" and bag.key_for("crypt") == "", "the bag finds the right key")
+	# spell lists survive in the data files (typed arrays, see the editor re-save note)
+	var fi: SpellData = load("res://data/spells/fireball.tres")
+	var cw: SpellData = load("res://data/spells/cure_wounds.tres")
+	check(Array(fi.classes) == ["wizard"] and Array(cw.classes) == ["cleric"], "spell lists: fireball wizard, cure wounds cleric")
+	var lb: SpellData = load("res://data/spells/lightning_bolt.tres")
+	check(lb.level == 3 and lb.target == SpellData.Target.LINE and lb.range_cells() == 20 and lb.damage == "8d6", "Lightning Bolt: 3rd, 100-ft line, 8d6")
+	# the SRD scroll table
+	check(SpellData.scroll_dc(1) == 13 and SpellData.scroll_attack_bonus(1) == 5, "1st-level scroll: DC 13, +5")
+	check(SpellData.scroll_dc(3) == 15 and SpellData.scroll_attack_bonus(3) == 7, "3rd-level scroll: DC 15, +7")
+	check(SpellData.scroll_dc(5) == 17 and SpellData.scroll_dc(9) == 19, "5th 17, 9th 19")
+	check(fi.description_at_level() == "A burst of flame on a 3x3 area: 8d6 fire, DEX save for half.", "no upcasting text: '%s'" % fi.description_at_level())
+	# reading a scroll: a copy of the spell that spends no slot and uses the scroll's numbers
+	var sf := ItemData.get_item("scroll_fireball")
+	var p := CombatManager.scroll_power(sf)
+	check(p != fi and p.is_scroll() and not p.uses_slot() and fi.uses_slot(), "scroll power: no slot (the spell itself still uses one)")
+	check(p.dc_for(load("res://data/heroes/wizard.tres")) == 15 and p.attack_bonus_for(load("res://data/heroes/cleric.tres")) == 7, "scroll DC / attack bonus")
+	check(CombatManager.is_item_power(p) and not CombatManager.is_potion_power(p), "scroll is an item power, not a potion")
+	check(CombatManager.scroll_power(sf) == p, "scroll power cached")
+	var mage := _hero(Hero.HeroClass.MAGE)
+	var fighter := _hero(Hero.HeroClass.FIGHTER)
+	var cleric := _hero(Hero.HeroClass.CLERIC)
+	check(CombatManager.scroll_problem(mage, sf) == "", "the mage can read Fireball")
+	check(CombatManager.scroll_problem(fighter, sf) != "", "the fighter can't (%s)" % CombatManager.scroll_problem(fighter, sf))
+	check(CombatManager.scroll_problem(cleric, sf) != "" and CombatManager.scroll_problem(cleric, ItemData.get_item("scroll_cure_wounds")) == "", "the cleric reads Cure Wounds, not Fireball")
+	check(CombatManager.max_spell_level(mage) == 3 and CombatManager.max_spell_level(fighter) == 0, "mage casts up to 3rd")
+	check(CombatManager.scroll_check_dc(mage, p) == 0, "no check for a 3rd-level scroll at level 5")
+	var big: SpellData = p.duplicate()
+	big.level = 5
+	check(CombatManager.scroll_check_dc(mage, big) == 15, "a 5th-level scroll needs a DC 15 check")
+	mage.free()
+	fighter.free()
+	cleric.free()

@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_molsk"]
+
+[resource]
+resource_name = "Lightning Bolt"
+script = ExtResource("1_molsk")
+id = "lightning_bolt"
+display_name = "Lightning Bolt"
+description = "A 100-ft line of lightning: 8d6 lightning, DEX save for half. Stops at walls. +1d6 per slot above 3rd."
+level = 3
+classes = Array[String](["wizard"])
+target = 5
+range_ft = 100
+resolve = 1
+save_ability = "DEX"
+half_on_save = true
+damage = "8d6"
+damage_type = "lightning"
+upcast_dice = "1d6"
+sfx = "lightning_crack"
+vfx = "lightning"
+big_moment = true

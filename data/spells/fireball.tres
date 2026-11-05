@@ -9,6 +9,7 @@ id = "fireball"
 display_name = "Fireball"
 description = "A burst of flame on a 3x3 area: 8d6 fire, DEX save for half. +1d6 per slot above 3rd."
 level = 3
+classes = Array[String](["wizard"])
 target = 4
 range_ft = 150
 area_size = 3

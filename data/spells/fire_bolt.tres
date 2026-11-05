@@ -8,6 +8,7 @@ script = ExtResource("1_s1te2")
 id = "fire_bolt"
 display_name = "Fire Bolt"
 description = "Hurl a mote of fire. Ranged spell attack, 1d10 fire (2d10 at 5th level)."
+classes = Array[String](["wizard"])
 range_ft = 120
 resolve = 0
 damage = "1d10"

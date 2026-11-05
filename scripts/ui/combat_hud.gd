@@ -139,7 +139,7 @@ func _process(_delta: float) -> void:
 	_set_button(_buttons.spell, hero_turn and not cur.stats.powers.is_empty(), hero_turn and ((busy and not item_busy) or _popup_kind == "spell"))
 	if not hero_turn and _popup.visible:
 		_close_popup()
-	_set_button(_buttons.item, hero_turn and _has_potions(), hero_turn and (item_busy or _popup_kind == "item"))
+	_set_button(_buttons.item, hero_turn and _has_usable_items(), hero_turn and (item_busy or _popup_kind == "item"))
 	_set_button(_buttons.wait, hero_turn, false)
 
 
@@ -577,17 +577,18 @@ func _open_powers() -> void:
 	_show_popup("spell", rows)
 
 
-func _has_potions() -> bool:
+func _has_usable_items() -> bool:
 	var bag := combat.map.inventory
 	if bag:
 		for st: Dictionary in bag.stacks:
 			var it := ItemData.get_item(st.id)
-			if it and it.kind == ItemData.Kind.POTION:
+			if it and CombatManager.use_power(it) != null:
 				return true
 	return false
 
 
-## Item menu: the bag's potions (action; drink, or give to an adjacent ally).
+## Item menu: the bag's potions (action; drink, or give to an adjacent ally) and spell scrolls
+## (read by a hero who has the spell on their list: the spell, no slot).
 func _open_items() -> void:
 	var h := combat.current
 	if not h is Hero or combat.moving:
@@ -598,8 +599,17 @@ func _open_items() -> void:
 	for m: Dictionary in combat.menu_items(h):
 		var it: ItemData = m.item
 		var iid := it.id
+		var desc := "Action: %s. Drink it, or give it to an ally next to you (also gets a downed ally back up)." % it.summary()
+		if it.kind == ItemData.Kind.SCROLL:
+			var p: SpellData = m.power
+			desc = "%s: read the scroll to cast %s (%s, no slot; DC %d). It crumbles. %s" % [
+					"Bonus action" if p.cast_time == SpellData.CastTime.BONUS else "Action", p.display_name,
+					CombatManager.power_tag_level(p.level), p.dc_override, it.spell.description_at_level()]
+			var dc := CombatManager.scroll_check_dc(h, p)
+			if dc > 0:
+				desc += " Beyond %s's power: needs a DC %d check." % [h.display_name(), dc]
 		rows.append({text = it.display_name, tag = "x%d" % m.count, ok = m.ok, why = m.why,
-				desc = "Action: %s. Drink it, or give it to an ally next to you (also gets a downed ally back up)." % it.summary(),
+				desc = desc,
 				pick = func(): combat.begin_item(iid)})
 	if rows.is_empty():
 		_hint.text = "Nothing in the bag to use."

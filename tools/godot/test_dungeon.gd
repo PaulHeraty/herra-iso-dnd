@@ -92,6 +92,7 @@ func _run() -> void:
 	_check(chest.opened and not chest.locked, "chest lock picked after %d tries" % ctries)
 	_check(chest.get_node("Sprite").texture == Chest.OPEN_TEX, "open chest sprite")
 	_check(m.inventory.gold == 40 and m.inventory.count("potion_healing") == 5, "chest loot in the bag (gold %d, potions %d)" % [m.inventory.gold, m.inventory.count("potion_healing")])
+	_check(m.inventory.has("crypt_key") and m.inventory.has("scroll_cure_wounds"), "the storeroom chest held the Iron Key and a scroll")
 	_check(m.hud.loot_open(), "loot box shown")
 	m.try_open_chest(chest, m.party)
 	_check(m.inventory.gold == 40, "an opened chest gives nothing twice")
@@ -148,6 +149,35 @@ func _run() -> void:
 	_check(m.party[3].slots_left[0] == 1, "mage's spent slots carried over")
 	_check(m.inventory.gold == 65 and m.inventory.count("longsword") == 2 and m.inventory.count("potion_healing") == 5, "bag carried over")
 	_check(m.party[0].stats.attacks[0].name == "Warhammer" and m.party[0].stats.armor_class == 18, "equipment carried over")
+	_check(m.inventory.has("crypt_key"), "the Iron Key came along")
+
+	# --- keys: the lair door opens only with the Bone Key ---
+	var lair := m.door_at(Vector2i(15, 17))
+	_check(lair.locked and lair.key_id == "lair" and lair.lock_dc == 0, "lair door: key only")
+	_check(m.lock_hint(lair, "Door").contains("needs a key"), "hover hint: needs a key")
+	for i in 5:
+		m.try_open_door(lair, m.party)
+	_check(lair.locked and not lair.is_open, "no picking or forcing a key-only lock")
+	var cm1 := m.combat
+	var opener := m.party[1]
+	var keep_cell := opener.cell
+	opener.place_at(lair.sides()[0] if m.has_floor(lair.sides()[0]) else lair.sides()[1])
+	cm1.current = opener
+	cm1.action_used = false
+	cm1.attacks_left = opener.stats.attacks_per_action()
+	cm1.interact_used = false
+	_check(cm1._door_problem(lair) == "Locked: it needs a key", "in a fight, without the key: '%s'" % cm1._door_problem(lair))
+	m.inventory.add("lair_key")
+	_check(m.lock_hint(lair, "Door").contains("Bone Key"), "hover hint names the key")
+	cm1.action_used = true
+	cm1.attacks_left = 0
+	_check(cm1._door_problem(lair) == "", "with the key it's the free interaction, even after the action")
+	cm1.interact_used = true
+	_check(cm1._door_problem(lair) != "", "but only one door a turn")
+	cm1.current = null
+	opener.place_at(keep_cell)
+	m.try_open_door(lair, m.party)
+	_check(lair.is_open and m.inventory.has("lair_key"), "the Bone Key opens it (and is kept)")
 
 	# --- back up: floor 1 remembers its doors and dead monsters ---
 	var up := m.stairs_at(Vector2i(3, 2))
@@ -157,6 +187,7 @@ func _run() -> void:
 	await _until_scene_changes(old_up)
 	m = _map()
 	_check(m.scene_file_path.ends_with("dungeon_1.tscn"), "back on floor 1")
+	m.combat.set_process(false)
 	_check(m.party[0].cell == Vector2i(31, 21), "party at the from_below entry (%s)" % m.party[0].cell)
 	_check(m.door_at(Vector2i(5, 9)).is_open and m.door_at(Vector2i(13, 21)).is_open, "opened doors stay open")
 	var guards := 0
@@ -189,7 +220,7 @@ func _run() -> void:
 	cm.current = cleric
 	cm.action_used = false
 	cm.attacks_left = cleric.stats.attacks_per_action()
-	var items := cm.menu_items(cleric)
+	var items := cm.menu_items(cleric).filter(func(x): return x.item.kind == ItemData.Kind.POTION)
 	_check(items.size() == 1 and items[0].ok and items[0].count == potions - 1, "Item menu offers the potions")
 	cm.begin_item("potion_healing")
 	var pt := cm.valid_targets(cleric, cm.targeting)
@@ -201,7 +232,45 @@ func _run() -> void:
 		await process_frame
 	_check(mage.is_alive() and mage.hp <= 12, "the mage is back up (HP %d)" % mage.hp)
 	_check(m.inventory.count("potion_healing") == potions - 2 and cm.action_used, "potion used up, action spent")
-	_check(not cm.menu_items(cleric)[0].ok, "no second potion this turn (action used)")
+	_check(not cm.menu_items(cleric).any(func(x): return x.ok), "no second potion this turn (action used)")
+
+	# --- scrolls: read Cure Wounds from the bag (exploring), the Item menu, Lightning Bolt ---
+	cm.current = null
+	f2.hp = 10
+	_check(m.inventory.count("scroll_cure_wounds") == 1, "the Cure Wounds scroll from the storeroom")
+	_check(inv2.equip(f2, "scroll_cure_wounds") and f2.hp > 10 and not m.inventory.has("scroll_cure_wounds"), "clicking the scroll: the cleric heals the fighter (HP %d), the scroll is gone" % f2.hp)
+	_check(not inv2.equip(f2, "scroll_cure_wounds"), "none left to read")
+	m.inventory.add("scroll_fireball")
+	_check(not inv2.equip(f2, "scroll_fireball") and m.inventory.has("scroll_fireball"), "Fireball scroll waits for a fight")
+	m.inventory.add("scroll_lightning_bolt")
+	var fighter_items := cm.menu_items(f2).filter(func(x): return x.item.kind == ItemData.Kind.SCROLL)
+	_check(fighter_items.size() == 2 and not fighter_items[0].ok and fighter_items[0].why.contains("spell list"), "the fighter can't read scrolls (%s)" % (fighter_items[0].why if fighter_items else "?"))
+	cm.current = mage
+	cm.action_used = false
+	cm.attacks_left = mage.stats.attacks_per_action()
+	var mage_items := cm.menu_items(mage).filter(func(x): return x.item.id == "scroll_lightning_bolt")
+	_check(mage_items.size() == 1 and mage_items[0].ok, "the mage can read Lightning Bolt")
+	# Lightning Bolt along the stair room: through two skeletons, stopped by the far wall.
+	var sk: Array[Actor] = []
+	for mo in m.monsters:
+		if mo.is_alive() and mo.stats.id == "skeleton" and sk.size() < 2:
+			sk.append(mo)
+	mage.place_at(Vector2i(27, 19))
+	sk[0].place_at(Vector2i(30, 19))
+	sk[1].place_at(Vector2i(32, 19))
+	var lbp := CombatManager.scroll_power(ItemData.get_item("scroll_lightning_bolt"))
+	var line := cm.shape_cells(mage, lbp, Vector2i(33, 19))
+	_check(line.size() >= 6 and Vector2i(30, 19) in line and Vector2i(32, 19) in line, "line covers both skeletons (%d cells)" % line.size())
+	_check(line.all(func(c): return m.has_floor(c) and not m.blocks_sight(c)), "the line stops at the wall")
+	var hp0: Array[int] = [sk[0].hp, sk[1].hp]
+	var slots0: Array = mage.slots_left.duplicate()
+	cm.dice_mode = CombatManager.DiceMode.OFF
+	cm.order = [mage, sk[0], sk[1]]
+	var none: Array[Actor] = []
+	await cm._cast(mage, lbp, 0, none, Vector2i(33, 19))
+	_check(sk[0].hp < hp0[0] and sk[1].hp < hp0[1], "both skeletons hit (%d -> %d, %d -> %d)" % [hp0[0], sk[0].hp, hp0[1], sk[1].hp])
+	_check(not m.inventory.has("scroll_lightning_bolt") and mage.slots_left == slots0 and cm.action_used, "scroll used up, no slot spent, action spent")
+	cm.order.clear()
 	cm.current = null
 	print("test_dungeon: %s (%d failed)" % ["ALL PASS" if fails == 0 else "FAILURES", fails])
 	quit(1 if fails else 0)

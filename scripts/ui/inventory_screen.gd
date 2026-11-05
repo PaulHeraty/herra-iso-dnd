@@ -188,6 +188,10 @@ func equip(h: Hero, item_id: String, slot := "") -> bool:
 		return false
 	if it.kind == ItemData.Kind.POTION:
 		return drink(h, item_id)
+	if it.kind == ItemData.Kind.SCROLL:
+		return read(h, item_id)
+	if it.kind == ItemData.Kind.KEY:
+		return _say("Keys are used by themselves: click the locked door or chest.", CombatHud.COL_DIM)
 	if _locked():
 		return _say("Equipment can't change during a fight.", COL_WARN)
 	if not it.is_equipment():
@@ -215,6 +219,22 @@ func drink(h: Hero, item_id: String) -> bool:
 	if got < 0:
 		return false
 	_say("%s drinks the %s: +%d HP (%d/%d)." % [h.display_name(), it.display_name, got, h.hp, h.stats.max_hp], COL_GOOD)
+	_refresh()
+	return true
+
+
+## A scroll clicked (or dropped on `h`'s tab): healing scrolls are read on `h` by whoever can
+## read them (exploring only); others wait for a fight (the Item action).
+func read(h: Hero, item_id: String) -> bool:
+	var it := ItemData.get_item(item_id)
+	if _locked():
+		return _say("In a fight, read scrolls with the Item action on the reader's turn.", COL_WARN)
+	var r := combat.read_now(h, item_id)
+	if r.got < 0:
+		Sfx.play("fail_sting", -12.0)
+		return _say(r.why, COL_WARN)
+	_say("%s reads the %s: %s +%d HP (%d/%d)." % [r.reader.display_name(), it.display_name,
+			h.display_name(), r.got, h.hp, h.stats.max_hp], COL_GOOD)
 	_refresh()
 	return true
 
@@ -404,6 +424,16 @@ func _describe(it: ItemData, slot: String, count: int) -> void:
 			lines.append_array(_compare(hero, it))
 	elif it.kind == ItemData.Kind.POTION:
 		lines.append(_c("Click: %s drinks it. In a fight: the Item action." % hero.display_name(), CombatHud.COL_DIM))
+	elif it.kind == ItemData.Kind.SCROLL and it.spell:
+		# one line only: the description box is full
+		if it.spell.resolve == SpellData.Resolve.HEAL:
+			lines.append(_c("Click: read it to heal %s. In a fight: Item." % hero.display_name(), CombatHud.COL_DIM))
+		elif CombatManager.scroll_problem(hero, it) != "":
+			lines.append(_c("Not a spell %s can cast." % hero.display_name(), COL_BAD))
+		else:
+			lines.append(_c("Read it in a fight: the Item action.", CombatHud.COL_DIM))
+	elif it.kind == ItemData.Kind.KEY:
+		lines.append(_c("Used by itself when you open its lock.", CombatHud.COL_DIM))
 	if it.value_gp > 0:
 		lines.append(_c("Worth %d gp" % it.value_gp, CombatHud.COL_GOLD.darkened(0.15)))
 	_info_body.text = "\n".join(lines)

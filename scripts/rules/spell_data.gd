@@ -21,6 +21,8 @@ enum Recharge { NONE, SHORT_REST, LONG_REST, DICE }       ## DICE = "Recharge 5-
 @export_multiline var description := ""
 @export var kind := Kind.SPELL
 @export var level := 0                       ## spell level; 0 = cantrip (no slot)
+## Spells: the classes whose spell list has it ("wizard", "cleric"); who can read it from a scroll.
+@export var classes: Array[String] = []
 @export var cast_time := CastTime.ACTION
 @export_group("Targeting")
 @export var target := Target.ENEMY
@@ -75,8 +77,29 @@ func is_cantrip() -> bool:
 	return kind == Kind.SPELL and level == 0
 
 
+## Spells of 1st level and up spend a slot, except when read from a scroll (the scroll is used up).
 func uses_slot() -> bool:
-	return kind == Kind.SPELL and level > 0
+	return kind == Kind.SPELL and level > 0 and not has_meta("scroll")
+
+
+## The description without its upcasting sentence ("+1d6 per slot above 3rd."): for scrolls,
+## which always cast at their own level.
+func description_at_level() -> String:
+	return RegEx.create_from_string(" ?\\+\\d+[^.]*per slot above[^.]*\\.").sub(description, "", true)
+
+
+## A spell read from a spell scroll (CombatManager.scroll_power).
+func is_scroll() -> bool:
+	return has_meta("scroll")
+
+
+## Spell Scroll (SRD): the save DC and attack bonus a scroll of this spell level uses.
+static func scroll_dc(spell_level: int) -> int:
+	return [13, 13, 13, 15, 15, 17, 17, 18, 18, 19][clampi(spell_level, 0, 9)]
+
+
+static func scroll_attack_bonus(spell_level: int) -> int:
+	return scroll_dc(spell_level) - 8
 
 
 ## Damage dice for a caster of `char_level`, cast with a slot of `slot_level`.

@@ -9,6 +9,7 @@ id = "bless"
 display_name = "Bless"
 description = "Up to three allies add 1d4 to attack rolls and saving throws. Concentration, up to 1 minute. +1 target per slot above 1st."
 level = 1
+classes = Array[String](["cleric"])
 target = 1
 max_targets = 3
 upcast_targets = 1

@@ -9,6 +9,7 @@ id = "cure_wounds"
 display_name = "Cure Wounds"
 description = "Touch: heal 1d8 + your spellcasting modifier. Brings a dying ally back. +1d8 per slot above 1st."
 level = 1
+classes = Array[String](["cleric"])
 target = 1
 range_ft = 5
 needs_los = false

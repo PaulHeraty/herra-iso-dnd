@@ -9,6 +9,7 @@ id = "magic_missile"
 display_name = "Magic Missile"
 description = "Three glowing darts that never miss, 1d4+1 force each. Split them between targets. +1 dart per slot above 1st."
 level = 1
+classes = Array[String](["wizard"])
 range_ft = 120
 max_targets = 3
 damage = "1d4+1"

@@ -634,7 +634,10 @@ func move_along(who: Actor, path: Array[Vector2i]) -> void:
 func _door_problem(door: Door) -> String:
 	if not current.cell in door.sides():
 		return "Move next to the door to open it"
-	if door.locked:
+	var key := map.key_for(door)
+	if door.locked and key == "" and door.key_id != "" and door.lock_dc <= 0:
+		return "Locked: it needs a key"
+	if door.locked and key == "":
 		if action_used or attacks_left < current.stats.attacks_per_action():
 			return "Picking the lock takes your action (already used)"
 	elif interact_used:
@@ -649,11 +652,11 @@ func _use_door(door: Door) -> void:
 		status_changed.emit(why)
 		Sfx.play("fail_sting", -12.0)
 		return
-	if door.locked:
-		action_used = true
+	if door.locked and map.key_for(door) == "":
+		action_used = true                  # picking / forcing it is your action
 		attacks_left = 0
 	else:
-		interact_used = true
+		interact_used = true                # opening (with the key, if locked) is free once a turn
 	current.facing = door.get_cell() - current.cell
 	var who: Array[Hero] = [current]
 	if map.try_open_door(door, who):
@@ -693,7 +696,12 @@ func _show_preview() -> void:
 		var msg := _door_problem(door)
 		map.overlay.set_cells("cursor", [door.get_cell()], COL_BLOCKED if msg != "" else COL_ACTIVE, 0.15, 0.7, msg == "")
 		if msg == "":
-			msg = "Click: pick the lock (uses your action)" if door.locked else "Click: open the door (free, once a turn)"
+			if not door.locked:
+				msg = "Click: open the door (free, once a turn)"
+			elif map.key_for(door) != "":
+				msg = "Click: unlock it with the %s and open it (free, once a turn)" % ItemData.get_item(map.key_for(door)).display_name
+			else:
+				msg = "Click: pick the lock (uses your action)"
 		status_changed.emit(msg)
 		return
 	if not map.has_floor(_hover):
@@ -1049,8 +1057,8 @@ func valid_targets(caster: Actor, p: SpellData) -> Array[Actor]:
 				continue
 		if DungeonMap.grid_distance(caster.cell, a.cell) > rng:
 			continue
-		if is_item_power(p) and a.is_alive() and a.hp >= a.stats.max_hp:
-			continue                            # don't waste a potion on someone unhurt
+		if is_item_power(p) and p.resolve == SpellData.Resolve.HEAL and a.is_alive() and a.hp >= a.stats.max_hp:
+			continue                            # don't waste a potion or scroll on someone unhurt
 		if p.needs_los and a != caster and not map.has_line_of_sight(caster.cell, a.cell):
 			continue
 		out.append(a)
@@ -1063,7 +1071,12 @@ func shape_cells(caster: Actor, p: SpellData, aim: Vector2i) -> Array[Vector2i]:
 		SpellData.Target.AREA:
 			return Targeting.area_cells(aim, p.area_size)
 		SpellData.Target.LINE:
-			return Targeting.line_cells(caster.cell, aim, p.range_cells())
+			# A line stops at the first wall or closed door.
+			var line := Targeting.line_cells(caster.cell, aim, p.range_cells())
+			for i in line.size():
+				if map.blocks_sight(line[i]) or not map.has_floor(line[i]):
+					return line.slice(0, i)
+			return line
 		SpellData.Target.CONE:
 			return Targeting.cone_cells(caster.cell, aim, p.range_cells())
 	var none: Array[Vector2i] = []
@@ -1132,7 +1145,7 @@ func _targeting_hint() -> String:
 		_:
 			var n := _max_picks(p)
 			what = "click a target" if n == 1 else "pick %d/%d (Enter casts)" % [picked.size(), n]
-			if is_item_power(p):
+			if is_potion_power(p):
 				what = "click who drinks it (you or an ally next to you)"
 	return "%s%s: %s. Right-click cancels." % [p.display_name, slot, what]
 
@@ -1249,7 +1262,20 @@ func _cast(caster: Actor, p: SpellData, slot: int, targets: Array[Actor], aim: V
 			attacks_left -= 1
 			if attacks_left <= 0:
 				action_used = true
-	await resolve_power(caster, p, slot, targets, aim)
+	var check := scroll_check_dc(caster, p) if p.is_scroll() else 0
+	var fizzled := false
+	if check > 0:
+		var r := Dice.d20(caster.stats.mod(caster.stats.spell_ability))
+		fizzled = r.total < check
+		_say("%s reads a %s: a spell beyond their power (%s check %s vs DC %d)" % [caster.display_name(),
+				p.get_meta("item_name"), caster.stats.spell_ability, r.describe(), check])
+		if fizzled:
+			Sfx.play("scroll_read")
+			_say("  The words slip away and the scroll crumbles to dust.")
+			Sfx.play("fail_sting", -6.0)
+			await get_tree().create_timer(0.6).timeout
+	if not fizzled:
+		await resolve_power(caster, p, slot, targets, aim)
 	if caster is Hero and caster.current_action() == "cast":
 		caster.end_action()
 	moving = false
@@ -1264,7 +1290,10 @@ func _cast(caster: Actor, p: SpellData, slot: int, targets: Array[Actor], aim: V
 func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor], aim: Vector2i) -> void:
 	var lvl_txt := " (%s)" % power_tag_level(slot) if p.uses_slot() and slot > p.level else ""
 	var verb := "casts" if p.kind == SpellData.Kind.SPELL else "uses"
-	if is_item_power(p):
+	if p.is_scroll():
+		if scroll_check_dc(caster, p) == 0:      # (else _cast has already said it)
+			_say("%s reads a %s" % [caster.display_name(), p.get_meta("item_name")])
+	elif is_item_power(p):
 		var who: Actor = targets[0] if not targets.is_empty() else caster
 		if who == caster:
 			_say("%s drinks a %s" % [caster.display_name(), p.display_name])
@@ -1283,8 +1312,12 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 			caster.play_action("cast")      # held until _cast ends it
 		elif p.id == "shove":
 			caster.play_action("attack")
-	Sfx.play(p.sfx)
-	if is_item_power(p):
+	if p.is_scroll():
+		Sfx.play("scroll_read")
+		await get_tree().create_timer(0.4).timeout      # unroll, then the spell goes off
+	if p.vfx != "lightning":                            # (lightning cracks when it strikes)
+		Sfx.play(p.sfx)
+	if is_potion_power(p):
 		await get_tree().create_timer(0.45).timeout     # the glugs, then the heal chime
 	if p.kind == SpellData.Kind.SPELL and p.vfx != "fireball":
 		await SpellFx.charge(map, _cast_from(caster) + Vector2(0, 2), _spell_colour(p))
@@ -1301,6 +1334,12 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 		if p.vfx == "fireball":
 			_preroll(caster, p, slot, char_level, affected)
 			await _fireball_show(caster, aim, cells, p, affected)
+		elif p.vfx == "lightning":
+			_preroll(caster, p, slot, char_level, affected)
+			var end := IsoGrid.cell_to_world(cells[-1]) + Vector2(0, -8) if not cells.is_empty() else IsoGrid.cell_to_world(aim)
+			Sfx.play(p.sfx)
+			await SpellFx.lightning(map, _cast_from(caster), end)
+			_floor_flash(cells, Color8(225, 240, 255), Color8(110, 150, 255))
 		else:
 			var beam := Projectile.fire(map, caster.body_position(), IsoGrid.cell_to_world(aim), Projectile.Style.BEAM, _spell_colour(p))
 			await beam.done
@@ -1501,6 +1540,7 @@ func _spell_colour(p: SpellData) -> Color:
 		"radiant": return Color8(255, 236, 150)
 		"force": return Color8(150, 170, 255)
 		"necrotic": return Color8(200, 90, 210)
+		"lightning": return Color8(160, 200, 255)
 	return Color8(220, 220, 230)
 
 
@@ -1725,10 +1765,10 @@ func _fireball_show(caster: Actor, aim: Vector2i, cells: Array[Vector2i], p: Spe
 
 
 ## The 3x3 floor flashes white-hot, then fades through orange (as the mock-up's aoe_fire).
-func _floor_flash(cells: Array[Vector2i]) -> void:
+func _floor_flash(cells: Array[Vector2i], hot := Color8(255, 200, 90), cool := Color8(255, 110, 40)) -> void:
 	for k in 8:
 		var fire := 1.0 - k / 7.0
-		map.overlay.set_cells("blast", cells, Color8(255, 200, 90).lerp(Color8(255, 110, 40), 1.0 - fire), 0.75 * fire, 0.9 * fire, true)
+		map.overlay.set_cells("blast", cells, hot.lerp(cool, 1.0 - fire), 0.75 * fire, 0.9 * fire, true)
 		await get_tree().create_timer(0.07).timeout
 	map.overlay.clear("blast")
 
@@ -1910,34 +1950,143 @@ static func item_power(it: ItemData) -> SpellData:
 	return p
 
 
+## A power that uses up a bag item (potion or scroll).
 static func is_item_power(p: SpellData) -> bool:
 	return p != null and p.has_meta("item_id")
 
 
-## Bag items for the hero's Item menu: [{item, count, ok, why}]. Potions only for now.
+static func is_potion_power(p: SpellData) -> bool:
+	return is_item_power(p) and not p.is_scroll()
+
+
+# Spell scrolls (SRD Spell Scroll, Phase 4 step 5): if the spell is on your class's spell list you
+# can read it, casting it at the scroll's level with the scroll's save DC / attack bonus and no slot
+# (the scroll crumbles). A spell above the level you can cast needs a spellcasting ability check
+# (DC 10 + its level) or the scroll is wasted. Casting time = the spell's.
+
+static var _scroll_powers := {}
+
+
+## The spell behind a scroll: a copy of it marked as read from that scroll (cached per item id).
+static func scroll_power(it: ItemData) -> SpellData:
+	if _scroll_powers.has(it.id):
+		return _scroll_powers[it.id]
+	var p: SpellData = it.spell.duplicate()
+	p.dc_override = SpellData.scroll_dc(p.level)
+	p.attack_bonus_override = SpellData.scroll_attack_bonus(p.level)
+	p.set_meta("item_id", it.id)
+	p.set_meta("scroll", true)
+	p.set_meta("item_name", it.display_name)
+	_scroll_powers[it.id] = p
+	return p
+
+
+## The power used when this item is picked from the Item menu (null: not usable that way).
+static func use_power(it: ItemData) -> SpellData:
+	if it.kind == ItemData.Kind.POTION and it.heal != "":
+		return item_power(it)
+	if it.kind == ItemData.Kind.SCROLL and it.spell != null:
+		return scroll_power(it)
+	return null
+
+
+## Why `h` can't read scroll `it` at all ("" = it can).
+static func scroll_problem(h: Actor, it: ItemData) -> String:
+	if it.spell == null:
+		return "the scroll is blank"
+	if h.stats.spell_ability == "" or not it.spell.classes.has(h.stats.class_id):
+		return "not on %s's spell list" % h.display_name()
+	return ""
+
+
+## Highest spell level `h` can cast with its own slots (0 = cantrips only / none).
+static func max_spell_level(h: Actor) -> int:
+	var top := 0
+	for i in h.stats.spell_slots.size():
+		if h.stats.spell_slots[i] > 0:
+			top = i + 1
+	return top
+
+
+## A scroll of a spell above what the reader can cast needs this check DC (0 = no check).
+static func scroll_check_dc(h: Actor, p: SpellData) -> int:
+	return 10 + p.level if p.level > max_spell_level(h) else 0
+
+
+## Bag items for the hero's Item menu: [{item, count, ok, why}]: potions and scrolls.
 func menu_items(h: Actor) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if map.inventory == null:
 		return out
 	for st: Dictionary in map.inventory.stacks:
 		var it := ItemData.get_item(st.id)
-		if it == null or it.kind != ItemData.Kind.POTION or it.heal == "":
+		var p := use_power(it) if it else null
+		if p == null or p.cast_time in [SpellData.CastTime.REACTION, SpellData.CastTime.FREE]:
 			continue
 		var why := ""
-		if action_used or attacks_left < h.stats.attacks_per_action():
+		if it.kind == ItemData.Kind.SCROLL:
+			why = scroll_problem(h, it)
+		if why != "":
+			pass
+		elif p.cast_time == SpellData.CastTime.BONUS:
+			if bonus_used:
+				why = "bonus action used"
+		elif action_used or attacks_left < h.stats.attacks_per_action():
 			why = "action used"
-		elif valid_targets(h, item_power(it)).is_empty():
-			why = "no one in reach needs healing"
-		out.append({item = it, count = st.count, ok = why == "", why = why})
+		if why == "" and p.target in [SpellData.Target.ENEMY, SpellData.Target.ALLY, SpellData.Target.ANY] \
+				and valid_targets(h, p).is_empty():
+			why = "no one in reach needs healing" if p.resolve == SpellData.Resolve.HEAL else "no target in range"
+		out.append({item = it, count = st.count, ok = why == "", why = why, power = p})
 	return out
 
 
-## Item menu pick: choose who drinks it (the hero or an adjacent ally).
+## Item menu pick: a potion (choose who drinks it: the hero or an adjacent ally) or a scroll
+## (target its spell as usual).
 func begin_item(item_id: String) -> void:
 	var it := ItemData.get_item(item_id)
-	if it == null or not map.inventory.has(item_id):
+	if it == null or not map.inventory.has(item_id) or use_power(it) == null:
 		return
-	begin_targeting(item_power(it))
+	if it.kind == ItemData.Kind.SCROLL and scroll_problem(current, it) != "":
+		return
+	begin_targeting(use_power(it))
+
+
+## Outside combat (inventory screen): read a healing scroll on `who`. The reader is the first
+## conscious hero who can read it. Returns the HP regained, or -1 (with `why` set) if it can't.
+func read_now(who: Actor, item_id: String) -> Dictionary:
+	var it := ItemData.get_item(item_id)
+	if it == null or it.kind != ItemData.Kind.SCROLL or it.spell == null:
+		return {got = -1, why = "That isn't a scroll."}
+	if it.spell.resolve != SpellData.Resolve.HEAL:
+		return {got = -1, why = "Save the %s for a fight (the Item action)." % it.display_name}
+	var reader: Actor = null
+	for h: Actor in map.party:
+		if h.is_alive() and scroll_problem(h, it) == "":
+			reader = h
+			break
+	if reader == null:
+		return {got = -1, why = "Nobody awake can read the %s." % it.display_name}
+	if who.dead:
+		return {got = -1, why = "%s is beyond the help of healing." % who.display_name()}
+	if who.is_alive() and who.hp >= who.stats.max_hp:
+		return {got = -1, why = "%s is unhurt: no need for the %s." % [who.display_name(), it.display_name]}
+	var p := scroll_power(it)
+	if scroll_check_dc(reader, p) > 0:
+		return {got = -1, why = "%s can't cast spells that powerful yet: read it in a fight." % reader.display_name()}
+	if not map.inventory.remove(item_id):
+		return {got = -1, why = "None left."}
+	var r := Dice.roll(p.heal_for(maxi(1, reader.stats.level), p.level))
+	var amount := r.total + (reader.stats.mod(reader.stats.spell_ability) if p.add_ability_mod else 0)
+	var was_down := not who.is_alive()
+	var got := who.heal(amount)
+	Sfx.play("scroll_read")
+	get_tree().create_timer(0.4).timeout.connect(func(): Sfx.play("heal_chime"))
+	SpellFx.sparkles(map, who.body_position(), Color8(150, 235, 140))
+	FloatText.spawn(map, who.body_position() + Vector2(0, -10), "+%d" % got, COL_ALLY, 10)
+	_detail("  %s: %s -> %d" % [it.display_name, r.describe(), amount])
+	_say("%s reads a %s on %s: +%d HP%s" % [reader.display_name(), it.display_name,
+			"themself" if who == reader else who.display_name(), got, " (back up!)" if was_down else ""])
+	return {got = got, why = "", reader = reader}
 
 
 ## Outside combat (inventory screen): `who` drinks a potion straight away, no action needed.

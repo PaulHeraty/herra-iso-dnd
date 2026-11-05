@@ -347,7 +347,25 @@ func _build_spells() -> void:
 	fr.sfx = "ray_zap"
 	fr.vfx = "fear_ray"
 
-	for s: SpellData in [fb, mm, sh, fi, sf, cw, bl, sw, sv, hd, sa, wb, fr]:
+	# Lightning Bolt: nobody knows it yet; it comes on scrolls (a wizard can read them).
+	var lb := _spell("lightning_bolt", "Lightning Bolt", S, 3, C.ACTION, T.LINE, 100, R.SAVE,
+			"A 100-ft line of lightning: 8d6 lightning, DEX save for half. Stops at walls. +1d6 per slot above 3rd.")
+	lb.save_ability = "DEX"
+	lb.half_on_save = true
+	lb.damage = "8d6"
+	lb.damage_type = "lightning"
+	lb.upcast_dice = "1d6"
+	lb.sfx = "lightning_crack"
+	lb.vfx = "lightning"
+	lb.big_moment = true
+
+	# Spell lists (SRD): who can read each spell from a scroll.
+	for s: SpellData in [fb, mm, sh, fi, lb]:
+		s.classes = _s(["wizard"])
+	for s: SpellData in [sf, cw, bl]:
+		s.classes = _s(["cleric"])
+
+	for s: SpellData in [fb, mm, sh, fi, sf, cw, bl, sw, sv, hd, sa, wb, fr, lb]:
 		var path := SPELL_DIR + s.id + ".tres"
 		var err := ResourceSaver.save(s, path, ResourceSaver.FLAG_CHANGE_PATH)
 		print("wrote ", path, " err=", err)

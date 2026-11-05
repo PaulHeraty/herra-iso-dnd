@@ -34,6 +34,8 @@ func _init() -> void:
 	_save("chest_open", _chest_open())
 	_save("coins", _coins())
 	_save("potion_drink", _potion_drink())
+	_save("scroll_read", _scroll_read())
+	_save("lightning_crack", _lightning_crack())
 	quit()
 
 
@@ -488,4 +490,48 @@ func _potion_drink() -> PackedFloat32Array:
 		var glug := _mul(_sine(gn, f, f * 0.55), _env(gn, 0.006, 2.5))
 		var gurgle := _mul(_lowpass(_noise(gn), 500.0), _env(gn, 0.01, 2.0))
 		out = _mix(out, _mix(glug, gurgle, 0.5), 0.9, _n(0.14 + 0.14 * k))
+	return out
+
+
+## Reading a spell scroll: a dry paper unroll (crackly band-passed noise), then a rising
+## two-note shimmer as the words burn away.
+func _scroll_read() -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(_n(0.75))
+	var rn := _n(0.32)
+	var rustle := _lowpass(_highpass(_noise(rn), 1200.0), 5200.0)
+	var crackle := _noise(rn)
+	var e := PackedFloat32Array()
+	e.resize(rn)
+	for i in rn:
+		var t := float(i) / rn
+		# uneven paper ticks over a swell that fades
+		e[i] = sin(PI * t) * (0.45 + 0.55 * absf(crackle[i]) * (1.0 if fmod(t * 23.0, 1.0) < 0.35 else 0.3))
+	out = _mix(out, _mul(rustle, e), 0.7)
+	for k in 2:
+		var sn := _n(0.4)
+		var f: float = [880.0, 1318.5][k]
+		var tone := _mix(_sine(sn, f, f * 1.02), _sine(sn, f * 2.0, f * 2.03), 0.3)
+		out = _mix(out, _mul(tone, _env(sn, 0.03, 2.2)), 0.32, _n(0.22 + 0.11 * k))
+	return out
+
+
+## Lightning Bolt: a sharp white-noise crack with a buzzing zap, then a low rolling rumble.
+func _lightning_crack() -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(_n(1.4))
+	var cn := _n(0.16)
+	var crack := _mul(_highpass(_noise(cn), 900.0), _env(cn, 0.0008, 5.0))
+	out = _mix(out, crack, 1.0)
+	var zn := _n(0.3)
+	var zap := _mul(_square(zn, 2200.0, 180.0, 0.35, 70.0, 0.2), _env(zn, 0.001, 2.0))
+	out = _mix(out, _lowpass(zap, 4500.0), 0.35)
+	var rn := _n(1.3)
+	var rumble := _lowpass(_noise(rn), 160.0, 70.0)
+	var re := PackedFloat32Array()
+	re.resize(rn)
+	for i in rn:
+		var t := float(i) / rn
+		re[i] = minf(1.0, t * 12.0) * pow(1.0 - t, 1.8) * (0.7 + 0.3 * sin(TAU * 3.5 * t))
+	out = _mix(out, _mul(rumble, re), 5.0, _n(0.06))
 	return out

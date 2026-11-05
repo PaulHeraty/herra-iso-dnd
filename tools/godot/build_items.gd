@@ -60,6 +60,17 @@ func _init() -> void:
 	pg.stackable = true
 	_save(pg)
 
+	# --- spell scrolls (SRD Spell Scroll): read by a class with the spell on its list ---
+	_scroll("magic_missile", 75, "Violet ink on thin parchment.")
+	_scroll("cure_wounds", 75, "A healing prayer in gold leaf.")
+	_scroll("bless", 75, "A short blessing on fine vellum.")
+	_scroll("fireball", 300, "Scorched at the edges, warm to the touch.")
+	_scroll("lightning_bolt", 300, "It crackles. Your hair stands on end.")
+
+	# --- keys: open the doors and chests with the same key_id; never used up ---
+	_key("crypt_key", "Iron Key", "crypt", "A heavy iron key, green with age. A skull is cut into its bow.")
+	_key("lair_key", "Bone Key", "lair", "A key carved from a single long bone. It is cold to hold.")
+
 	# --- rings ---
 	var rp := _item("ring_protection", "Ring of Protection", ItemData.Kind.RING, 500,
 			"A plain silver band that hums faintly. +1 to AC and to every saving throw.")
@@ -126,3 +137,24 @@ func _save(it: ItemData) -> void:
 	if err != OK:
 		push_error("can't write %s (%d)" % [path, err])
 	_written[it.id] = true
+
+
+## A Spell Scroll of `spell_id` (data/spells/, built by build_data.gd first).
+func _scroll(spell_id: String, value: int, flavour: String) -> void:
+	var sp: SpellData = load("res://data/spells/%s.tres" % spell_id)
+	const HERO := {wizard = "Mage", cleric = "Cleric"}   # the party's names for the classes
+	var who := " or ".join(sp.classes.map(func(c: String) -> String: return HERO.get(c, c.capitalize())))
+	var lvl := "cantrip" if sp.level == 0 else "%s level" % ["", "1st", "2nd", "3rd", "4th", "5th"][sp.level]
+	var what := sp.description_at_level()     # a scroll casts at its own level: no upcasting
+	var it := _item("scroll_" + spell_id, "Scroll of " + sp.display_name, ItemData.Kind.SCROLL, value,
+			"%s\n%s (%s): %s\n%s only. Crumbles once read. DC %d, attack +%d." % [
+				flavour, sp.display_name, lvl, what, who, SpellData.scroll_dc(sp.level), SpellData.scroll_attack_bonus(sp.level)])
+	it.spell = sp
+	it.stackable = true
+	_save(it)
+
+
+func _key(id: String, name: String, key_id: String, desc: String) -> void:
+	var it := _item(id, name, ItemData.Kind.KEY, 0, desc + " It opens a lock somewhere in the dungeon.")
+	it.key_id = key_id
+	_save(it)

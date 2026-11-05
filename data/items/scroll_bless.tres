@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_jfjw2"]
+[ext_resource type="Resource" path="res://data/spells/bless.tres" id="2_ri8bt"]
+
+[resource]
+resource_name = "Scroll of Bless"
+script = ExtResource("1_jfjw2")
+id = "scroll_bless"
+display_name = "Scroll of Bless"
+kind = 4
+description = "A short blessing on fine vellum.
+Bless (1st level): Up to three allies add 1d4 to attack rolls and saving throws. Concentration, up to 1 minute.
+Cleric only. Crumbles once read. DC 13, attack +5."
+value_gp = 75
+stackable = true
+spell = ExtResource("2_ri8bt")

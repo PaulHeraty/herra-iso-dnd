@@ -8,6 +8,7 @@ script = ExtResource("1_kspht")
 id = "sacred_flame"
 display_name = "Sacred Flame"
 description = "Radiant flame descends on a creature: DEX save or 1d8 radiant (2d8 at 5th level). Ignores cover."
+classes = Array[String](["cleric"])
 range_ft = 60
 resolve = 1
 save_ability = "DEX"

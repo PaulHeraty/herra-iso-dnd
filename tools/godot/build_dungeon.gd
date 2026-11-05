@@ -29,7 +29,7 @@ const PROPS := {
 # --- the two floors -------------------------------------------------------------------------------
 # rooms: name -> {rect, monsters [[kind, cell, facing]], props [[kind, cell, (along_y)]],
 #                 chests [[cell, gold, (items), (lock_dc: 0 = unlocked)]], braziers [cells], bones [cells], web (bool), torches (step)}
-# corridors: [Rect2i] ; doors: [[cell, locked, dc]] ; arches: doorway cells without a door
+# corridors: [Rect2i] ; doors: [[cell, locked, dc (0 = key only), (key_id)]] ; arches: doorway cells without a door
 
 const F = PartyStart.Facing
 
@@ -50,15 +50,15 @@ var FLOOR_1 := {
 		"C": {"rect": Rect2i(14, 3, 7, 5),
 			"props": [["crate", Vector2i(0, 0)], ["crate", Vector2i(1, 0)], ["barrel", Vector2i(6, 0)],
 				["barrel", Vector2i(6, 4)], ["crate", Vector2i(0, 4)], ["urn", Vector2i(3, 0)]],
-			"chests": [[Vector2i(5, 0), 40, ["potion_healing", "potion_healing"], 12]]},
-		# D: the crypt - locked; sarcophagi, skeletons and the floor's treasure
+			"chests": [[Vector2i(5, 0), 40, ["potion_healing", "potion_healing", "crypt_key", "scroll_cure_wounds"], 12]]},
+		# D: the crypt - locked (the Iron Key is in the storeroom chest; or pick it); sarcophagi, skeletons and the floor's treasure
 		"D": {"rect": Rect2i(14, 14, 9, 9), "web": true,
 			"props": [["sarcophagus", Vector2i(2, 2)], ["sarcophagus", Vector2i(6, 2)],
 				["sarcophagus", Vector2i(2, 6)], ["sarcophagus", Vector2i(6, 6)], ["urn", Vector2i(0, 0)],
 				["urn", Vector2i(8, 0)]],
 			"monsters": [["k", Vector2i(4, 1), F.SOUTH_WEST], ["k", Vector2i(4, 4), F.NORTH_WEST],
 				["k", Vector2i(4, 7), F.NORTH_WEST]],
-			"chests": [[Vector2i(4, 0), 120, ["warhammer", "studded_leather"]]], "braziers": [Vector2i(0, 8)]},
+			"chests": [[Vector2i(4, 0), 120, ["warhammer", "studded_leather", "scroll_magic_missile"]]], "braziers": [Vector2i(0, 8)]},
 		# E: webbed hall - giant spiders among the cocooned dead
 		"E": {"rect": Rect2i(25, 2, 10, 10), "web": true,
 			"monsters": [["S", Vector2i(6, 2), F.SOUTH_WEST], ["S", Vector2i(3, 6), F.SOUTH_WEST]],
@@ -79,7 +79,7 @@ var FLOOR_1 := {
 		Rect2i(21, 5, 4, 1),      # C - E
 		Rect2i(29, 12, 1, 4),     # E - F
 	],
-	"doors": [[Vector2i(5, 9), false, 0], [Vector2i(13, 5), false, 0], [Vector2i(13, 21), true, 13],
+	"doors": [[Vector2i(5, 9), false, 0], [Vector2i(13, 5), false, 0], [Vector2i(13, 21), true, 13, "crypt"],
 		[Vector2i(24, 5), false, 0], [Vector2i(29, 15), false, 0]],
 	"arches": [Vector2i(5, 17), Vector2i(12, 5), Vector2i(10, 21), Vector2i(21, 5), Vector2i(29, 12)],
 }
@@ -99,7 +99,7 @@ var FLOOR_2 := {
 			"props": [["sarcophagus", Vector2i(1, 6)], ["urn", Vector2i(0, 0)], ["urn", Vector2i(9, 0)],
 				["urn", Vector2i(9, 3)], ["rubble", Vector2i(3, 6)]],
 			"bones": [Vector2i(2, 3), Vector2i(6, 2), Vector2i(4, 5), Vector2i(7, 7)],
-			"chests": [[Vector2i(5, 0), 60, ["potion_greater_healing"]]]},
+			"chests": [[Vector2i(5, 0), 60, ["potion_greater_healing", "lair_key", "scroll_lightning_bolt"]]]},
 		# I: the nest - spiders and cocoons
 		"I": {"rect": Rect2i(2, 12, 11, 9), "web": true,
 			"monsters": [["S", Vector2i(4, 3), F.NORTH_EAST], ["S", Vector2i(8, 5), F.NORTH_WEST],
@@ -113,7 +113,7 @@ var FLOOR_2 := {
 			"monsters": [["E", Vector2i(6, 5), F.NORTH_WEST], ["k", Vector2i(2, 4), F.NORTH_WEST],
 				["k", Vector2i(9, 4), F.NORTH_WEST]],
 			"braziers": [Vector2i(0, 0), Vector2i(11, 0), Vector2i(0, 9), Vector2i(11, 9)],
-			"chests": [[Vector2i(10, 8), 300, ["ring_protection", "potion_greater_healing"]]], "props": [["urn", Vector2i(11, 4)]],
+			"chests": [[Vector2i(10, 8), 300, ["ring_protection", "potion_greater_healing", "scroll_fireball"]]], "props": [["urn", Vector2i(11, 4)]],
 			"bones": [Vector2i(5, 8), Vector2i(7, 1)]},
 	},
 	"corridors": [
@@ -123,7 +123,7 @@ var FLOOR_2 := {
 		Rect2i(13, 17, 3, 1),     # I - J
 	],
 	"doors": [[Vector2i(10, 4), false, 0], [Vector2i(4, 11), false, 0], [Vector2i(18, 12), false, 0],
-		[Vector2i(15, 17), true, 15]],
+		[Vector2i(15, 17), true, 0, "lair"]],
 	"arches": [Vector2i(8, 4), Vector2i(4, 8), Vector2i(18, 10), Vector2i(13, 17)],
 }
 
@@ -203,6 +203,8 @@ func _build(d: Dictionary, root_name: String, path: String) -> bool:
 		door.locked = dd[1]
 		if dd[1]:
 			door.lock_dc = dd[2]
+		if dd.size() > 3:
+			door.key_id = dd[3]
 
 	var group := 1
 	var start_cell := Vector2i.ZERO

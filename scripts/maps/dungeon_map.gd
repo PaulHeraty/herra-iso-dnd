@@ -396,11 +396,26 @@ func try_open_door(door: Door, by: Array[Hero]) -> bool:
 ## opens it; else the Rogue picks it (thieves' tools: DEX + expertise vs lock_dc) or, failing that,
 ## the strongest hero forces it (Athletics vs lock_dc + 2). Each try is one roll; the player can
 ## try again. key_id with lock_dc 0 = only the key. Logs what happens. True = unlocked.
+## The bag's key for a door or chest's lock ("" = none, or it has no key).
+func key_for(thing: Node) -> String:
+	return inventory.key_for(thing.key_id) if inventory else ""
+
+
+## Hover text for a locked door or chest: what clicking it will do.
+func lock_hint(thing: Node, what: String) -> String:
+	var key := key_for(thing)
+	if key != "":
+		return "%s (locked): click to unlock it with the %s." % [what, ItemData.get_item(key).display_name]
+	if thing.key_id != "" and thing.lock_dc <= 0:
+		return "%s (locked): it needs a key." % what
+	return "%s (locked): click to try the lock." % what
+
+
 func _try_lock(thing: Node, what: String, by: Array[Hero]) -> bool:
 	var able := by.filter(func(h: Hero): return h.is_alive())
 	if able.is_empty():
 		return false
-	var key := inventory.key_for(thing.key_id) if inventory else ""
+	var key := key_for(thing)
 	if key != "":
 		combat._say("%s unlocks the %s with the %s." % [able[0].display_name(), what,
 				ItemData.get_item(key).display_name])

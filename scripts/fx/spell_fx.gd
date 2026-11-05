@@ -9,7 +9,7 @@ extends Node2D
 
 signal arrived
 
-enum Kind { BOLT, DART, COLUMN, SPARKLES, BURST, CHARGE }
+enum Kind { BOLT, DART, COLUMN, SPARKLES, BURST, CHARGE, LIGHTNING }
 
 const FIRE_SHEET := preload("res://assets/effects/fireball_sheet.png")
 const BOOM_SHEET := preload("res://assets/effects/explosion_sheet.png")
@@ -29,6 +29,8 @@ var _arrived := false
 var _light: PointLight2D
 var _light_base := 0.0
 var _rng := RandomNumberGenerator.new()
+var _jag := PackedVector2Array()      ## lightning: the current jagged path (relative to the node)
+var _jag_t := 0.0
 
 static var _light_tex: Texture2D
 
@@ -88,6 +90,16 @@ static func charge(parent: Node, at: Vector2, col: Color) -> void:
 	var fx := _make(parent, Kind.CHARGE, at, at, col)
 	fx.duration = 0.3
 	fx._add_light(Color(col.r, col.g, col.b), 0.6, 0.3)
+	await fx.arrived
+
+
+## A jagged lightning stroke from `a` to `b` (Lightning Bolt): flickers, re-forks, lights the
+## room along its length. Awaits the strike (almost at once); the afterglow fades on its own.
+static func lightning(parent: Node, a: Vector2, b: Vector2) -> void:
+	var fx := _make(parent, Kind.LIGHTNING, a, b, Color8(160, 200, 255))
+	fx.duration = 0.55
+	fx.position = a.lerp(b, 0.5)
+	fx._add_light(Color(0.62, 0.75, 1.0), 3.2, clampf(a.distance_to(b) / 70.0, 1.2, 3.5))
 	await fx.arrived
 
 
@@ -162,6 +174,17 @@ func _process(delta: float) -> void:
 		Kind.BURST:
 			if not _arrived:
 				_arrive()
+		Kind.LIGHTNING:
+			if _jag.is_empty() or _t - _jag_t > 0.05:
+				_jag_t = _t
+				_jag = _jagged(from - position, to - position)
+			if not _arrived and _t >= 0.06:
+				_arrive()
+				for i in 10:
+					_spawn(to - position + Vector2(_rng.randf_range(-3, 3), _rng.randf_range(-3, 3)),
+							Vector2(_rng.randf_range(-40, 40), _rng.randf_range(-40, 10)), _rng.randf_range(0.15, 0.35), color.lightened(0.5))
+			if _light:
+				_light.energy = _light_base * (1.0 - k) * (0.55 + 0.45 * float(int(_t * 30.0) % 2))
 	# particles
 	for p in _parts:
 		p.age += delta
@@ -178,6 +201,18 @@ func _process(delta: float) -> void:
 	elif _t > duration + 3.0:
 		queue_free()          # safety: no effect outlives its time by more than a few seconds
 	queue_redraw()
+
+
+## A zigzag from a to b: points every ~6 px, pushed sideways at random (less near the ends).
+func _jagged(a: Vector2, b: Vector2) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	var n := maxi(2, int(a.distance_to(b) / 6.0))
+	var side := (b - a).orthogonal().normalized()
+	for i in n + 1:
+		var t := float(i) / n
+		var wob := 0.0 if i == 0 or i == n else _rng.randf_range(-3.5, 3.5) * sin(t * PI) + _rng.randf_range(-1.0, 1.0)
+		pts.append((a.lerp(b, t) + side * wob).round())
+	return pts
 
 
 func _path(k: float) -> Vector2:
@@ -253,6 +288,24 @@ func _draw() -> void:
 				draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.5))
 				draw_arc(Vector2.ZERO, r, 0.0, TAU, 16, Color(color.r, color.g, color.b, 0.8 * fade), 1.0)
 				draw_set_transform(Vector2.ZERO)
+		Kind.LIGHTNING:
+			if _jag.size() < 2 or k >= 1.0:
+				return
+			# bright for the first flashes, then flickering thinner as it fades
+			var fade := 1.0 if k < 0.35 else 1.0 - (k - 0.35) / 0.65
+			if k > 0.35 and int(_t * 30.0) % 3 == 0:
+				fade *= 0.35
+			draw_polyline(_jag, Color(color.r * 0.6, color.g * 0.7, color.b, 0.35 * fade), 5.0)
+			draw_polyline(_jag, Color(color.r, color.g, color.b, 0.85 * fade), 3.0)
+			draw_polyline(_jag, Color(1, 1, 1, fade), 1.0)
+			# a short side fork from a random kink
+			if _jag.size() > 6:
+				var i0 := 2 + (int(_jag_t * 997.0) % (_jag.size() - 4))
+				var p0 := _jag[i0]
+				var dir := (_jag[i0 + 1] - _jag[i0 - 1]).normalized().rotated(0.7 if i0 % 2 else -0.7)
+				var p1 := (p0 + dir * 7.0 + dir.orthogonal() * 2.0).round()
+				var p2 := (p1 + dir * 6.0 - dir.orthogonal() * 2.0).round()
+				draw_polyline(PackedVector2Array([p0, p1, p2]), Color(color.r, color.g, color.b, 0.7 * fade), 1.0)
 		Kind.BURST:
 			var f := mini(int(k * 7.0), 6)
 			var s := 32.0 * scale_k

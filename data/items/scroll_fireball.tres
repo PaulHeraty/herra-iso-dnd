@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_u2x4w"]
+[ext_resource type="Resource" path="res://data/spells/fireball.tres" id="2_on7v6"]
+
+[resource]
+resource_name = "Scroll of Fireball"
+script = ExtResource("1_u2x4w")
+id = "scroll_fireball"
+display_name = "Scroll of Fireball"
+kind = 4
+description = "Scorched at the edges, warm to the touch.
+Fireball (3rd level): A burst of flame on a 3x3 area: 8d6 fire, DEX save for half.
+Mage only. Crumbles once read. DC 15, attack +7."
+value_gp = 300
+stackable = true
+spell = ExtResource("2_on7v6")
