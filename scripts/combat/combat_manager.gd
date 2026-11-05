@@ -144,7 +144,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			_use_door(door)
 			return
-		if _reach.has(c) and _reach[c].stop and c != current.cell:
+		if _reach.has(c) and _reach[c].stop and c != current.cell and map.is_explored(c):
 			get_viewport().set_input_as_handled()
 			move_along(current, DungeonMap.reach_path(_reach, c))
 
@@ -643,7 +643,7 @@ func _show_range() -> void:
 	_reach = map.combat_reach(current.cell, move_left, current)
 	var cells: Array[Vector2i] = []
 	for c: Vector2i in _reach:
-		if _reach[c].stop and c != current.cell:
+		if _reach[c].stop and c != current.cell and map.is_explored(c):
 			cells.append(c)
 	if cells.is_empty():
 		map.overlay.clear("range")
@@ -696,7 +696,7 @@ func _show_preview() -> void:
 			status_changed.emit("Attack %s: %s %+d, %s%s  (%d%% to hit%s%s)" % [foe.display_name(), a.name, bonus,
 					current.stats.damage_expr(a), extra, roundi(p * 100), advt, ", " + opt.note if opt.note != "" else ""])
 		return
-	if _reach.has(_hover) and _reach[_hover].stop and _hover != current.cell:
+	if _reach.has(_hover) and _reach[_hover].stop and _hover != current.cell and map.is_explored(_hover):
 		var p := DungeonMap.reach_path(_reach, _hover)
 		if p.size() > 1:
 			map.overlay.set_cells("path", p.slice(0, -1), COL_RANGE, 0.25, 0.6, true)

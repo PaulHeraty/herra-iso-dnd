@@ -21,6 +21,9 @@ extends Node2D
 @export var entry_id := "start"
 ## Shown when the party arrives (e.g. "The Upper Halls").
 @export var map_title := ""
+## Fog of war: only explored cells are drawn; explored ones out of sight are dimmed and their
+## monsters hidden (see FogOfWar).
+@export var fog_of_war := true
 
 const HERO_SCENE := preload("res://scenes/actors/hero.tscn")
 const PARTY_ORDER := [Hero.HeroClass.FIGHTER, Hero.HeroClass.ROGUE, Hero.HeroClass.CLERIC, Hero.HeroClass.MAGE]
@@ -53,6 +56,13 @@ var hud: CombatHud
 var floor_view: TileMapLayer
 var walls_view: TileMapLayer
 var _astar := AStarGrid2D.new()
+var fog := FogOfWar.new()
+var _fog_key := ""
+var _wall_set := {}
+## View cell -> map cell (floor) / [source, atlas, map cell] (walls) for the current rotation.
+var _view_floor := {}
+var _view_walls := {}
+const FOG_DIM := Color(0.5, 0.5, 0.6)
 var _pending_turns := 0
 ## Sprites placed by map cell (decor, monster previews): node -> [map cell, offset from its centre]
 var _placed := {}
@@ -90,6 +100,8 @@ func _ready() -> void:
 	refresh_navigation()
 	_spawn_party()
 	party_xp = PartyState.party_xp
+	_compute_fog()
+	refresh_navigation()
 	camera_controller = CameraController.new()
 	camera_controller.name = "CameraController"
 	camera_controller.camera = camera
@@ -125,6 +137,7 @@ func _process(delta: float) -> void:
 		rotate_view(-1)
 	if _pending_turns != 0 and not _anyone_moving():
 		apply_pending_rotation()
+	_tick_fog()
 	var reveal: Array[Rect2] = []
 	for h in party:
 		reveal.append(WallFader.figure_rect(h.position))
@@ -231,9 +244,23 @@ static func _same_side(a: Actor, b: Actor) -> bool:
 	return (a is Hero) == (b is Hero)
 
 
-## True if the map has a floor tile at `cell`.
+## True if the map has a floor tile at `cell` that the party knows about (explored).
 func has_floor(cell: Vector2i) -> bool:
-	return floor_layer.get_cell_source_id(cell) != -1
+	return floor_layer.get_cell_source_id(cell) != -1 and is_explored(cell)
+
+
+## Fog of war: has the party seen this cell? (Always true with fog_of_war off.)
+func is_explored(cell: Vector2i) -> bool:
+	return not fog_of_war or fog.explored.has(cell)
+
+
+## Fog of war: can the party see this cell right now?
+func is_seen(cell: Vector2i) -> bool:
+	return not fog_of_war or fog.visible.has(cell)
+
+
+func _party_can_walk(cell: Vector2i) -> bool:
+	return is_walkable(cell) and is_explored(cell)
 
 
 ## Rebuild the walk grid from the tiles and doors. Call after opening/closing doors or editing tiles.
@@ -246,7 +273,7 @@ func refresh_navigation() -> void:
 	var r := _astar.region
 	for x in range(r.position.x, r.end.x):
 		for y in range(r.position.y, r.end.y):
-			_astar.set_point_solid(Vector2i(x, y), not is_walkable(Vector2i(x, y)))
+			_astar.set_point_solid(Vector2i(x, y), not _party_can_walk(Vector2i(x, y)))
 
 
 ## Cells from `from` to `to` inclusive (diagonals allowed when not cutting a wall corner),
@@ -392,6 +419,7 @@ func try_open_door(door: Door, by: Array[Hero]) -> bool:
 
 
 func _on_door_opened() -> void:
+	update_fog()
 	refresh_navigation()
 
 
@@ -507,11 +535,15 @@ func _make_view_layers() -> void:
 
 ## Rebuild everything visible for the current IsoGrid.rotation.
 func _apply_view() -> void:
+	wall_fader = WallFader.new(walls_view, entities)     # also makes the dimmed tile variants
 	floor_view.clear()
+	_view_floor.clear()
 	for c in floor_layer.get_used_cells():
-		floor_view.set_cell(IsoGrid.to_view(c), floor_layer.get_cell_source_id(c),
-				floor_layer.get_cell_atlas_coords(c), floor_layer.get_cell_alternative_tile(c))
+		_view_floor[IsoGrid.to_view(c)] = c
+	for v: Vector2i in _view_floor:
+		_draw_floor_cell(v)
 	walls_view.clear()
+	_view_walls.clear()
 	var view_walls := {}
 	for c in walls_layer.get_used_cells():
 		view_walls[IsoGrid.to_view(c)] = c
@@ -520,7 +552,7 @@ func _apply_view() -> void:
 		var sid := walls_layer.get_cell_source_id(c)
 		var atlas := walls_layer.get_cell_atlas_coords(c)
 		if IsoGrid.rotation == 0:
-			walls_view.set_cell(v, sid, atlas, walls_layer.get_cell_alternative_tile(c))
+			_view_walls[v] = [sid, atlas, c]
 		else:
 			# Pick the block variant by which faces are now exposed to the viewer.
 			var left := not view_walls.has(v + Vector2i(0, 1))
@@ -532,8 +564,10 @@ func _apply_view() -> void:
 				row = WALL_ROW_LEFT
 			elif right:
 				row = WALL_ROW_RIGHT
-			walls_view.set_cell(v, sid, Vector2i(atlas.x, row))
-	wall_fader = WallFader.new(walls_view, entities)
+			_view_walls[v] = [sid, Vector2i(atlas.x, row), c]
+	for v: Vector2i in _view_walls:
+		if is_explored(_view_walls[v][2]):
+			walls_view.set_cell(v, _view_walls[v][0], _view_walls[v][1])
 	for n in entities.get_children():
 		if n is MapMarker:
 			n.apply_view()
@@ -546,6 +580,111 @@ func _apply_view() -> void:
 	overlay.queue_redraw()
 	if scorch:
 		scorch.queue_redraw()
+	_refresh_fog_look()
+
+
+# --- fog of war ---------------------------------------------------------------------------------
+
+## Recompute what the party sees (after moves, doors, rotation) and redraw what changed.
+func update_fog() -> void:
+	if not fog_of_war or floor_view == null:
+		return
+	var fresh := _compute_fog()
+	for c in fresh:
+		if _astar.is_in_boundsv(c):
+			_astar.set_point_solid(c, not _party_can_walk(c))
+	_refresh_fog_look()
+
+
+## Update the fog when a hero has changed cell or a door has opened; keep monster visibility
+## current every frame (monsters move on their own).
+func _tick_fog() -> void:
+	if not fog_of_war:
+		return
+	var key := ""
+	for h in party:
+		key += "%d,%d,%d;" % [h.cell.x, h.cell.y, int(h.is_alive())]
+	for n in entities.get_children():
+		if n is Door and n.is_open:
+			key += "d"
+	if key != _fog_key:
+		_fog_key = key
+		update_fog()
+	_refresh_monster_fog()
+
+
+func _compute_fog() -> Array[Vector2i]:
+	if not fog_of_war:
+		return []
+	if _wall_set.is_empty():
+		for c in walls_layer.get_used_cells():
+			_wall_set[c] = true
+	var opaque := _wall_set.duplicate()
+	for n in entities.get_children():
+		if n is Door and n.blocks_move():
+			opaque[n.get_cell()] = true
+	var eyes: Array[Vector2i] = []
+	for h in party:
+		if h.is_alive():
+			eyes.append(h.cell)
+	if eyes.is_empty():
+		for h in party:
+			if not h.dead:
+				eyes.append(h.cell)
+	return fog.update(eyes, opaque)
+
+
+## Floor tile for a view cell: hidden if unexplored, dimmed if out of sight.
+func _draw_floor_cell(v: Vector2i) -> void:
+	var c: Vector2i = _view_floor[v]
+	if not is_explored(c):
+		floor_view.erase_cell(v)
+		return
+	var alt := floor_layer.get_cell_alternative_tile(c) if is_seen(c) else WallFader.DIM_BASE
+	if floor_view.get_cell_source_id(v) == -1 or floor_view.get_cell_alternative_tile(v) != alt:
+		floor_view.set_cell(v, floor_layer.get_cell_source_id(c), floor_layer.get_cell_atlas_coords(c), alt)
+
+
+## Redraw tiles, markers and decor for the current fog.
+func _refresh_fog_look() -> void:
+	if wall_fader == null:
+		return
+	for v: Vector2i in _view_floor:
+		_draw_floor_cell(v)
+	var dim := {}
+	for v: Vector2i in _view_walls:
+		var w: Array = _view_walls[v]
+		if not is_explored(w[2]):
+			continue
+		if walls_view.get_cell_source_id(v) == -1:
+			walls_view.set_cell(v, w[0], w[1])
+		if not is_seen(w[2]):
+			dim[v] = true
+	wall_fader.set_dim(dim)
+	for n in entities.get_children():
+		if n is Torch:                      # torches and braziers: hidden until seen, never dimmed
+			n.visible = is_explored(n.get_cell())
+		elif n is MapMarker:
+			n.visible = is_explored(n.get_cell())
+			n.modulate = Color.WHITE if is_seen(n.get_cell()) else FOG_DIM
+	for s: Node2D in _placed:
+		var c: Vector2i = _placed[s][0]
+		s.visible = is_explored(c) and (IsoGrid.rotation == 0 or not s.is_in_group("wall_decor"))
+		s.modulate = Color.WHITE if is_seen(c) else FOG_DIM
+	_refresh_monster_fog()
+
+
+## Monsters show only while the party sees them (or while they're in the fight); remains stay
+## where they fell once explored.
+func _refresh_monster_fog() -> void:
+	for m in monsters:
+		if not m.is_alive() and m.vanish_on_death:
+			continue
+		var show := is_seen(m.cell) or (not m.is_alive() and is_explored(m.cell))
+		if combat and combat.in_combat and m in combat.order:
+			show = true
+		if m.visible != show:
+			m.visible = show
 
 
 ## Remember a sprite's map cell (and offset within it) so it can follow view rotation.

@@ -42,6 +42,10 @@ func _run() -> void:
 	var m := _map()
 	m.combat.set_process(false)            # no fights during the test
 	_check(m.party.size() == 4, "party spawned on floor 1")
+	_check(m.is_explored(m.party[0].cell) and not m.is_explored(Vector2i(5, 5)), "fog: start explored, guard room not")
+	for i in m.party.size():
+		m.party[i].place_at(Vector2i(5, 10 + i))
+	m.update_fog()
 
 	# --- an ordinary door: closed blocks the path, opening it clears it ---
 	var door := m.door_at(Vector2i(5, 9))
@@ -50,6 +54,7 @@ func _run() -> void:
 	_check(not m.has_line_of_sight(Vector2i(5, 11), Vector2i(5, 6)), "closed door blocks sight")
 	m.try_open_door(door, m.party)
 	_check(door.is_open, "door opens")
+	_check(m.is_explored(Vector2i(5, 5)) and m.is_seen(Vector2i(5, 5)), "fog: opening the door reveals the guard room")
 	_check(not m.find_path(Vector2i(5, 10), Vector2i(5, 8)).is_empty(), "open door lets the party through")
 
 	# --- the locked crypt: the Rogue picks it (may take a few tries) ---
@@ -62,6 +67,10 @@ func _run() -> void:
 	_check(crypt.is_open and not crypt.locked, "crypt lock picked after %d tries" % tries)
 
 	# --- the party clicks a door: walks to its near side, then opens it ---
+	for i in m.party.size():
+		m.party[i].place_at(Vector2i(8, 4 + i))
+	m.update_fog()
+	m.refresh_navigation()
 	var storeroom := m.door_at(Vector2i(13, 5))
 	var path := m.controller.door_path(storeroom)
 	_check(not path.is_empty() and path[-1] in storeroom.sides(), "door_path ends beside the door")
@@ -105,6 +114,7 @@ func _run() -> void:
 		if mo.cell.x >= 26 and mo.cell.y >= 16:
 			guards += 1
 	_check(guards == 0, "killed stair guards stay dead")
+	_check(m.is_explored(Vector2i(5, 5)) and not m.is_seen(Vector2i(5, 5)), "fog: guard room remembered (dimmed) on return")
 	_check(m.monsters.size() == 8, "the other monsters are still there (%d)" % m.monsters.size())
 	print("test_dungeon: %s (%d failed)" % ["ALL PASS" if fails == 0 else "FAILURES", fails])
 	quit(1 if fails else 0)

@@ -187,7 +187,7 @@ func _refresh_overlay() -> void:
 	else:
 		overlay.clear("destination")
 	var reachable := map.is_walkable(_hover) and (_hover == party[0].cell or not preview.is_empty() or _walking)
-	if map.floor_layer.get_cell_source_id(_hover) == -1:
+	if not map.has_floor(_hover):
 		overlay.clear("cursor")
 	elif reachable:
 		overlay.set_cells("cursor", [_hover], COL_CURSOR, 0.15, 0.7, true)

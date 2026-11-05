@@ -8,6 +8,9 @@ const FADE_ALPHA := 0.55      ## opacity of a fully faded wall
 const FADE_TIME := 0.15       ## seconds to fade out / back in
 const FADE_STEPS := 4
 const ALT_BASE := 100         ## alternative ids ALT_BASE+1 .. ALT_BASE+FADE_STEPS
+## Fog of war: walls explored but out of sight use DIM_BASE+k (k = fade step 0..FADE_STEPS).
+const DIM_BASE := 200
+const DIM := Color(0.5, 0.5, 0.6)
 ## Minimum overlap (px) between figure and wall block before the wall fades.
 const MIN_OVERLAP := 3.0
 ## Cells in front of a spot that a 40 px wall block could cover it from (the overlap test decides).
@@ -20,6 +23,7 @@ const AHEAD := [
 var _layer: TileMapLayer
 var _torches: Array[Torch] = []
 var _fade := {}               ## cell -> 0..1 (1 = fully faded)
+var _dim := {}                ## view cells drawn dimmed (fog of war: remembered, not seen)
 
 
 func _init(walls: TileMapLayer, entities: Node) -> void:
@@ -86,6 +90,8 @@ func _walls_hiding(fig: Rect2) -> Array[Vector2i]:
 func _apply(c: Vector2i, v: float) -> void:
 	var k := roundi(v * FADE_STEPS)
 	var alt := 0 if k == 0 else ALT_BASE + k
+	if _dim.has(c):
+		alt = DIM_BASE + k
 	if _layer.get_cell_alternative_tile(c) != alt:
 		_layer.set_cell(c, _layer.get_cell_source_id(c), _layer.get_cell_atlas_coords(c), alt)
 	for t in _torches:
@@ -93,15 +99,27 @@ func _apply(c: Vector2i, v: float) -> void:
 			t.modulate.a = lerpf(1.0, FADE_ALPHA, float(k) / FADE_STEPS)
 
 
-## For every tile of the atlas sources used on this layer, add faded copies (same origin,
+## Fog of war: draw these view wall cells dimmed (and every other one normally).
+func set_dim(cells: Dictionary) -> void:
+	var changed := {}
+	for c in _dim:
+		if not cells.has(c):
+			changed[c] = true
+	for c in cells:
+		if not _dim.has(c):
+			changed[c] = true
+	_dim = cells
+	for c: Vector2i in changed:
+		if _layer.get_cell_source_id(c) != -1:
+			_apply(c, _fade.get(c, 0.0))
+
+## For every tile of every atlas source in the TileSet (floor too: DIM_BASE = the dimmed floor),
+## add faded / dimmed copies (same origin,
 ## sorting and custom data).
 func _make_alternatives() -> void:
 	var ts := _layer.tile_set
-	var sources := {}
-	for c in _layer.get_used_cells():
-		sources[_layer.get_cell_source_id(c)] = true
-	for sid: int in sources:
-		var src := ts.get_source(sid) as TileSetAtlasSource
+	for i in ts.get_source_count():
+		var src := ts.get_source(ts.get_source_id(i)) as TileSetAtlasSource
 		if src == null:
 			continue
 		for t in src.get_tiles_count():
@@ -110,18 +128,26 @@ func _make_alternatives() -> void:
 
 func _make_tile_alternatives(ts: TileSet, src: TileSetAtlasSource, coords: Vector2i) -> void:
 	var base := src.get_tile_data(coords, 0)
-	for k in range(1, FADE_STEPS + 1):
-		var alt := ALT_BASE + k
-		if src.has_alternative_tile(coords, alt):
-			continue
-		src.create_alternative_tile(coords, alt)
-		var d := src.get_tile_data(coords, alt)
-		d.texture_origin = base.texture_origin
-		d.y_sort_origin = base.y_sort_origin
-		d.z_index = base.z_index
-		d.flip_h = base.flip_h
-		d.flip_v = base.flip_v
-		d.transpose = base.transpose
-		d.modulate = Color(base.modulate, base.modulate.a * lerpf(1.0, FADE_ALPHA, float(k) / FADE_STEPS))
-		for i in ts.get_custom_data_layers_count():
-			d.set_custom_data_by_layer_id(i, base.get_custom_data_by_layer_id(i))
+	for k in range(0, FADE_STEPS + 1):
+		for dim in [false, true]:
+			if k == 0 and not dim:
+				continue
+			var alt := (DIM_BASE if dim else ALT_BASE) + k
+			if src.has_alternative_tile(coords, alt):
+				continue
+			_make_alt(ts, src, coords, base, alt, k, dim)
+
+
+func _make_alt(ts: TileSet, src: TileSetAtlasSource, coords: Vector2i, base: TileData, alt: int, k: int, dim: bool) -> void:
+	src.create_alternative_tile(coords, alt)
+	var d := src.get_tile_data(coords, alt)
+	d.texture_origin = base.texture_origin
+	d.y_sort_origin = base.y_sort_origin
+	d.z_index = base.z_index
+	d.flip_h = base.flip_h
+	d.flip_v = base.flip_v
+	d.transpose = base.transpose
+	var tint := base.modulate * DIM if dim else base.modulate
+	d.modulate = Color(tint, base.modulate.a * lerpf(1.0, FADE_ALPHA, float(k) / FADE_STEPS))
+	for i in ts.get_custom_data_layers_count():
+		d.set_custom_data_by_layer_id(i, base.get_custom_data_by_layer_id(i))
