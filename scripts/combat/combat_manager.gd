@@ -20,6 +20,8 @@ signal log_line(text: String)
 ## Short status for the HUD hint line (movement left, controls).
 signal status_changed(text: String)
 ## A reaction could change the outcome: the HUD asks the player and calls answer_reaction().
+## A big moment for the banner ("MAGE CASTS FIREBALL!").
+signal announce(text: String)
 signal reaction_prompt(text: String)
 signal reaction_answered(yes: bool)
 
@@ -1150,8 +1152,8 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 	if caster is Monster:
 		caster.play("attack")
 	Sfx.play(p.sfx)
-	if p.kind == SpellData.Kind.SPELL:
-		await SpellFx.charge(map, caster.body_position() + Vector2(0, -2), _spell_colour(p))
+	if p.kind == SpellData.Kind.SPELL and p.vfx != "fireball":
+		await SpellFx.charge(map, _cast_from(caster) + Vector2(0, 2), _spell_colour(p))
 	var char_level := maxi(1, caster.stats.level)
 	var affected: Array[Actor] = targets.duplicate()
 	if _is_shaped(p):
@@ -1161,14 +1163,7 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 			if a.is_alive() and a.cell in cells and (p.hits_allies or not DungeonMap._same_side(a, caster)):
 				affected.append(a)
 		if p.vfx == "fireball":
-			# Interim until the full Fireball sequence (Phase 3 step 6): fly, then burst on every cell.
-			await SpellFx.bolt(map, caster.body_position(), IsoGrid.cell_to_world(aim) + Vector2(0, -6))
-			Sfx.play("explosion")
-			for i in cells.size():
-				SpellFx.burst(map, IsoGrid.cell_to_world(cells[i]) + Vector2(0, 4), 1.0 if i == 4 else 0.7, 1.6 if i == 4 else 0.5)
-				if i % 3 == 2:
-					await get_tree().create_timer(0.04).timeout
-			await _area_flash(cells)
+			await _fireball_show(caster, aim, cells)
 		else:
 			var beam := Projectile.fire(map, caster.body_position(), IsoGrid.cell_to_world(aim), Projectile.Style.BEAM, _spell_colour(p))
 			await beam.done
@@ -1548,3 +1543,43 @@ func _sneak_applies(attacker: Actor, target: Actor, a: AttackData, adv: int) -> 
 ## For the attack hint: would this option get Sneak Attack?
 func sneak_preview(attacker: Actor, target: Actor, o: Dictionary) -> bool:
 	return _sneak_applies(attacker, target, o.attack, o.adv)
+
+
+# --- Fireball showcase (Phase 3 step 6) --------------------------------------------------------
+
+func _cast_from(caster: Actor) -> Vector2:
+	return caster.cast_point() if caster.has_method("cast_point") else caster.body_position()
+
+
+## Charge at the staff gem, fly in an arc lighting the room, then the 3x3 blast with flash, shake,
+## scorch and smoke. Returns at the moment of the blast (damage is resolved while it plays).
+func _fireball_show(caster: Actor, aim: Vector2i, cells: Array[Vector2i]) -> void:
+	announce.emit("%s CASTS %s!" % [caster.display_name().to_upper(), "FIREBALL"])
+	var gem := _cast_from(caster)
+	await FireballFx.charge(map, gem)
+	var centre := IsoGrid.cell_to_world(aim) + Vector2(0, 2)
+	await FireballFx.fly(map, gem, centre + Vector2(0, -8))
+	var worlds: Array[Vector2] = []
+	for c in cells:
+		worlds.append(IsoGrid.cell_to_world(c) + Vector2(0, 2))
+	FireballFx.explode(map, centre, worlds)
+	map.camera_controller.shake(3.0, 0.4)
+	_floor_flash(cells)
+	await get_tree().create_timer(0.12).timeout
+	_leave_scorch(aim, cells)
+
+
+## The 3x3 floor flashes white-hot, then fades through orange (as the mock-up's aoe_fire).
+func _floor_flash(cells: Array[Vector2i]) -> void:
+	for k in 8:
+		var fire := 1.0 - k / 7.0
+		map.overlay.set_cells("blast", cells, Color8(255, 200, 90).lerp(Color8(255, 110, 40), 1.0 - fire), 0.75 * fire, 0.9 * fire, true)
+		await get_tree().create_timer(0.07).timeout
+	map.overlay.clear("blast")
+
+
+func _leave_scorch(aim: Vector2i, cells: Array[Vector2i]) -> void:
+	await get_tree().create_timer(0.2).timeout
+	for c in cells:
+		if map.has_floor(c):
+			map.scorch.add_mark(c, 1.0 if c == aim else 0.62)

@@ -21,6 +21,8 @@ var ui_bottom := 0.0
 
 var _zoom_i := 0
 var _dragging := false
+var _shake_t := 0.0
+var _shake_px := 0.0
 
 
 func _ready() -> void:
@@ -28,6 +30,12 @@ func _ready() -> void:
 	camera.zoom = Vector2.ONE * ZOOM_LEVELS[_zoom_i]
 	if target:
 		camera.position = _clamped(target.position)
+
+
+## Shake the view for `duration` seconds, `px` screen pixels at the start (Fireball).
+func shake(px: float, duration := 0.4) -> void:
+	_shake_px = px
+	_shake_t = duration
 
 
 ## Put the camera straight onto a point (e.g. after the view turns).
@@ -52,6 +60,10 @@ func _process(delta: float) -> void:
 		camera.position = camera.position.lerp(target.position, 1.0 - exp(-FOLLOW_RATE * delta))
 	camera.position = _clamped(camera.position)
 	camera.offset = Vector2(0, ui_bottom * 0.5 / camera.zoom.x)
+	if _shake_t > 0.0:
+		_shake_t -= delta
+		var amt := _shake_px * clampf(_shake_t / 0.4, 0.0, 1.0)
+		camera.offset += Vector2(randf_range(-amt, amt), randf_range(-amt, amt)).round()
 
 
 func _unhandled_input(event: InputEvent) -> void:

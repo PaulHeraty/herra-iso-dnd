@@ -24,6 +24,7 @@ func _init() -> void:
 	_save("radiant", _radiant())
 	_save("heal_chime", _heal_chime())
 	_save("fire_impact", _fire_impact())
+	_save("fireball_boom", _fireball_boom())
 	quit()
 
 
@@ -260,6 +261,52 @@ func _fire_impact() -> PackedFloat32Array:
 			crack[i] = rng.randf_range(-1.0, 1.0)
 	crack = _mul(_highpass(crack, 2000.0), _env(n, 0.001, 1.5))
 	return _mix(boom, crack, 1.5)
+
+
+
+## Fireball: a big explosion - sub-bass thump, sharp crack, roaring blast sweeping down,
+## long rumbling tail with crackles, a little saturation for weight.
+func _fireball_boom() -> PackedFloat32Array:
+	var n := _n(2.6)
+	# sub-bass thump: 75 Hz falling to 28 Hz
+	var sub := _mul(_sine(_n(1.2), 75.0, 28.0), _env(_n(1.2), 0.004, 2.2))
+	# the crack at the front
+	var crack := _mul(_highpass(_noise(_n(0.09)), 1500.0), _env(_n(0.09), 0.0005, 3.0))
+	# roaring blast: noise with a cutoff sweeping 4 kHz -> 250 Hz
+	var roar := _mul(_lowpass(_noise(_n(1.1)), 4000.0, 250.0), _env(_n(1.1), 0.003, 1.8))
+	# rumble tail: dark noise, slow swell and long fade
+	var rumble_n := _n(2.6)
+	var rumble := _lowpass(_lowpass(_noise(rumble_n), 180.0), 140.0)
+	var re := PackedFloat32Array()
+	re.resize(rumble_n)
+	for i in rumble_n:
+		var t := float(i) / rumble_n
+		re[i] = minf(1.0, t * 8.0) * pow(1.0 - t, 1.3) * (0.8 + 0.2 * sin(TAU * 3.0 * t))
+	rumble = _mul(rumble, re)
+	# crackles in the tail
+	var crk := PackedFloat32Array()
+	crk.resize(n)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4242
+	for i in n:
+		var t := float(i) / n
+		if t > 0.08 and rng.randf() < 0.0025 * (1.0 - t):
+			crk[i] = rng.randf_range(-1.0, 1.0)
+	crk = _highpass(crk, 1800.0)
+	var x := PackedFloat32Array()
+	x.resize(n)
+	x = _mix(x, sub, 1.0)
+	x = _mix(x, roar, 0.9)
+	x = _mix(x, rumble, 2.4)
+	x = _mix(x, crack, 0.7)
+	x = _mix(x, crk, 0.6)
+	# saturation for weight
+	var peak := 0.0001
+	for v in x:
+		peak = maxf(peak, absf(v))
+	for i in x.size():
+		x[i] = tanh(x[i] / peak * 1.8)
+	return x
 
 # --- output -----------------------------------------------------------------------------------
 

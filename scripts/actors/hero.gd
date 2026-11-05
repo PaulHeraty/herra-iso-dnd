@@ -81,3 +81,14 @@ func _on_revived() -> void:
 func on_died() -> void:
 	sprite.rotation_degrees = -90.0
 	sprite.modulate = Color(0.32, 0.3, 0.36)
+
+
+## Where spells leave from: the Mage's staff gem (front/back view, mirrored), else the chest.
+func cast_point() -> Vector2:
+	if hero_class != HeroClass.MAGE or not walk_sheet:
+		return body_position() + Vector2(0, -4)
+	var back := sprite.frame >= sprite.hframes
+	var x := -6.0 if back else 5.0          # staff column in the 14x22 drawing
+	if sprite.flip_h:
+		x = -x
+	return position + Vector2(x, -20)

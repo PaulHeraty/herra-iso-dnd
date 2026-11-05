@@ -212,7 +212,9 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
        the condition name + effect). User request.)
   5. Class abilities: Sneak Attack, Hide, Second Wind, Shove (prone/push). DONE (Hide: not with an
      enemy adjacent; no cover/obscurement rules yet).
-  6. Fireball showcase (charge, arc, 3x3 blast + bursts, flash, shake, scorch, smoke).
+  6. Fireball showcase (charge, arc, 3x3 blast + bursts, flash, shake, scorch, smoke). DONE
+     (scripts/fx/fireball_fx.gd, scorch_layer.gd). User changes vs the mock-up: straight flight, one big
+     3x3 blast (explosion sheet at 3x), big boom sound (fireball_boom.wav).
   7. Dice-roll scene (freeze, spotlight, d20 save panel, damage dice + clacks); full/quick/off.
   8. Monster abilities (spider Web: restrained, recharge; Eye Tyrant fear ray) + short/long rests.
 - [ ] **Phase 4 — Items:** chests, loot, gold, inventory, equipment changing stats, potions, scrolls, keys.

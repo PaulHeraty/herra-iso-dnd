@@ -41,6 +41,7 @@ var overlay: GridOverlay
 var controller: PartyController
 var camera_controller: CameraController
 var wall_fader: WallFader
+var scorch: ScorchLayer
 var combat: CombatManager
 var hud: CombatHud
 ## Visible, rotated copies of the Floor / Walls layers.
@@ -69,10 +70,14 @@ func _ready() -> void:
 		if s is Node2D:
 			_place_by_cell(s, s.position)
 	_make_view_layers()
+	scorch = ScorchLayer.new()
+	scorch.name = "Scorch"
+	add_child(scorch)
+	move_child(scorch, floor_view.get_index() + 1)       # floor marks, lit like the floor
 	overlay = GridOverlay.new()
 	overlay.name = "Overlay"
 	add_child(overlay)
-	move_child(overlay, floor_view.get_index() + 1)   # above the floor, below World
+	move_child(overlay, scorch.get_index() + 1)          # above the floor, below World
 	_spawn_monsters()
 	refresh_navigation()
 	_spawn_party()
@@ -375,6 +380,8 @@ func _apply_view() -> void:
 		if s.is_in_group("wall_decor"):
 			s.visible = IsoGrid.rotation == 0
 	overlay.queue_redraw()
+	if scorch:
+		scorch.queue_redraw()
 
 
 ## Remember a sprite's map cell (and offset within it) so it can follow view rotation.

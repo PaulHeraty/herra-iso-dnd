@@ -19,6 +19,7 @@ const TRIM := {
 	"fire_impact": 3.0,
 	"radiant": -2.0,
 	"heal_chime": -3.0,
+	"fireball_boom": 3.0,
 }
 
 static var _inst: Sfx

@@ -71,6 +71,7 @@ func _ready() -> void:
 	combat.combat_started.connect(_on_started)
 	combat.combat_ended.connect(_on_ended)
 	combat.turn_started.connect(func(_a: Actor): _close_popup())     # a new turn: any open menu is stale
+	combat.announce.connect(_on_announce)
 	combat.victory.connect(_on_victory)
 	combat.defeat.connect(_on_defeat)
 	_build_end_screen()
@@ -90,7 +91,11 @@ func _process(_delta: float) -> void:
 	if not visible or combat == null:
 		return
 	var cur := combat.current
-	_banner.text = ("%s'S TURN" % cur.display_name().to_upper()) if cur else ""
+	if _announce_t > 0.0:
+		_announce_t -= _delta
+	else:
+		_banner.add_theme_color_override("font_color", COL_BANNER)
+		_banner.text = ("%s'S TURN" % cur.display_name().to_upper()) if cur else ""
 	_next.text = _upcoming()
 	# "Next:" always sits below the hint, however many lines the hint wraps to.
 	_next.position.y = _hint.position.y + maxf(12.0, _hint.get_line_count() * 11.0) + 1.0
@@ -666,3 +671,13 @@ func _show_info(title: String, text: String) -> void:
 	_info.size = Vector2(POPUP_W, h)
 	_info.position = Vector2(_popup.position.x, _popup.position.y - h - 2)
 	_info.visible = true
+
+
+var _announce_t := 0.0
+
+
+## Big moments replace the turn banner for a moment, in fire orange (mock-up: "MAGE CASTS FIREBALL!").
+func _on_announce(text: String) -> void:
+	_banner.text = text
+	_banner.add_theme_color_override("font_color", Color8(255, 170, 80))
+	_announce_t = 2.2
