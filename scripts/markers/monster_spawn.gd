@@ -20,6 +20,8 @@ extends MapMarker
 
 ## Runtime: the Monster actor spawned here (null if its scene is missing).
 var monster: Node2D
+## Runtime: killed on an earlier visit (MapState), so nothing spawns.
+var cleared := false
 
 
 func _init() -> void:

@@ -40,6 +40,8 @@ var attacks_left := 0
 var bonus_used := false
 ## Sneak Attack: once per turn.
 var sneak_used := false
+## Free object interaction this turn (opening a door) used.
+var interact_used := false
 var moving := false
 var _reach := {}
 var _hover := Vector2i(-99999, -99999)
@@ -136,6 +138,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			if not opt.is_empty():
 				get_viewport().set_input_as_handled()
 				_hero_attack(foe, opt)
+			return
+		var door := map.closed_door_under(map.get_local_mouse_position())
+		if door and not foe:
+			get_viewport().set_input_as_handled()
+			_use_door(door)
 			return
 		if _reach.has(c) and _reach[c].stop and c != current.cell:
 			get_viewport().set_input_as_handled()
@@ -356,12 +363,14 @@ func _start_of_turn(a: Actor) -> void:
 		_say("%s stands up." % a.display_name())
 
 
-## Resistance halves, immunity zeroes.
+## Resistance halves, immunity zeroes, vulnerability doubles.
 func _adjust(dmg: int, dtype: String, target: Actor) -> int:
 	if dtype in target.stats.immunities:
 		return 0
 	if dtype in target.stats.resistances:
 		return dmg / 2
+	if dtype in target.stats.vulnerabilities:
+		return dmg * 2
 	return dmg
 
 
@@ -552,6 +561,7 @@ func _next_turn() -> void:
 	action_used = false
 	bonus_used = false
 	sneak_used = false
+	interact_used = false
 	attacks_left = current.stats.attacks_per_action()
 	chosen_attack = null
 	targeting = null
@@ -598,6 +608,37 @@ func move_along(who: Actor, path: Array[Vector2i]) -> void:
 		_show_range()
 
 
+
+## Why the current hero can't open `door` right now, or "".
+func _door_problem(door: Door) -> String:
+	if not current.cell in door.sides():
+		return "Move next to the door to open it"
+	if door.locked:
+		if action_used or attacks_left < current.stats.attacks_per_action():
+			return "Picking the lock takes your action (already used)"
+	elif interact_used:
+		return "You have already opened a door this turn"
+	return ""
+
+
+## The current hero opens (or tries to pick/force) a door it stands next to.
+func _use_door(door: Door) -> void:
+	var why := _door_problem(door)
+	if why != "":
+		status_changed.emit(why)
+		Sfx.play("fail_sting", -12.0)
+		return
+	if door.locked:
+		action_used = true
+		attacks_left = 0
+	else:
+		interact_used = true
+	current.facing = door.get_cell() - current.cell
+	var who: Array[Hero] = [current]
+	if map.try_open_door(door, who):
+		_check_join()
+	_show_range()
+
 func _show_range() -> void:
 	_reach = map.combat_reach(current.cell, move_left, current)
 	var cells: Array[Vector2i] = []
@@ -626,6 +667,14 @@ func _show_preview() -> void:
 	map.overlay.clear("path")
 	map.overlay.clear("cursor")
 	_emit_status()
+	var door := map.closed_door_under(map.get_local_mouse_position())
+	if door and not _enemy_under_mouse():
+		var msg := _door_problem(door)
+		map.overlay.set_cells("cursor", [door.get_cell()], COL_BLOCKED if msg != "" else COL_ACTIVE, 0.15, 0.7, msg == "")
+		if msg == "":
+			msg = "Click: pick the lock (uses your action)" if door.locked else "Click: open the door (free, once a turn)"
+		status_changed.emit(msg)
+		return
 	if not map.has_floor(_hover):
 		return
 	var foe := _enemy_under_mouse()

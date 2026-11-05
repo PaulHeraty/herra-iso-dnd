@@ -27,6 +27,7 @@ enum Size { TINY, SMALL, MEDIUM, LARGE, HUGE }
 @export var hit_dice := "1d8"           ## e.g. "5d10" (heroes, for short rests) / "4d10+4" (monsters)
 @export var armor_class := 10
 @export var resistances: Array[String] = []
+@export var vulnerabilities: Array[String] = []   ## double damage (e.g. skeletons: bludgeoning)
 @export var immunities: Array[String] = []
 @export_group("Movement")
 @export var speed_ft := 30
@@ -135,6 +136,7 @@ const SKILL_ABILITY := {
 	"perception": "WIS", "insight": "WIS", "survival": "WIS", "medicine": "WIS",
 	"arcana": "INT", "investigation": "INT", "religion": "INT", "history": "INT",
 	"intimidation": "CHA", "persuasion": "CHA", "deception": "CHA",
+	"thieves_tools": "DEX",
 }
 
 

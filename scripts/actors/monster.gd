@@ -25,6 +25,9 @@ signal animation_finished(anim: String)
 ## Combat HP bar: height above the feet (top of the sprite) and width.
 @export var hp_bar_y := -30.0
 @export var hp_bar_w := 16
+## Sounds for being hit / dying (assets/sfx/<name>.wav).
+@export var hurt_sfx := "monster_hurt"
+@export var death_sfx := "monster_death"
 
 var group_id := 0
 ## Shown while this monster is in a fight (CombatManager sets it).
@@ -136,13 +139,13 @@ func _update_facing_visual() -> void:
 func _on_hurt() -> void:
 	_flash()
 	play("hurt")
-	Sfx.play("monster_hurt")
+	Sfx.play(hurt_sfx)
 
 
 func _on_down() -> void:
 	_flash()
 	play("death")
-	Sfx.play("monster_death")
+	Sfx.play(death_sfx)
 
 
 func _fade_out() -> void:

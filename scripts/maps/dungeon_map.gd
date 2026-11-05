@@ -19,6 +19,8 @@ extends Node2D
 @export var preview_missing_monsters := true
 ## Which PartyStart to use (matches PartyStart.entry_id).
 @export var entry_id := "start"
+## Shown when the party arrives (e.g. "The Upper Halls").
+@export var map_title := ""
 
 const HERO_SCENE := preload("res://scenes/actors/hero.tscn")
 const PARTY_ORDER := [Hero.HeroClass.FIGHTER, Hero.HeroClass.ROGUE, Hero.HeroClass.CLERIC, Hero.HeroClass.MAGE]
@@ -30,6 +32,8 @@ const WALL_ROW_LEFT := 0      ## lower-left face only
 const WALL_ROW_RIGHT := 1     ## lower-right face only
 const WALL_ROW_BOTH := 2
 const WALL_ROW_CAP := 3
+## TileMapLayer rendering quadrant size (cells) for the visible layers (see _make_view_layers).
+const LIGHT_CHUNK := 4
 
 ## The heroes, leader first.
 var party: Array[Hero] = []
@@ -67,6 +71,9 @@ func _ready() -> void:
 	for n in entities.get_children():
 		if n is MapMarker:
 			n.lock_cell()
+		if n is Door:
+			n.opened.connect(_on_door_opened)
+	MapState.restore(self)
 	for s in decor.get_children():
 		if s is Node2D:
 			_place_by_cell(s, s.position)
@@ -82,6 +89,7 @@ func _ready() -> void:
 	_spawn_monsters()
 	refresh_navigation()
 	_spawn_party()
+	party_xp = PartyState.party_xp
 	camera_controller = CameraController.new()
 	camera_controller.name = "CameraController"
 	camera_controller.camera = camera
@@ -107,7 +115,8 @@ func _ready() -> void:
 	hud.combat = combat
 	add_child(hud)
 	_apply_view()
-
+	if PartyState.has_state() or map_title != "":
+		_arrival_fade(PartyState.has_state())
 
 func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("view_rotate_right"):
@@ -167,6 +176,10 @@ func terrain_walkable(cell: Vector2i) -> bool:
 		if n is Door and n.get_cell() == cell and n.blocks_move():
 			return false
 		if n is Chest and n.get_cell() == cell:
+			return false
+		if n is Prop and n.blocks and n.get_cell() == cell:
+			return false
+		if n is Brazier and n.get_cell() == cell:
 			return false
 	return true
 
@@ -319,6 +332,149 @@ func actor_under(pos: Vector2, include_down := true) -> Actor:
 	return actor_at(IsoGrid.world_to_cell(pos))
 
 
+## The door on a (map) cell, or null.
+func door_at(cell: Vector2i) -> Door:
+	for n in entities.get_children():
+		if n is Door and n.get_cell() == cell:
+			return n
+	return null
+
+
+## A closed door under a world point: on the cell under it, or whose panel the point is on.
+func closed_door_under(pos: Vector2) -> Door:
+	var d := door_at(IsoGrid.world_to_cell(pos))
+	if d and not d.is_open:
+		return d
+	for n in entities.get_children():
+		if n is Door and not n.is_open and n.panel_rect().has_point(pos):
+			return n
+	return null
+
+
+## Try to open a door: unlocked doors just open; locked ones are picked by the Rogue (thieves'
+## tools: DEX + expertise vs lock_dc) or, failing that, forced by the strongest hero (Athletics vs
+## lock_dc + 2). Each try is one roll; the player can try again. Logs what happens. Returns true
+## if the door is now open.
+func try_open_door(door: Door, by: Array[Hero]) -> bool:
+	if door.is_open:
+		return true
+	if not door.locked:
+		door.open()
+		return true
+	var able := by.filter(func(h: Hero): return h.is_alive())
+	if able.is_empty():
+		return false
+	if door.key_id != "" and door.lock_dc <= 0:
+		combat._say("The door is locked. It needs a key.")
+		Sfx.play("door_locked")
+		return false
+	var rogue: Hero = null
+	var strong: Hero = able[0]
+	for h: Hero in able:
+		if h.hero_class == Hero.HeroClass.ROGUE:
+			rogue = h
+		if h.stats.skill_bonus("athletics") > strong.stats.skill_bonus("athletics"):
+			strong = h
+	var who := rogue if rogue else strong
+	var skill := "thieves_tools" if rogue else "athletics"
+	var dc := door.lock_dc if rogue else door.lock_dc + 2
+	var r := Dice.d20(who.stats.skill_bonus(skill))
+	if r.total >= dc:
+		combat._say("%s %s the lock (%s vs DC %d)" % [who.display_name(),
+				"picks" if rogue else "forces", r.describe(), dc])
+		Sfx.play("lock_click" if rogue else "hit_blunt")
+		door.open()
+		return true
+	combat._say("%s fails to %s the lock (%s vs DC %d)" % [who.display_name(),
+			"pick" if rogue else "force", r.describe(), dc])
+	Sfx.play("door_locked")
+	return false
+
+
+func _on_door_opened() -> void:
+	refresh_navigation()
+
+
+## The stairs on a (map) cell, or null.
+func stairs_at(cell: Vector2i) -> Stairs:
+	for n in entities.get_children():
+		if n is Stairs and n.get_cell() == cell:
+			return n
+	return null
+
+
+## Stairs under a world point: on the cell under it, or (stairs up) whose steps the point is on.
+func stairs_under(pos: Vector2) -> Stairs:
+	var s := stairs_at(IsoGrid.world_to_cell(pos))
+	if s:
+		return s
+	for n in entities.get_children():
+		if n is Stairs and n.up and Rect2(n.position + Vector2(-16, -30), Vector2(32, 38)).has_point(pos):
+			return n
+	return null
+
+
+var _leaving := false
+
+
+## Go to the map the stairs lead to (outside combat): fade out, remember this map and the party,
+## change scene. The new map places the party at the PartyStart named by target_entry.
+func take_stairs(st: Stairs) -> void:
+	if _leaving or combat.in_combat or combat.game_over:
+		return
+	if st.target_map == "" or not ResourceLoader.exists(st.target_map):
+		combat._say("These stairs lead nowhere (yet).")
+		return
+	_leaving = true
+	controller.enabled = false
+	Sfx.play("stairs", 0.0, 1.15 if st.up else 1.0)
+	var fade := _fade_rect()
+	var tw := create_tween()
+	tw.tween_property(fade, "color:a", 1.0, 0.6)
+	await tw.finished
+	MapState.save(self)
+	PartyState.save(self)
+	MapState.next_entry = st.target_entry
+	get_tree().change_scene_to_file(st.target_map)
+
+
+## A full-screen black rect above everything (for fades).
+func _fade_rect() -> ColorRect:
+	var layer := CanvasLayer.new()
+	layer.layer = 50
+	add_child(layer)
+	var r := ColorRect.new()
+	r.size = Vector2(640, 360)
+	r.color = Color(0, 0, 0, 0)
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(r)
+	return r
+
+
+## Arriving: fade in from black (after stairs) and show the map's title for a moment.
+func _arrival_fade(from_black: bool) -> void:
+	var r := _fade_rect()
+	r.color.a = 1.0 if from_black else 0.0
+	var title := Label.new()
+	title.add_theme_font_override("font", load("res://assets/fonts/herra_pixel.fnt"))
+	title.add_theme_font_size_override("font_size", 10)
+	title.add_theme_color_override("font_color", Color8(255, 220, 120))
+	title.text = map_title.to_upper()
+	title.scale = Vector2(2, 2)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.size = Vector2(320, 12)
+	title.position = Vector2(0, 110)
+	title.modulate.a = 0.0
+	r.get_parent().add_child(title)
+	var tw := create_tween()
+	tw.tween_property(r, "color:a", 0.0, 0.8)
+	tw.parallel().tween_property(title, "modulate:a", 1.0, 0.5)
+	tw.tween_interval(1.6)
+	tw.tween_property(title, "modulate:a", 0.0, 0.6)
+	await tw.finished
+	r.get_parent().queue_free()
+
+
 ## The actor standing on a cell, or null.
 func actor_at(cell: Vector2i) -> Actor:
 	for n in entities.get_children():
@@ -333,11 +489,15 @@ func _make_view_layers() -> void:
 	floor_view = TileMapLayer.new()
 	floor_view.name = "FloorView"
 	floor_view.tile_set = floor_layer.tile_set
+	# Small rendering chunks: a 2D canvas item takes only a limited number of lights, and a big
+	# map has dozens of torches, so a big floor chunk would drop most of them.
+	floor_view.rendering_quadrant_size = LIGHT_CHUNK
 	add_child(floor_view)
 	move_child(floor_view, floor_layer.get_index() + 1)
 	walls_view = TileMapLayer.new()
 	walls_view.name = "WallsView"
 	walls_view.tile_set = walls_layer.tile_set
+	walls_view.rendering_quadrant_size = LIGHT_CHUNK
 	walls_view.y_sort_enabled = true
 	walls_layer.get_parent().add_child(walls_view)
 	walls_layer.get_parent().move_child(walls_view, walls_layer.get_index() + 1)
@@ -404,10 +564,11 @@ func _anyone_moving() -> bool:
 # --- spawning ----------------------------------------------------------------------------------
 
 func _find_party_start() -> PartyStart:
+	var want := MapState.next_entry if MapState.next_entry != "" else entry_id
 	var first: PartyStart = null
 	for n in entities.get_children():
 		if n is PartyStart:
-			if n.entry_id == entry_id:
+			if n.entry_id == want:
 				return n
 			if first == null:
 				first = n
@@ -426,6 +587,7 @@ func _spawn_party() -> void:
 		entities.add_child(hero)
 		hero.facing = PartyStart.FACING_DIR[start.facing]
 		hero.place_at(cells[i])
+		PartyState.apply(hero)
 		party.append(hero)
 
 
@@ -455,7 +617,7 @@ func _formation_cells(origin: Vector2i, n: int) -> Array[Vector2i]:
 ## A Monster actor at every MonsterSpawn whose scenes/actors/monsters/<monster_id>.tscn exists.
 func _spawn_monsters() -> void:
 	for n in entities.get_children():
-		if not n is MonsterSpawn:
+		if not n is MonsterSpawn or n.cleared:
 			continue
 		var path := "res://scenes/actors/monsters/%s.tscn" % n.monster_id
 		if not ResourceLoader.exists(path):

@@ -10,6 +10,8 @@ const STEP_TIME := 0.18
 const COL_CURSOR := Color8(255, 220, 90)
 const COL_BLOCKED := Color8(255, 80, 60)
 const COL_PATH := Color8(90, 150, 255)
+const COL_LOCKED := Color8(255, 150, 60)
+const COL_STAIRS := Color8(120, 220, 255)
 
 var map: DungeonMap
 var overlay: GridOverlay
@@ -18,6 +20,8 @@ var party: Array[Hero] = []
 
 ## Cells still to walk (leader), destination last.
 var _path: Array[Vector2i] = []
+## Door to open when the leader gets there (clicked a closed door).
+var _door_goal: Door
 var _walking := false
 var _hover := Vector2i(-99999, -99999)
 ## False while combat runs (CombatManager takes over input).
@@ -56,7 +60,29 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		if map.hud and map.hud.mouse_over_ui():
 			return
-		var target := IsoGrid.world_to_cell(map.get_local_mouse_position())
+		var mouse := map.get_local_mouse_position()
+		var door := map.closed_door_under(mouse)
+		var target := IsoGrid.world_to_cell(mouse)
+		_door_goal = null
+		if door:
+			var dp := door_path(door)
+			if dp.is_empty():
+				get_viewport().set_input_as_handled()
+				return
+			_door_goal = door
+			target = dp[-1]
+			if target == party[0].cell:
+				get_viewport().set_input_as_handled()
+				_arrived()
+				return
+		else:
+			var st := map.stairs_under(mouse)
+			if st:
+				target = st.get_cell()
+				if target == party[0].cell:
+					get_viewport().set_input_as_handled()
+					map.take_stairs(st)
+					return
 		var p := map.find_path(party[0].cell, target)
 		if p.size() > 1:
 			p.remove_at(0)
@@ -87,12 +113,65 @@ func _walk() -> void:
 		map.apply_pending_rotation()
 	_walking = false
 	_refresh_overlay()
+	_arrived()
 
+
+
+## The leader has stopped: open the door it walked to, or take the stairs it stands on.
+func _arrived() -> void:
+	if not enabled:            # combat started on the way
+		_door_goal = null
+		return
+	var door := _door_goal
+	_door_goal = null
+	if door and not door.is_open and party[0].cell in door.sides():
+		party[0].facing = door.get_cell() - party[0].cell
+		map.try_open_door(door, party)
+		_refresh_overlay()
+		return
+	if not _path.is_empty():
+		return
+	var st := map.stairs_at(party[0].cell)
+	if st:
+		map.take_stairs(st)
+
+
+## Path (leader cell first) to the nearer side of a closed door, or [] if neither side can be
+## reached. Already standing on a side = just that cell.
+func door_path(door: Door) -> Array[Vector2i]:
+	var best: Array[Vector2i] = []
+	for s in door.sides():
+		if s == party[0].cell:
+			return [s]
+		var p := map.find_path(party[0].cell, s)
+		if not p.is_empty() and (best.is_empty() or p.size() < best.size()):
+			best = p
+	return best
 
 func _refresh_overlay() -> void:
 	if not enabled:
 		return
 	var preview: Array[Vector2i] = []
+	var door: Door = null if _walking else map.closed_door_under(map.get_local_mouse_position())
+	if door and not (map.hud and map.hud.mouse_over_ui()):
+		preview = door_path(door)
+		if not preview.is_empty():
+			preview.remove_at(0)
+		overlay.set_cells("path", preview, COL_PATH, 0.12, 0.35, true)
+		overlay.clear("destination")
+		overlay.set_cells("cursor", [door.get_cell()], COL_CURSOR if not door.locked else COL_LOCKED, 0.15, 0.7, true)
+		return
+	var st: Stairs = null if _walking or door else map.stairs_under(map.get_local_mouse_position())
+	if st and not (map.hud and map.hud.mouse_over_ui()):
+		preview = map.find_path(party[0].cell, st.get_cell())
+		if not preview.is_empty():
+			preview.remove_at(0)
+		overlay.set_cells("path", preview.slice(0, -1), COL_PATH, 0.12, 0.35, true)
+		overlay.clear("destination")
+		overlay.set_cells("cursor", [st.get_cell()], COL_STAIRS, 0.2, 0.75, true)
+		if map.hud:
+			map.hud.flash_hint(st.hint())
+		return
 	if _walking:
 		preview = _path
 	elif map.is_walkable(_hover) and _hover != party[0].cell:

@@ -22,7 +22,7 @@ func _init() -> void:
 	_build_spells()
 	for s in [_fighter(), _rogue(), _cleric(), _wizard()]:
 		_save(s, HERO_DIR)
-	for s in [_giant_spider(), _eye_tyrant()]:
+	for s in [_giant_spider(), _eye_tyrant(), _skeleton()]:
 		_save(s, MONSTER_DIR)
 	quit()
 
@@ -95,7 +95,7 @@ func _rogue() -> CreatureStats:
 	var s := _stats("rogue", "Rogue", [8, 18, 12, 12, 12, 10])
 	_hero(s, "rogue", 33, "5d8", 15, ["DEX", "INT"])          # leather armour
 	s.powers = [sp.sneak_attack, sp.hide]
-	s.skill_proficiencies = _s(["acrobatics", "athletics"])
+	s.skill_proficiencies = _s(["acrobatics", "athletics", "thieves_tools"])
 	s.skill_expertise = _s(["stealth", "perception"])
 	s.attacks = [
 		_attack("Shortsword", AttackData.Kind.MELEE, AttackData.Ability.FINESSE, "1d6", "piercing"),
@@ -157,6 +157,30 @@ func _giant_spider() -> CreatureStats:
 	s.attacks = [bite]
 	s.powers = [sp.spider_web]
 	s.skill_overrides = {"stealth": 7, "perception": 0}
+	return s
+
+
+func _skeleton() -> CreatureStats:
+	# SRD 5.1 Skeleton (CR 1/4). Vulnerable to bludgeoning, immune to poison.
+	var s := _stats("skeleton", "Skeleton", [10, 14, 15, 6, 8, 5])
+	s.creature_type = "undead"
+	s.challenge = 0.25
+	s.xp = 50
+	s.proficiency_bonus = 2
+	s.max_hp = 13
+	s.hit_dice = "2d8+4"
+	s.armor_class = 13
+	s.speed_ft = 30
+	s.sight_ft = 40
+	s.vulnerabilities = _s(["bludgeoning"])
+	s.immunities = _s(["poison"])
+	var sword := _attack("Shortsword", AttackData.Kind.MELEE, AttackData.Ability.DEX, "1d6+2", "piercing")
+	sword.to_hit_override = 4
+	var bow := _ranged(_attack("Shortbow", AttackData.Kind.RANGED, AttackData.Ability.DEX, "1d6+2", "piercing"), 80, 320)
+	bow.to_hit_override = 4
+	bow.sfx = "bow_shot"
+	s.attacks = [sword, bow]
+	s.skill_overrides = {"perception": -1}
 	return s
 
 

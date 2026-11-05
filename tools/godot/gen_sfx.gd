@@ -25,6 +25,12 @@ func _init() -> void:
 	_save("heal_chime", _heal_chime())
 	_save("fire_impact", _fire_impact())
 	_save("fireball_boom", _fireball_boom())
+	_save("door_open", _door_open())
+	_save("door_locked", _door_locked())
+	_save("lock_click", _lock_click())
+	_save("stairs", _stairs())
+	_save("bone_rattle", _bone_rattle())
+	_save("bone_collapse", _bone_collapse())
 	quit()
 
 
@@ -307,6 +313,97 @@ func _fireball_boom() -> PackedFloat32Array:
 	for i in x.size():
 		x[i] = tanh(x[i] / peak * 1.8)
 	return x
+
+
+# --- dungeon sounds (doors, locks, stairs, skeletons) ---------------------------------------
+
+## Heavy wooden door: a creaky hinge (wobbling square, low-passed) then a soft thud.
+func _door_open() -> PackedFloat32Array:
+	var n := _n(0.55)
+	var creak := PackedFloat32Array()
+	creak.resize(n)
+	var ph := 0.0
+	for i in n:
+		var t := float(i) / n
+		var f := 180.0 + 120.0 * t + 40.0 * sin(t * 37.0) + 25.0 * sin(t * 91.0)
+		ph += f / RATE
+		creak[i] = (1.0 if fmod(ph, 1.0) < 0.18 else -0.2) * sin(PI * t) * (0.6 + 0.4 * sin(t * 53.0))
+	creak = _lowpass(creak, 2200.0, 1400.0)
+	var tn := _n(0.2)
+	var thud := _mix(_mul(_sine(tn, 110.0, 50.0), _env(tn, 0.002, 3.0)),
+			_mul(_lowpass(_noise(tn), 500.0), _env(tn, 0.001, 4.0)), 0.6)
+	return _mix(creak, thud, 1.4, _n(0.42))
+
+
+## Locked: the handle rattles twice against the bolt.
+func _door_locked() -> PackedFloat32Array:
+	var x := PackedFloat32Array()
+	x.resize(_n(0.32))
+	for k in 2:
+		var m := _n(0.07)
+		var clunk := _mix(_mul(_square(m, 520.0 - k * 60.0, 300.0, 0.3), _env(m, 0.001, 4.0)),
+				_mul(_lowpass(_noise(m), 1800.0), _env(m, 0.001, 5.0)), 0.8)
+		x = _mix(x, clunk, 1.0, _n(0.02 + k * 0.13))
+	return x
+
+
+## Lock picked: two light ticks, then the bolt clicks back.
+func _lock_click() -> PackedFloat32Array:
+	var x := PackedFloat32Array()
+	x.resize(_n(0.36))
+	for k in 2:
+		var m := _n(0.025)
+		x = _mix(x, _mul(_highpass(_noise(m), 3000.0), _env(m, 0.001, 3.0)), 0.5, _n(0.01 + k * 0.08))
+	var c := _n(0.09)
+	var click := _mix(_mul(_square(c, 1400.0, 900.0, 0.25), _env(c, 0.001, 5.0)),
+			_mul(_lowpass(_noise(c), 2500.0), _env(c, 0.001, 4.0)), 0.9)
+	return _mix(x, click, 1.0, _n(0.24))
+
+
+## Footsteps on stone stairs, falling in pitch (going down; played faster/higher for up).
+func _stairs() -> PackedFloat32Array:
+	var x := PackedFloat32Array()
+	x.resize(_n(1.0))
+	for k in 5:
+		var m := _n(0.1)
+		var step := _mix(_mul(_sine(m, 150.0 - k * 12.0, 60.0), _env(m, 0.002, 3.0)),
+				_mul(_lowpass(_noise(m), 900.0 - k * 80.0), _env(m, 0.001, 5.0)), 0.7)
+		x = _mix(x, step, 1.0 - k * 0.12, _n(k * 0.17))
+	return x
+
+
+## Skeleton hit: a burst of dry bone clicks.
+func _bone_rattle() -> PackedFloat32Array:
+	var x := PackedFloat32Array()
+	x.resize(_n(0.3))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 77
+	for k in 9:
+		var m := _n(0.03)
+		var f := rng.randf_range(900.0, 1700.0)
+		var click := _mix(_mul(_square(m, f, f * 0.7, 0.2), _env(m, 0.001, 6.0)),
+				_mul(_highpass(_noise(m), 2000.0), _env(m, 0.001, 6.0)), 0.6)
+		x = _mix(x, click, rng.randf_range(0.4, 1.0) * (1.0 - k * 0.07), _n(k * 0.026 + rng.randf_range(0.0, 0.01)))
+	return x
+
+
+## Skeleton collapses: clicks spreading out, then a final clatter on the floor.
+func _bone_collapse() -> PackedFloat32Array:
+	var x := PackedFloat32Array()
+	x.resize(_n(0.8))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 78
+	for k in 22:
+		var m := _n(0.035)
+		var f := rng.randf_range(600.0, 1500.0)
+		var click := _mix(_mul(_square(m, f, f * 0.6, 0.2), _env(m, 0.001, 6.0)),
+				_mul(_highpass(_noise(m), 1500.0), _env(m, 0.001, 6.0)), 0.6)
+		var t := pow(rng.randf(), 0.7) * 0.62
+		x = _mix(x, click, rng.randf_range(0.3, 0.9), _n(t))
+	var tn := _n(0.15)
+	x = _mix(x, _mul(_lowpass(_noise(tn), 700.0), _env(tn, 0.001, 3.0)), 0.8, _n(0.6))
+	return x
+
 
 # --- output -----------------------------------------------------------------------------------
 
