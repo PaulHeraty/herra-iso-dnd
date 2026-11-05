@@ -213,6 +213,19 @@ func attack_options_from(attacker: Actor, target: Actor, from: Vector2i) -> Arra
 	return out
 
 
+## Hero animation for a ranged weapon attack: the Rogue draws the bow, the Mage aims the staff
+## (crossbow bolt), the Fighter throws (attack swing). "" for monsters.
+func _ranged_anim(attacker: Actor) -> String:
+	if not attacker is Hero:
+		return ""
+	match attacker.hero_class:
+		Hero.HeroClass.ROGUE:
+			return "shoot"
+		Hero.HeroClass.MAGE:
+			return "cast"
+	return "attack"
+
+
 ## Roll an attack and apply it. Awaitable.
 func perform_attack(attacker: Actor, target: Actor, opt: Dictionary) -> void:
 	if opt.is_empty() or not attacker.is_alive() or not target.is_alive():
@@ -223,14 +236,22 @@ func perform_attack(attacker: Actor, target: Actor, opt: Dictionary) -> void:
 	if attacker is Monster:
 		attacker.play("attack")
 	if a.kind == AttackData.Kind.MELEE:
+		if attacker is Hero:
+			attacker.play_action("attack")
 		await attacker.lunge(target.position).finished
 	else:
+		var anim := _ranged_anim(attacker)
+		if anim != "":
+			attacker.play_action(anim)
+			await get_tree().create_timer(attacker.action_hit_time(anim)).timeout
 		var beam := a.damage_type in ["necrotic", "force", "radiant", "fire", "cold", "lightning"]
 		Sfx.play("ray_zap" if beam else "bow_shot")
 		var col := Color8(230, 90, 200) if beam else Color8(220, 200, 160)
 		var p := Projectile.fire(map, attacker.body_position(), target.body_position(),
 				Projectile.Style.BEAM if beam else Projectile.Style.ARROW, col)
 		await p.done
+		if attacker is Hero and attacker.current_action() == "cast":
+			attacker.end_action()
 	var melee := a.kind == AttackData.Kind.MELEE
 	var cond_adv := Condition.attack_advantage(attacker, target, melee, DungeonMap.grid_distance(attacker.cell, target.cell))
 	var adv := combine_advantage(opt.adv, cond_adv)
@@ -1223,6 +1244,8 @@ func _cast(caster: Actor, p: SpellData, slot: int, targets: Array[Actor], aim: V
 			if attacks_left <= 0:
 				action_used = true
 	await resolve_power(caster, p, slot, targets, aim)
+	if caster is Hero and caster.current_action() == "cast":
+		caster.end_action()
 	moving = false
 	if _check_end():
 		return
@@ -1242,6 +1265,11 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 		caster.facing = _dir_to(caster.cell, aim)
 	if caster is Monster:
 		caster.play("attack")
+	elif caster is Hero:
+		if p.kind == SpellData.Kind.SPELL or p.id == "second_wind":
+			caster.play_action("cast")      # held until _cast ends it
+		elif p.id == "shove":
+			caster.play_action("attack")
 	Sfx.play(p.sfx)
 	if p.kind == SpellData.Kind.SPELL and p.vfx != "fireball":
 		await SpellFx.charge(map, _cast_from(caster) + Vector2(0, 2), _spell_colour(p))
@@ -1615,6 +1643,8 @@ func _offer_shield(target: Actor, attacker: Actor, what: String, total: int, ac:
 	target.spend_slot(target.lowest_slot_for(sh))
 	target.add_condition("shielded", 1, target, sh)
 	_say("%s casts Shield! (AC %d)" % [target.display_name(), ac + 5])
+	target.play_action("cast")
+	get_tree().create_timer(0.6).timeout.connect(target.end_action)
 	Sfx.play("charge", -4.0, 1.4)
 	SpellFx.sparkles(map, target.body_position(), Color8(130, 170, 255))
 	FloatText.spawn(map, target.body_position() + Vector2(0, -18), "SHIELD", Color8(150, 180, 255), 10)

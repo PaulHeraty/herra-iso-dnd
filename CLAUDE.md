@@ -65,7 +65,7 @@ doesn't supply.
 ```
 assets/
   tiles/      floor_atlas.png, wall_atlas.png, dungeon_tileset.tres   (generated)
-  sprites/    heroes/ (16×24), monsters/ (Eye Tyrant), props/ (chest, bones, torch_sheet, web, stairs_up/down, barrel, crate, sarcophagus, rubble, cocoon, urn, brazier)
+  sprites/    heroes/ (walk sheets 16×24, action sheets 32×32), monsters/ (Eye Tyrant), props/ (chest, bones, torch_sheet, web, stairs_up/down, barrel, crate, sarcophagus, rubble, cocoon, urn, brazier)
   effects/    fireball_sheet.png (6×16px), explosion_sheet.png (7×32px)
   fonts/      herra_pixel.fnt/.png: our pixel font (use size 10; scale the Control 2x/3x for big text)
   sfx/        13 WAVs from the concept session (torch_ambience imports as a forward loop) + generated ones (gen_sfx.gd)
@@ -102,7 +102,8 @@ data/         heroes/*.tres (level 5 party), monsters/*.tres: CreatureStats + At
               (spells, class abilities, monster powers) — all from tools/godot/build_data.gd
 tools/
   godot/      gen_art.gd -> build_tileset.gd -> build_test_room.gd   (run in that order, import between)
-              gen_hero_sheets.gd (hero walk sheets), preview_hero_walk.gd + gif_writer.gd (GIF previews)
+              gen_hero_sheets.gd (hero walk sheets), gen_hero_actions.gd (hero action sheets, from the walk drawings),
+              preview_hero_walk.gd / preview_hero_actions.gd + gif_writer.gd (GIF previews)
               build_data.gd (stat blocks -> data/), test_rules.gd (headless rules tests: PASS/FAIL)
               gen_spider.gd (procedural Giant Spider sheet: 3D-ish model projected to iso)
               gen_sfx.gd (SFX: hits, miss, bow, hurt, hiss, ray, crit, mm_zip, radiant, heal_chime, fire_impact)
@@ -161,6 +162,18 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
   standing legs; walk = alternate leg lifted 1px, robes: feet tuck under + hem sways). Preview:
   `tools/godot/preview_hero_walk.gd` → GIF. Walk feel may be revisited later (user: "fine for now").
   `Actor` keeps its facing in map cells and picks row/mirror for the current view rotation.
+- Hero **action sheets** `assets/sprites/heroes/<hero>_actions.png` (512×64): **32×32** cells (the
+  16×24 figure cell sits at (8, 8); sprite offset (-16, -30)), 16 cols × 2 rows (front / back):
+  attack 0-3 (wind-up, strike + swoosh, follow-through, recover), shoot 4-6 (Rogue bow; others copy
+  the wind-up), cast 7-10 (raise + 3 looping glow frames), hurt 11-12, down 13-15 (kneel, slump,
+  lying). Built by `tools/godot/gen_hero_actions.gd` from the walk-sheet drawings: a per-hero rig
+  erases the weapon and redraws arm (sleeve line from the shoulder) + weapon + hand per pose, so
+  changes to `gen_hero_sheets.gd` carry over (re-run both). Preview: `preview_hero_actions.gd` → GIF.
+  `Hero.play_action()` swaps to the action sheet and back; `Hero.ACTION_ANIMS` must match the columns.
+  Combat: melee = attack, ranged = shoot (Rogue) / cast (Mage, crossbow) / attack (throw), spells +
+  Second Wind = cast (held until the power resolves; Mage/Cleric spells leave from the raised gem /
+  holy symbol, `Hero.CAST_POINTS`), Shove = attack, Shield reaction = a short cast, hurt on damage,
+  down at 0 HP (stays lying, greyed; darker when dead).
 - Floor tiles **32×16** diamonds. Wall blocks 32 wide with **40 px** faces (texture 32×56). Lit face =
   lower-left (brightness 0.62), darker = lower-right (0.44).
 - Monsters e.g. Eye Tyrant 32×32 floating, offset (-16, -33). Sheet rows: idle(8), blink(6),
@@ -249,8 +262,8 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
 - **First milestone (after phases 0–3):** one user-built dungeon, 4 heroes, 2–3 monster types,
   Fireball + healing + melee working, playable start to finish.
 
-Biggest art job still ahead: all 4 heroes have 4 facings + idle/walk (see walk sheets in Art
-specs) but still need attack/cast/hurt/death animations. Monsters are real `Monster` actors spawned at `MonsterSpawn` markers
+All 4 heroes have 4 facings + idle/walk + attack/shoot/cast/hurt/down animations (walk and action
+sheets in Art specs). Possible later: drink-potion / use-item pose (Phase 4). Monsters are real `Monster` actors spawned at `MonsterSpawn` markers
 (scene `scenes/actors/monsters/<monster_id>.tscn` + stats `data/monsters/<monster_id>.tres`). Heroes are real `Hero` actors (`scenes/actors/hero.tscn`,
 `scripts/actors/actor.gd` + `hero.gd`), spawned by `DungeonMap` at the `PartyStart` marker.
 

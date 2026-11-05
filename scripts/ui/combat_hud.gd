@@ -209,7 +209,7 @@ func _build_panel(root: Control) -> void:
 		card.add_child(frame)
 		var pic := TextureRect.new()
 		var at := AtlasTexture.new()
-		at.atlas = h.sprite.texture
+		at.atlas = h.walk_texture() if h is Hero else h.sprite.texture
 		at.region = Rect2(0, 0, 16, 16)          # head and shoulders of the front idle frame
 		pic.texture = at
 		pic.position = Vector2(2, 2)

@@ -41,7 +41,7 @@ static func apply(h: Hero) -> void:
 	if h.dead:
 		h.on_died()
 	elif h.hp <= 0:
-		h._on_down()
+		h.restore_down()
 
 
 static func reset() -> void:
