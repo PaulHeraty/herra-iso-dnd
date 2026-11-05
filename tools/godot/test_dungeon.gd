@@ -107,10 +107,26 @@ func _run() -> void:
 	m.inventory.add_gold(25)
 	m.inventory.add("warhammer")
 	m.inventory.add("longsword")
-	for it in fighter.equip("main", "warhammer"):
-		m.inventory.add(it)
-	m.inventory.remove("warhammer")
-	_check(fighter.stats.attacks[0].name == "Warhammer" and m.inventory.count("longsword") == 2, "fighter swaps to the warhammer")
+	# the inventory screen: I opens it, equip / take off through it, Esc closes it
+	var key_i := InputEventKey.new()
+	key_i.keycode = KEY_I
+	key_i.pressed = true
+	Input.parse_input_event(key_i)
+	await _frames(3)
+	var inv := m.hud.inventory_screen
+	_check(inv.visible and m.hud.mouse_over_ui(), "I opens the inventory (and blocks the map)")
+	_check(inv.equip(fighter, "warhammer"), "fighter equips the warhammer from the screen")
+	_check(fighter.stats.attacks[0].name == "Warhammer" and m.inventory.count("longsword") == 2 and not m.inventory.has("warhammer"), "fighter swaps to the warhammer")
+	m.inventory.add("studded_leather")
+	_check(not inv.equip(m.party[3], "studded_leather") and m.inventory.has("studded_leather"), "the mage can't wear armour; it stays in the bag")
+	_check(inv.unequip(fighter, "ranged") and not fighter.equipment.has("ranged") and m.inventory.has("handaxe"), "take off the handaxe into the bag")
+	_check(inv.equip(fighter, "handaxe") and fighter.equipment.get("ranged") == "handaxe", "and put it back on")
+	var esc := InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.pressed = true
+	Input.parse_input_event(esc)
+	await _frames(3)
+	_check(not inv.visible, "Esc closes the inventory")
 	var killed := 0
 	for mo in m.monsters:
 		if mo.cell.x >= 26 and mo.cell.y >= 16:

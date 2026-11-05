@@ -298,3 +298,28 @@ func unequip(slot: String) -> String:
 	equipment.erase(slot)
 	refresh_stats()
 	return iid
+
+
+## Take `item_id` out of the party bag and put it on (in `slot`, or where it normally goes);
+## whatever it replaces goes back in the bag. Returns "" on success, else why it can't.
+func equip_from(bag: Inventory, item_id: String, slot := "") -> String:
+	var it := ItemData.get_item(item_id)
+	if it == null or not bag.has(item_id):
+		return "That isn't in the bag."
+	if slot == "":
+		slot = Equipment.default_slot(it, equipment)
+	var why := Equipment.cannot_equip(base_stats, it, slot)
+	if why != "":
+		return why
+	bag.remove(item_id)
+	for off: String in equip(slot, item_id):
+		bag.add(off)
+	return ""
+
+
+## Take off what's in `slot` and put it in the party bag. Returns the item id ("" if empty).
+func unequip_to(bag: Inventory, slot: String) -> String:
+	var iid := unequip(slot)
+	if iid != "":
+		bag.add(iid)
+	return iid

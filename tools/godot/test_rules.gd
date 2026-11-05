@@ -265,6 +265,46 @@ func _test_items() -> void:
 	check(Array(Equipment.displaced_by({main = "greatsword"}, I.call("shield"), "off")) == ["main"], "shield displaces a greatsword")
 	check(Equipment.default_slot(I.call("ring_protection"), {ring1 = "ring_protection"}) == "ring2", "second ring slot")
 	check(Equipment.starting(cb).has("off"), "Cleric starts with a shield")
+	var gs_eq := Equipment.with_item(eq, I.call("greatsword"), "main")
+	check(gs_eq.main == "greatsword" and not gs_eq.has("off") and eq.off == "shield", "with_item: greatsword drops the shield, original untouched")
+	# Icons: every item has its own picture; unknown kinds fall back to the kind's icon.
+	for iid in ids:
+		check(I.call(iid).icon_index() == ItemData.ICON_ORDER.find(iid), "%s has its own icon" % iid)
+	var odd := ItemData.new()
+	odd.kind = ItemData.Kind.KEY
+	check(odd.icon_index() == ItemData.ICON_ORDER.find("key"), "unknown key uses the key icon")
+	odd.id = "longsword_plus1"
+	odd.kind = ItemData.Kind.WEAPON
+	check(odd.icon_index() == ItemData.ICON_ORDER.find("longsword"), "+1 longsword uses the longsword icon")
+	# Equip from / take off to the bag.
+	var hf := _hero(Hero.HeroClass.FIGHTER)
+	hf.base_stats = fb
+	hf.equipment = Equipment.starting(fb)
+	hf.refresh_stats()
+	var bag := Inventory.new()
+	bag.add("greatsword")
+	check(hf.equip_from(bag, "greatsword") == "" and hf.equipment.main == "greatsword" and not hf.equipment.has("off"), "fighter takes the greatsword")
+	check(bag.has("longsword") and bag.has("shield") and not bag.has("greatsword"), "longsword + shield back in the bag")
+	check(hf.stats.armor_class == 16, "AC 16 without the shield (%d)" % hf.stats.armor_class)
+	check(hf.equip_from(bag, "plate_armor") != "", "can't equip what isn't in the bag")
+	check(hf.unequip_to(bag, "armor") == "chain_mail" and bag.has("chain_mail") and hf.stats.armor_class == 11, "chain mail off: AC 10 + DEX 1")
+	var hw := _hero(Hero.HeroClass.MAGE)
+	hw.base_stats = wb
+	hw.equipment = {}
+	hw.refresh_stats()
+	check(hw.equip_from(bag, "chain_mail") != "" and bag.has("chain_mail"), "mage refuses chain mail; it stays in the bag")
+	bag.add("ring_protection", 2)
+	check(hw.equip_from(bag, "ring_protection") == "" and hw.equip_from(bag, "ring_protection") == "", "two rings")
+	check(hw.equipment.has("ring1") and hw.equipment.has("ring2") and hw.stats.item_save_bonus == 2, "both ring slots, saves +2")
+	hf.free()
+	hw.free()
+	# Sorting the bag: weapons, armour, shields, rings, potions...
+	var sb := Inventory.new()
+	for iid in ["potion_healing", "shield", "ring_protection", "rapier", "chain_mail", "dagger"]:
+		sb.add(iid)
+	sb.sort()
+	var sorted_ids := sb.stacks.map(func(st): return st.id)
+	check(sorted_ids == ["dagger", "rapier", "chain_mail", "shield", "ring_protection", "potion_healing"], "sorted bag %s" % [sorted_ids])
 	# The bag: stacks, counts, gold, round trip.
 	var inv := Inventory.starting()
 	check(inv.count("potion_healing") == 3 and inv.stacks.size() == 1, "starting bag: 3 potions in one stack")

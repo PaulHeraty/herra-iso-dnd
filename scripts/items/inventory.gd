@@ -80,6 +80,17 @@ func key_for(key_id: String) -> String:
 	return ""
 
 
+## Tidy the bag: weapons, armour, shields, rings, potions, scrolls, keys, treasure; by name within.
+func sort() -> void:
+	var order := [ItemData.Kind.WEAPON, ItemData.Kind.ARMOR, ItemData.Kind.SHIELD, ItemData.Kind.RING,
+			ItemData.Kind.POTION, ItemData.Kind.SCROLL, ItemData.Kind.KEY, ItemData.Kind.TREASURE]
+	var key := func(st: Dictionary) -> String:
+		var it := ItemData.get_item(st.id)
+		return "%d %s" % [order.find(it.kind), it.display_name] if it else "9"
+	stacks.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return key.call(a) < key.call(b))
+	changed.emit()
+
+
 func add_gold(n: int) -> void:
 	gold += n
 	changed.emit()

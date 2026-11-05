@@ -74,6 +74,15 @@ static func displaced_by(eq: Dictionary, item: ItemData, slot: String) -> Array[
 	return out
 
 
+## The equipment after putting `item` in `slot` (what it displaces taken off).
+static func with_item(eq: Dictionary, item: ItemData, slot: String) -> Dictionary:
+	var out := eq.duplicate()
+	for s in displaced_by(eq, item, slot):
+		out.erase(s)
+	out[slot] = item.id
+	return out
+
+
 ## Starting equipment (base.starting_equipment item ids) as slot -> id.
 static func starting(base: CreatureStats) -> Dictionary:
 	var eq := {}

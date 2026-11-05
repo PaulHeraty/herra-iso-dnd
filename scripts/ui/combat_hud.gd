@@ -40,6 +40,7 @@ var _lines: PackedStringArray = []
 var _panel: Panel
 var _cards: Array[Dictionary] = []
 var _buttons := {}
+var inventory_screen: InventoryScreen
 
 
 func _ready() -> void:
@@ -77,6 +78,11 @@ func _ready() -> void:
 	combat.defeat.connect(_on_defeat)
 	_build_end_screen()
 	_build_rest_buttons()
+	inventory_screen = InventoryScreen.new()
+	inventory_screen.name = "Inventory"
+	inventory_screen.combat = combat
+	root.add_child(inventory_screen)
+	combat.combat_started.connect(inventory_screen.close)
 	# The party panel stays up while exploring too (HP, slots, conditions, rests).
 	visible = true
 	combat.map.camera_controller.ui_bottom = PANEL_H
@@ -86,6 +92,8 @@ func _ready() -> void:
 func mouse_over_ui() -> bool:
 	if not visible:
 		return false
+	if inventory_screen and inventory_screen.visible:
+		return true          # the whole map is off limits while the inventory is open
 	if _panel.get_global_rect().has_point(_panel.get_global_mouse_position()):
 		return true
 	return _popup.visible and _popup.get_global_rect().has_point(_popup.get_global_mouse_position())
@@ -593,6 +601,9 @@ func _open_weapons() -> void:
 func _on_card_input(event: InputEvent, h: Hero) -> void:
 	if not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
 		return
+	if inventory_screen.visible:
+		inventory_screen.select(h)
+		return
 	if combat.targeting:
 		if not combat.pick_target(h):
 			_hint.text = "%s can't be targeted with %s (out of range or already picked)." % [h.display_name(), combat.targeting.display_name]
@@ -608,6 +619,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			_answer(true)
 		elif event.keycode in [KEY_N, KEY_ESCAPE]:
 			_answer(false)
+		get_viewport().set_input_as_handled()
+		return
+	if _inventory_input(event):
 		get_viewport().set_input_as_handled()
 		return
 	if not _popup or not _popup.visible:
@@ -650,8 +664,29 @@ func _build_reaction(root: Control) -> void:
 	combat.reaction_prompt.connect(_on_reaction_prompt)
 
 
+## I opens / closes the inventory; Esc or a click on the map closes it. True = input used.
+func _inventory_input(event: InputEvent) -> bool:
+	if inventory_screen == null:
+		return false
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_I and (not combat.map.dice or not combat.map.dice.visible):
+			if not inventory_screen.visible and combat.targeting:
+				combat.cancel_targeting()
+			_close_popup()
+			inventory_screen.toggle()
+			return true
+		if event.keycode == KEY_ESCAPE and inventory_screen.visible:
+			inventory_screen.close()
+			return true
+	if inventory_screen.visible and event is InputEventMouseButton and event.pressed:
+		inventory_screen.close()
+		return true
+	return false
+
+
 func _on_reaction_prompt(text: String) -> void:
 	_close_popup()
+	inventory_screen.close()
 	_react_text.text = text
 	_react.visible = true
 	Sfx.play("ui_select")
@@ -731,7 +766,18 @@ func _build_rest_buttons() -> void:
 		b.mouse_entered.connect(func():
 			_hint.text = "Long rest: full HP, spell slots and abilities." if specs[i][1] else "Short rest: spend hit dice to heal; Second Wind comes back.")
 		_rest_buttons.append(b)
-	_gold = _label(_panel, Vector2(first.position.x + 2, 33), COL_GOLD)
+	var bag := Button.new()
+	bag.text = "Bag (I)"
+	bag.focus_mode = Control.FOCUS_NONE
+	bag.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	bag.clip_text = true
+	bag.position = Vector2(first.position.x, 31)
+	_panel.add_child(bag)
+	bag.set_deferred("size", Vector2(first.size.x, 13))
+	bag.pressed.connect(func(): inventory_screen.toggle())
+	bag.mouse_entered.connect(func(): _hint.text = "The party bag and everyone's equipment.")
+	_rest_buttons.append(bag)
+	_gold = _label(_panel, Vector2(first.position.x + 2, 46), COL_GOLD)
 
 
 func _rest(long: bool) -> void:

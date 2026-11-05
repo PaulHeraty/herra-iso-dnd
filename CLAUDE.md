@@ -69,6 +69,7 @@ assets/
   effects/    fireball_sheet.png (6×16px), explosion_sheet.png (7×32px)
   fonts/      herra_pixel.fnt/.png: our pixel font (use size 10; scale the Control 2x/3x for big text)
   sfx/        13 WAVs from the concept session (torch_ambience imports as a forward loop) + generated ones (gen_sfx.gd)
+  ui/         condition_icons.png (gen_icons.gd), item_icons.png (16x16 per item, columns = ItemData.ICON_ORDER; gen_item_art.gd)
 scenes/
   maps/       map_template.tscn (copy this for new maps), test_room.tscn, dungeon_1.tscn (main scene) + dungeon_2.tscn
   markers/    party_start, monster_spawn, chest, torch, door, trap, prop, brazier, stairs (.tscn)
@@ -92,7 +93,10 @@ scripts/
   combat/combat_manager.gd  CombatManager: LOS detection -> combat, initiative, turns, movement, attacks (d20 vs AC, crits, riders, resist), apply_damage (concentration saves, death saves,
                         massive damage), Shield reaction prompt, monster AI (expected-damage plan; groups that see the party join mid-fight) (DungeonMap.combat_reach: 1 sq per step incl. diagonals, pass allies, enemies block)
   ui/combat_hud.gd      CombatHud: mock-up combat UI (turn banner, hint, next turns, colour log; hero cards + action menu,
-                        Spell/Ability + weapon popups)
+                        Spell/Ability + weapon popups; exploration: rest buttons, Bag (I), gold)
+  ui/inventory_screen.gd  InventoryScreen (I / Bag button): bag grid, the shown hero's 6 slots + stats, description box
+                        with what equipping changes; click = equip / take off, drag to a slot, hero tab or the bag;
+                        read-only in combat. Hero.equip_from(bag, id) / unequip_to(bag, slot) do the moves.
   combat/targeting.gd   Targeting: area (NxN) / line / cone cells. CombatManager: menu_powers, begin_targeting,
                         resolve_power (generic: spell attack / save / auto darts+conditions / heal / contest)
   fx/                   FloatText (damage numbers), Projectile (arrow / beam), SpellFx (bolt, dart, column,
@@ -116,7 +120,7 @@ tools/
               gen_sfx.gd (SFX: hits, miss, bow, hurt, hiss, ray, crit, mm_zip, radiant, heal_chime, fire_impact, chest_open, coins)
               gen_font.gd (our HerraPixel bitmap font -> assets/fonts/herra_pixel.fnt + .png)
               gen_icons.gd (9x9 condition icons -> assets/ui/condition_icons.png; order = Condition.ICON_INDEX)
-              gen_item_art.gd (open chest; item icons in step 3)
+              gen_item_art.gd (open chest + item icons; weapons drawn along the diagonal from code)
               gen_dungeon_art.gd (stairs + props), gen_skeleton.gd (Skeleton sheet), build_dungeon.gd (the two
               dungeon floors from room/corridor lists; OVERWRITES them), test_dungeon.gd (doors, locks, stairs,
               state between floors: PASS/FAIL; run without --headless, HERRA_AUTO_REACT=1)
@@ -271,7 +275,8 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
      exploration only), loot box + "+N gold" + coins sound, gold shown in the party panel. Chests
      in both floors now hold items (storeroom chest locked DC 12). DONE.
   3. Inventory screen (I): bag grid with generated pixel icons, hero equipment slots, equip/unequip
-     (outside combat only), tooltips, training rules.
+     (outside combat only), tooltips, training rules. DONE (scripts/ui/inventory_screen.gd; click or
+     drag; hero tabs or the party cards pick the hero; Sort button; hover shows AC/attack/speed changes).
   4. Potions + the Item action in combat (drink, or feed an adjacent ally).
   5. Scrolls (cast from a scroll, class spell list check) + keys (locked doors / chests).
   6. Magic items (+1 weapons/armour, rings) + stocking both floors with loot.

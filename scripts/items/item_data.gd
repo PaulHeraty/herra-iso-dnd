@@ -38,7 +38,47 @@ const DIR := "res://data/items/"
 @export var spell: SpellData            ## scroll: the spell it casts
 @export var key_id := ""                ## key: opens doors/chests with this key_id
 
+## Columns of assets/ui/item_icons.png (tools/godot/gen_item_art.gd draws them in this order).
+## Items find theirs by id ("_plus1" magic versions share the plain one), else by kind.
+const ICON_ORDER := [
+	"dagger", "mace", "quarterstaff", "shortsword", "longsword", "rapier", "warhammer",
+	"greatsword", "handaxe", "light_crossbow", "shortbow", "longbow",
+	"leather_armor", "studded_leather", "chain_shirt", "scale_mail", "chain_mail", "plate_armor",
+	"shield", "potion_healing", "potion_greater_healing", "ring_protection", "ring",
+	"scroll", "key", "gem", "gold",
+]
+const KIND_ICON := {
+	Kind.WEAPON: "longsword", Kind.ARMOR: "leather_armor", Kind.SHIELD: "shield",
+	Kind.POTION: "potion_healing", Kind.SCROLL: "scroll", Kind.KEY: "key", Kind.RING: "ring",
+	Kind.TREASURE: "gem",
+}
+const ICON_SIZE := 16
+const ICONS_PATH := "res://assets/ui/item_icons.png"
+
 static var _cache := {}
+static var _icons: Texture2D
+
+
+## Column of this item's picture in the icon sheet.
+func icon_index() -> int:
+	if icon >= 0:
+		return icon
+	var i := ICON_ORDER.find(id.trim_suffix("_plus1"))
+	return i if i >= 0 else ICON_ORDER.find(KIND_ICON.get(kind, "gem"))
+
+
+## A 16x16 texture of the icon (a fresh AtlasTexture on the icon sheet).
+func icon_texture() -> AtlasTexture:
+	return icon_texture_at(icon_index())
+
+
+static func icon_texture_at(index: int) -> AtlasTexture:
+	if _icons == null:
+		_icons = load(ICONS_PATH)
+	var at := AtlasTexture.new()
+	at.atlas = _icons
+	at.region = Rect2(index * ICON_SIZE, 0, ICON_SIZE, ICON_SIZE)
+	return at
 
 
 ## The item with this id (cached), or null.
