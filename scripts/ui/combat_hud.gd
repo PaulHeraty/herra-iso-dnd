@@ -29,6 +29,7 @@ const COL_LOG_CRIT := Color8(255, 220, 90)
 const COL_LOG_BAD := Color8(240, 110, 100)
 const COL_LOG_GOOD := Color8(140, 220, 130)
 const COL_LOG_MAGIC := Color8(214, 120, 230)
+const COL_GOLD := Color8(255, 215, 90)
 
 var combat: CombatManager
 var _banner: Label
@@ -93,6 +94,10 @@ func mouse_over_ui() -> bool:
 func _process(_delta: float) -> void:
 	if not visible or combat == null:
 		return
+	if _loot:
+		_loot_t -= _delta
+		if _loot_t <= 0.0:
+			_close_loot()
 	var cur := combat.current
 	if _announce_t > 0.0:
 		if combat.map.dice == null or not combat.map.dice.visible:   # hold it through the dice scene
@@ -111,6 +116,8 @@ func _process(_delta: float) -> void:
 		b.visible = fighting
 	for b: Button in _rest_buttons:
 		b.visible = not fighting
+	_gold.visible = not fighting
+	_gold.text = "Gold  %d" % combat.map.inventory.gold if combat.map.inventory else ""
 	if not fighting:
 		_banner.text = ""
 		_next.text = ""
@@ -705,6 +712,7 @@ func flash_hint(text: String) -> void:
 # --- rests (exploration) -----------------------------------------------------------------------
 
 var _rest_buttons: Array[Button] = []
+var _gold: Label
 
 
 func _build_rest_buttons() -> void:
@@ -723,6 +731,7 @@ func _build_rest_buttons() -> void:
 		b.mouse_entered.connect(func():
 			_hint.text = "Long rest: full HP, spell slots and abilities." if specs[i][1] else "Short rest: spend hit dice to heal; Second Wind comes back.")
 		_rest_buttons.append(b)
+	_gold = _label(_panel, Vector2(first.position.x + 2, 33), COL_GOLD)
 
 
 func _rest(long: bool) -> void:
@@ -757,3 +766,63 @@ func _rest(long: bool) -> void:
 		if not h.dead:
 			SpellFx.sparkles(combat.map, h.body_position(), Color8(150, 235, 140), false)
 	_hint.text = "%s rest done." % ("Long" if long else "Short")
+
+
+# --- loot (chests) -----------------------------------------------------------------------------
+
+const LOOT_W := 210
+const LOOT_TIME := 7.0               ## the box closes by itself after this long
+
+var _loot: Panel
+var _loot_t := 0.0
+
+
+## Show what was found in a chest: gold + [{id, count}]. Closes on the next click / key, or by
+## itself after a few seconds. (Everything is already in the bag.)
+func show_loot(gold: int, found: Array[Dictionary]) -> void:
+	if _loot:
+		_loot.queue_free()
+	_loot = Panel.new()
+	_loot.add_theme_stylebox_override("panel", _box(COL_BG, COL_GOLD.darkened(0.35)))
+	_loot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_panel.get_parent().add_child(_loot)
+	var title := _label(_loot, Vector2(6, 3), COL_GOLD)
+	title.text = "TREASURE"
+	var y := 16.0
+	if gold > 0:
+		var g := _label(_loot, Vector2(8, y), COL_GOLD)
+		g.text = "%d gold" % gold
+		y += 11
+	for f in found:
+		var it := ItemData.get_item(f.id)
+		var l := _label(_loot, Vector2(8, y), COL_TEXT)
+		l.text = it.display_name + ("  x%d" % f.count if f.count > 1 else "")
+		var s := it.summary()
+		y += 11
+		if s != "":
+			var d := _label(_loot, Vector2(16, y), COL_DIM)
+			d.text = s
+			y += 11
+	var hint := _label(_loot, Vector2(6, y + 2), COL_DIM)
+	hint.text = "Added to the party bag."
+	_loot.size = Vector2(LOOT_W, y + 16)
+	_loot.position = Vector2(roundf((SCREEN.x - LOOT_W) / 2.0), 60)
+	_loot_t = LOOT_TIME
+	_loot.modulate.a = 0.0
+	create_tween().tween_property(_loot, "modulate:a", 1.0, 0.15)
+
+
+func _close_loot() -> void:
+	if _loot:
+		_loot.queue_free()
+		_loot = null
+
+
+func loot_open() -> bool:
+	return _loot != null
+
+
+func _input(event: InputEvent) -> void:
+	# Any click or key closes the loot box (the click still does its normal job).
+	if _loot and ((event is InputEventMouseButton and event.pressed) or (event is InputEventKey and event.pressed)):
+		_close_loot.call_deferred()

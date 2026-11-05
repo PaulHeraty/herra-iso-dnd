@@ -274,6 +274,9 @@ kind = 5
 position = Vector2(272, 184)
 script = ExtResource("17_rckdc")
 gold = 40
+locked = true
+lock_dc = 12
+items = Array[String](["potion_healing", "potion_healing"])
 
 [node name="Torch_D_15_13" type="Node2D" parent="World/Entities" unique_id=757145909 instance=ExtResource("5_i3ud7")]
 position = Vector2(40, 236)
@@ -341,6 +344,7 @@ script = ExtResource("10_hek14")
 position = Vector2(80, 264)
 script = ExtResource("17_rckdc")
 gold = 120
+items = Array[String](["warhammer", "studded_leather"])
 
 [node name="Skeleton_D_4_1" type="Node2D" parent="World/Entities" unique_id=371078423 instance=ExtResource("13_twxlm")]
 position = Vector2(64, 272)

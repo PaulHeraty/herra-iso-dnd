@@ -31,6 +31,8 @@ func _init() -> void:
 	_save("stairs", _stairs())
 	_save("bone_rattle", _bone_rattle())
 	_save("bone_collapse", _bone_collapse())
+	_save("chest_open", _chest_open())
+	_save("coins", _coins())
 	quit()
 
 
@@ -406,6 +408,42 @@ func _bone_collapse() -> PackedFloat32Array:
 
 
 # --- output -----------------------------------------------------------------------------------
+
+## Chest lid: a short low hinge creak, then the lid knocks back against the chest.
+func _chest_open() -> PackedFloat32Array:
+	var n := _n(0.3)
+	var creak := PackedFloat32Array()
+	creak.resize(n)
+	var ph := 0.0
+	for i in n:
+		var t := float(i) / n
+		var f := 140.0 + 160.0 * t + 30.0 * sin(t * 41.0)
+		ph += f / RATE
+		creak[i] = (1.0 if fmod(ph, 1.0) < 0.2 else -0.25) * sin(PI * t)
+	creak = _lowpass(creak, 1800.0, 1200.0)
+	var tn := _n(0.18)
+	var knock := _mix(_mul(_sine(tn, 150.0, 70.0), _env(tn, 0.002, 4.0)),
+			_mul(_lowpass(_noise(tn), 700.0), _env(tn, 0.001, 5.0)), 0.7)
+	return _mix(creak, knock, 1.3, _n(0.26))
+
+
+## Coins: a handful of small metallic pings (inharmonic partials), tumbling and fading.
+func _coins() -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(_n(0.7))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4242
+	var t := 0.0
+	for k in 9:
+		var m := _n(0.16)
+		var f := rng.randf_range(2300.0, 3600.0)
+		var ping := _mix(_sine(m, f, f), _sine(m, f * 2.76, f * 2.76), 0.45)
+		ping = _mix(ping, _sine(m, f * 5.4, f * 5.4), 0.2)
+		ping = _mul(ping, _env(m, 0.001, 6.0))
+		out = _mix(out, ping, 0.75 - k * 0.06, _n(t))
+		t += rng.randf_range(0.025, 0.07)
+	return out
+
 
 func _save(name: String, x: PackedFloat32Array, peak := 0.85) -> void:
 	var m := 0.0001

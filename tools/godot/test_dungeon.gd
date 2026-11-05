@@ -75,13 +75,35 @@ func _run() -> void:
 	var path := m.controller.door_path(storeroom)
 	_check(not path.is_empty() and path[-1] in storeroom.sides(), "door_path ends beside the door")
 
+	# --- the storeroom chest: locked (DC 12), walk up, pick it, loot goes in the bag ---
+	m.try_open_door(storeroom, m.party)
+	var chest := m.chest_at(Vector2i(19, 3))
+	_check(chest != null and chest.locked and not chest.opened, "storeroom chest is closed and locked")
+	var cpath := m.controller.approach_path(chest.sides())
+	_check(not cpath.is_empty() and cpath[-1] in chest.sides(), "approach_path ends beside the chest")
+	for i in m.party.size():
+		m.party[i].place_at(cpath[-1] if i == 0 else Vector2i(16, 4 + i))
+	m.update_fog()
+	_check(m.closed_chest_under(chest.position + Vector2(0, -6)) == chest, "clicking the chest sprite finds it")
+	var ctries := 0
+	while not chest.opened and ctries < 30:
+		m.try_open_chest(chest, m.party)
+		ctries += 1
+	_check(chest.opened and not chest.locked, "chest lock picked after %d tries" % ctries)
+	_check(chest.get_node("Sprite").texture == Chest.OPEN_TEX, "open chest sprite")
+	_check(m.inventory.gold == 40 and m.inventory.count("potion_healing") == 5, "chest loot in the bag (gold %d, potions %d)" % [m.inventory.gold, m.inventory.count("potion_healing")])
+	_check(m.hud.loot_open(), "loot box shown")
+	m.try_open_chest(chest, m.party)
+	_check(m.inventory.gold == 40, "an opened chest gives nothing twice")
+	_check(m.closed_chest_under(chest.position) == null, "opened chest no longer clickable")
+
 	# --- damage a hero, kill the stair guards, take the stairs down ---
 	var fighter := m.party[0]
 	fighter.hp = 20
 	m.party[3].slots_left[0] = 1
 	# items: party AC/attacks from the kit; change the bag and an equipment slot before the stairs
 	_check(fighter.stats.armor_class == 18 and fighter.stats.attacks[0].name == "Longsword", "fighter fights with the kit (AC %d)" % fighter.stats.armor_class)
-	_check(m.inventory.count("potion_healing") == 3, "party starts with 3 potions")
+	_check(m.inventory.count("potion_healing") == 5, "3 starting potions + 2 from the chest")
 	m.inventory.add_gold(25)
 	m.inventory.add("warhammer")
 	m.inventory.add("longsword")
@@ -108,7 +130,7 @@ func _run() -> void:
 	_check(m.party[0].cell == Vector2i(4, 4), "party at the from_above entry (%s)" % m.party[0].cell)
 	_check(m.party[0].hp == 20, "fighter's HP carried over (%d)" % m.party[0].hp)
 	_check(m.party[3].slots_left[0] == 1, "mage's spent slots carried over")
-	_check(m.inventory.gold == 25 and m.inventory.count("longsword") == 2 and m.inventory.count("potion_healing") == 3, "bag carried over")
+	_check(m.inventory.gold == 65 and m.inventory.count("longsword") == 2 and m.inventory.count("potion_healing") == 5, "bag carried over")
 	_check(m.party[0].stats.attacks[0].name == "Warhammer" and m.party[0].stats.armor_class == 18, "equipment carried over")
 
 	# --- back up: floor 1 remembers its doors and dead monsters ---
@@ -126,6 +148,7 @@ func _run() -> void:
 		if mo.cell.x >= 26 and mo.cell.y >= 16:
 			guards += 1
 	_check(guards == 0, "killed stair guards stay dead")
+	_check(m.chest_at(Vector2i(19, 3)).opened, "opened chest stays open")
 	_check(m.is_explored(Vector2i(5, 5)) and not m.is_seen(Vector2i(5, 5)), "fog: guard room remembered (dimmed) on return")
 	_check(m.monsters.size() == 8, "the other monsters are still there (%d)" % m.monsters.size())
 	print("test_dungeon: %s (%d failed)" % ["ALL PASS" if fails == 0 else "FAILURES", fails])

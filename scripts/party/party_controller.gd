@@ -22,6 +22,8 @@ var party: Array[Hero] = []
 var _path: Array[Vector2i] = []
 ## Door to open when the leader gets there (clicked a closed door).
 var _door_goal: Door
+## Chest to open when the leader gets there (clicked a closed chest).
+var _chest_goal: Chest
 var _walking := false
 var _hover := Vector2i(-99999, -99999)
 ## False while combat runs (CombatManager takes over input).
@@ -61,10 +63,23 @@ func _unhandled_input(event: InputEvent) -> void:
 		if map.hud and map.hud.mouse_over_ui():
 			return
 		var mouse := map.get_local_mouse_position()
-		var door := map.closed_door_under(mouse)
+		var chest := map.closed_chest_under(mouse)
+		var door: Door = null if chest else map.closed_door_under(mouse)
 		var target := IsoGrid.world_to_cell(mouse)
 		_door_goal = null
-		if door:
+		_chest_goal = null
+		if chest:
+			var cp := approach_path(chest.sides())
+			if cp.is_empty():
+				get_viewport().set_input_as_handled()
+				return
+			_chest_goal = chest
+			target = cp[-1]
+			if target == party[0].cell:
+				get_viewport().set_input_as_handled()
+				_arrived()
+				return
+		elif door:
 			var dp := door_path(door)
 			if dp.is_empty():
 				get_viewport().set_input_as_handled()
@@ -117,10 +132,18 @@ func _walk() -> void:
 
 
 
-## The leader has stopped: open the door it walked to, or take the stairs it stands on.
+## The leader has stopped: open the door or chest it walked to, or take the stairs it stands on.
 func _arrived() -> void:
 	if not enabled:            # combat started on the way
 		_door_goal = null
+		_chest_goal = null
+		return
+	var chest := _chest_goal
+	_chest_goal = null
+	if chest and not chest.opened and party[0].cell in chest.sides():
+		party[0].facing = chest.get_cell() - party[0].cell
+		map.try_open_chest(chest, party)
+		_refresh_overlay()
 		return
 	var door := _door_goal
 	_door_goal = null
@@ -139,8 +162,14 @@ func _arrived() -> void:
 ## Path (leader cell first) to the nearer side of a closed door, or [] if neither side can be
 ## reached. Already standing on a side = just that cell.
 func door_path(door: Door) -> Array[Vector2i]:
+	return approach_path(door.sides())
+
+
+## Shortest path (leader cell first) to any of `cells`, or [] if none can be reached. Already
+## standing on one = just that cell.
+func approach_path(cells: Array[Vector2i]) -> Array[Vector2i]:
 	var best: Array[Vector2i] = []
-	for s in door.sides():
+	for s in cells:
 		if s == party[0].cell:
 			return [s]
 		var p := map.find_path(party[0].cell, s)
@@ -152,6 +181,17 @@ func _refresh_overlay() -> void:
 	if not enabled:
 		return
 	var preview: Array[Vector2i] = []
+	var chest: Chest = null if _walking else map.closed_chest_under(map.get_local_mouse_position())
+	if chest and not (map.hud and map.hud.mouse_over_ui()):
+		preview = approach_path(chest.sides())
+		if not preview.is_empty():
+			preview.remove_at(0)
+		overlay.set_cells("path", preview, COL_PATH, 0.12, 0.35, true)
+		overlay.clear("destination")
+		overlay.set_cells("cursor", [chest.get_cell()], COL_CURSOR if not chest.locked else COL_LOCKED, 0.15, 0.7, true)
+		if map.hud:
+			map.hud.flash_hint("Chest (locked): click to try the lock." if chest.locked else "Chest: click to open.")
+		return
 	var door: Door = null if _walking else map.closed_door_under(map.get_local_mouse_position())
 	if door and not (map.hud and map.hud.mouse_over_ui()):
 		preview = door_path(door)

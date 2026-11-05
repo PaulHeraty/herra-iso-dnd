@@ -187,6 +187,7 @@ kind = 3
 position = Vector2(240, 152)
 script = ExtResource("16_gju4c")
 gold = 60
+items = Array[String](["potion_greater_healing"])
 
 [node name="Skeleton_H_3_1" type="Node2D" parent="World/Entities" unique_id=1364104364 instance=ExtResource("17_gs07n")]
 position = Vector2(192, 144)
@@ -367,6 +368,7 @@ script = ExtResource("10_0fhl8")
 position = Vector2(96, 384)
 script = ExtResource("16_gju4c")
 gold = 300
+items = Array[String](["ring_protection", "potion_greater_healing"])
 
 [node name="EyeTyrant_J_6_5" type="Node2D" parent="World/Entities" unique_id=621797288 instance=ExtResource("17_gs07n")]
 position = Vector2(80, 328)

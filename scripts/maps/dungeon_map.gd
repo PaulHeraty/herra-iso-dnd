@@ -381,21 +381,34 @@ func closed_door_under(pos: Vector2) -> Door:
 	return null
 
 
-## Try to open a door: unlocked doors just open; locked ones are picked by the Rogue (thieves'
-## tools: DEX + expertise vs lock_dc) or, failing that, forced by the strongest hero (Athletics vs
-## lock_dc + 2). Each try is one roll; the player can try again. Logs what happens. Returns true
-## if the door is now open.
+## Try to open a door: unlocked doors just open; locked ones need a key or a roll (_try_lock).
+## Returns true if the door is now open.
 func try_open_door(door: Door, by: Array[Hero]) -> bool:
 	if door.is_open:
 		return true
-	if not door.locked:
-		door.open()
-		return true
+	if door.locked and not _try_lock(door, "door", by):
+		return false
+	door.open()
+	return true
+
+
+## A locked door or chest (`thing` has locked, lock_dc, key_id): the matching key from the bag
+## opens it; else the Rogue picks it (thieves' tools: DEX + expertise vs lock_dc) or, failing that,
+## the strongest hero forces it (Athletics vs lock_dc + 2). Each try is one roll; the player can
+## try again. key_id with lock_dc 0 = only the key. Logs what happens. True = unlocked.
+func _try_lock(thing: Node, what: String, by: Array[Hero]) -> bool:
 	var able := by.filter(func(h: Hero): return h.is_alive())
 	if able.is_empty():
 		return false
-	if door.key_id != "" and door.lock_dc <= 0:
-		combat._say("The door is locked. It needs a key.")
+	var key := inventory.key_for(thing.key_id) if inventory else ""
+	if key != "":
+		combat._say("%s unlocks the %s with the %s." % [able[0].display_name(), what,
+				ItemData.get_item(key).display_name])
+		Sfx.play("lock_click")
+		thing.locked = false
+		return true
+	if thing.key_id != "" and thing.lock_dc <= 0:
+		combat._say("The %s is locked. It needs a key." % what)
 		Sfx.play("door_locked")
 		return false
 	var rogue: Hero = null
@@ -407,18 +420,85 @@ func try_open_door(door: Door, by: Array[Hero]) -> bool:
 			strong = h
 	var who := rogue if rogue else strong
 	var skill := "thieves_tools" if rogue else "athletics"
-	var dc := door.lock_dc if rogue else door.lock_dc + 2
+	var dc: int = thing.lock_dc if rogue else thing.lock_dc + 2
 	var r := Dice.d20(who.stats.skill_bonus(skill))
 	if r.total >= dc:
 		combat._say("%s %s the lock (%s vs DC %d)" % [who.display_name(),
 				"picks" if rogue else "forces", r.describe(), dc])
 		Sfx.play("lock_click" if rogue else "hit_blunt")
-		door.open()
+		thing.locked = false
 		return true
 	combat._say("%s fails to %s the lock (%s vs DC %d)" % [who.display_name(),
 			"pick" if rogue else "force", r.describe(), dc])
 	Sfx.play("door_locked")
 	return false
+
+
+## The chest on a (map) cell, or null.
+func chest_at(cell: Vector2i) -> Chest:
+	for n in entities.get_children():
+		if n is Chest and n.get_cell() == cell:
+			return n
+	return null
+
+
+## An unopened, explored chest under a world point (its cell or its sprite), or null.
+func closed_chest_under(pos: Vector2) -> Chest:
+	var c := chest_at(IsoGrid.world_to_cell(pos))
+	if c and not c.opened and is_explored(c.get_cell()):
+		return c
+	for n in entities.get_children():
+		if n is Chest and not n.opened and is_explored(n.get_cell()) and n.sprite_rect().has_point(pos):
+			return n
+	return null
+
+
+## Open a chest (locks as for doors) and put what's inside into the party bag. Exploration only.
+## Returns true if it is now open.
+func try_open_chest(chest: Chest, by: Array[Hero]) -> bool:
+	if chest.opened:
+		return true
+	if combat.in_combat:
+		combat._say("No time for that now!")
+		return false
+	if chest.locked and not _try_lock(chest, "chest", by):
+		return false
+	chest.open()
+	_loot(chest)
+	return true
+
+
+func _loot(chest: Chest) -> void:
+	var found: Array[Dictionary] = []          # [{id, count}] for the HUD
+	var counts := {}
+	for iid in chest.items:
+		if ItemData.get_item(iid) == null:
+			continue
+		if not counts.has(iid):
+			found.append({id = iid, count = 0})
+		counts[iid] = counts.get(iid, 0) + 1
+	for f in found:
+		f.count = counts[f.id]
+		inventory.add(f.id, f.count)
+	if chest.gold > 0:
+		inventory.add_gold(chest.gold)
+	var parts: Array[String] = []
+	if chest.gold > 0:
+		parts.append("%d gold" % chest.gold)
+	for f in found:
+		var nm := ItemData.get_item(f.id).display_name
+		parts.append(nm if f.count == 1 else "%d x %s" % [f.count, nm])
+	if parts.is_empty():
+		combat._say("The chest is empty.")
+		return
+	combat._say("Found " + ", ".join(parts) + ".")
+	var top := chest.position + Vector2(0, -14)
+	if chest.gold > 0:
+		get_tree().create_timer(0.2).timeout.connect(func(): Sfx.play("coins"))
+		FloatText.spawn(self, top, "+%d gold" % chest.gold, Color8(255, 215, 90))
+	SpellFx.sparkles(self, top + Vector2(0, 6), Color8(255, 220, 120), false)
+	if hud:
+		hud.show_loot(chest.gold, found)
 
 
 func _on_door_opened() -> void:

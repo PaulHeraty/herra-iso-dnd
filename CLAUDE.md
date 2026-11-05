@@ -65,7 +65,7 @@ doesn't supply.
 ```
 assets/
   tiles/      floor_atlas.png, wall_atlas.png, dungeon_tileset.tres   (generated)
-  sprites/    heroes/ (walk sheets 16×24, action sheets 32×32), monsters/ (Eye Tyrant), props/ (chest, bones, torch_sheet, web, stairs_up/down, barrel, crate, sarcophagus, rubble, cocoon, urn, brazier)
+  sprites/    heroes/ (walk sheets 16×24, action sheets 32×32), monsters/ (Eye Tyrant), props/ (chest, chest_open, bones, torch_sheet, web, stairs_up/down, barrel, crate, sarcophagus, rubble, cocoon, urn, brazier)
   effects/    fireball_sheet.png (6×16px), explosion_sheet.png (7×32px)
   fonts/      herra_pixel.fnt/.png: our pixel font (use size 10; scale the Control 2x/3x for big text)
   sfx/        13 WAVs from the concept session (torch_ambience imports as a forward loop) + generated ones (gen_sfx.gd)
@@ -113,9 +113,10 @@ tools/
               build_items.gd (items -> data/items/; hero kits in build_data.gd refer to these ids)
               build_data.gd (stat blocks -> data/), test_rules.gd (headless rules tests: PASS/FAIL)
               gen_spider.gd (procedural Giant Spider sheet: 3D-ish model projected to iso)
-              gen_sfx.gd (SFX: hits, miss, bow, hurt, hiss, ray, crit, mm_zip, radiant, heal_chime, fire_impact)
+              gen_sfx.gd (SFX: hits, miss, bow, hurt, hiss, ray, crit, mm_zip, radiant, heal_chime, fire_impact, chest_open, coins)
               gen_font.gd (our HerraPixel bitmap font -> assets/fonts/herra_pixel.fnt + .png)
               gen_icons.gd (9x9 condition icons -> assets/ui/condition_icons.png; order = Condition.ICON_INDEX)
+              gen_item_art.gd (open chest; item icons in step 3)
               gen_dungeon_art.gd (stairs + props), gen_skeleton.gd (Skeleton sheet), build_dungeon.gd (the two
               dungeon floors from room/corridor lists; OVERWRITES them), test_dungeon.gd (doors, locks, stairs,
               state between floors: PASS/FAIL; run without --headless, HERRA_AUTO_REACT=1)
@@ -266,7 +267,9 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
      potions, Ring of Protection), Inventory (bag), Equipment (base stat block + kit -> AC, attacks,
      save bonus, speed; SRD class training: no armour for the Mage, light only for the Rogue...),
      carried over the stairs (PartyState), tests. DONE.
-  2. Chests: open sprite, walk up + open (locked: pick / force like doors), loot popup, gold.
+  2. Chests: open sprite, walk up + open (locked: key from the bag, else pick / force like doors;
+     exploration only), loot box + "+N gold" + coins sound, gold shown in the party panel. Chests
+     in both floors now hold items (storeroom chest locked DC 12). DONE.
   3. Inventory screen (I): bag grid with generated pixel icons, hero equipment slots, equip/unequip
      (outside combat only), tooltips, training rules.
   4. Potions + the Item action in combat (drink, or feed an adjacent ally).

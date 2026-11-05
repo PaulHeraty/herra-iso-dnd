@@ -28,7 +28,7 @@ const PROPS := {
 
 # --- the two floors -------------------------------------------------------------------------------
 # rooms: name -> {rect, monsters [[kind, cell, facing]], props [[kind, cell, (along_y)]],
-#                 chests [[cell, gold]], braziers [cells], bones [cells], web (bool), torches (step)}
+#                 chests [[cell, gold, (items), (lock_dc: 0 = unlocked)]], braziers [cells], bones [cells], web (bool), torches (step)}
 # corridors: [Rect2i] ; doors: [[cell, locked, dc]] ; arches: doorway cells without a door
 
 const F = PartyStart.Facing
@@ -50,7 +50,7 @@ var FLOOR_1 := {
 		"C": {"rect": Rect2i(14, 3, 7, 5),
 			"props": [["crate", Vector2i(0, 0)], ["crate", Vector2i(1, 0)], ["barrel", Vector2i(6, 0)],
 				["barrel", Vector2i(6, 4)], ["crate", Vector2i(0, 4)], ["urn", Vector2i(3, 0)]],
-			"chests": [[Vector2i(5, 0), 40]]},
+			"chests": [[Vector2i(5, 0), 40, ["potion_healing", "potion_healing"], 12]]},
 		# D: the crypt - locked; sarcophagi, skeletons and the floor's treasure
 		"D": {"rect": Rect2i(14, 14, 9, 9), "web": true,
 			"props": [["sarcophagus", Vector2i(2, 2)], ["sarcophagus", Vector2i(6, 2)],
@@ -58,7 +58,7 @@ var FLOOR_1 := {
 				["urn", Vector2i(8, 0)]],
 			"monsters": [["k", Vector2i(4, 1), F.SOUTH_WEST], ["k", Vector2i(4, 4), F.NORTH_WEST],
 				["k", Vector2i(4, 7), F.NORTH_WEST]],
-			"chests": [[Vector2i(4, 0), 120]], "braziers": [Vector2i(0, 8)]},
+			"chests": [[Vector2i(4, 0), 120, ["warhammer", "studded_leather"]]], "braziers": [Vector2i(0, 8)]},
 		# E: webbed hall - giant spiders among the cocooned dead
 		"E": {"rect": Rect2i(25, 2, 10, 10), "web": true,
 			"monsters": [["S", Vector2i(6, 2), F.SOUTH_WEST], ["S", Vector2i(3, 6), F.SOUTH_WEST]],
@@ -99,7 +99,7 @@ var FLOOR_2 := {
 			"props": [["sarcophagus", Vector2i(1, 6)], ["urn", Vector2i(0, 0)], ["urn", Vector2i(9, 0)],
 				["urn", Vector2i(9, 3)], ["rubble", Vector2i(3, 6)]],
 			"bones": [Vector2i(2, 3), Vector2i(6, 2), Vector2i(4, 5), Vector2i(7, 7)],
-			"chests": [[Vector2i(5, 0), 60]]},
+			"chests": [[Vector2i(5, 0), 60, ["potion_greater_healing"]]]},
 		# I: the nest - spiders and cocoons
 		"I": {"rect": Rect2i(2, 12, 11, 9), "web": true,
 			"monsters": [["S", Vector2i(4, 3), F.NORTH_EAST], ["S", Vector2i(8, 5), F.NORTH_WEST],
@@ -113,7 +113,7 @@ var FLOOR_2 := {
 			"monsters": [["E", Vector2i(6, 5), F.NORTH_WEST], ["k", Vector2i(2, 4), F.NORTH_WEST],
 				["k", Vector2i(9, 4), F.NORTH_WEST]],
 			"braziers": [Vector2i(0, 0), Vector2i(11, 0), Vector2i(0, 9), Vector2i(11, 9)],
-			"chests": [[Vector2i(10, 8), 300]], "props": [["urn", Vector2i(11, 4)]],
+			"chests": [[Vector2i(10, 8), 300, ["ring_protection", "potion_greater_healing"]]], "props": [["urn", Vector2i(11, 4)]],
 			"bones": [Vector2i(5, 8), Vector2i(7, 1)]},
 	},
 	"corridors": [
@@ -238,6 +238,11 @@ func _build(d: Dictionary, root_name: String, path: String) -> bool:
 		for ch in room.get("chests", []):
 			var chest := _inst("chest", entities, root, o + ch[0], "Chest_" + rn)
 			chest.gold = ch[1]
+			if ch.size() > 2:
+				chest.items.assign(ch[2])
+			if ch.size() > 3 and ch[3] > 0:
+				chest.locked = true
+				chest.lock_dc = ch[3]
 		var any_monster := false
 		for m in room.get("monsters", []):
 			var id: String = MONSTERS[m[0]]
