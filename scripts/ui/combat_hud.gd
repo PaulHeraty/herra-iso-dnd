@@ -4,7 +4,7 @@ extends CanvasLayer
 ##   top-left   "X'S TURN" (2x), a hint line, the next turns in order
 ##   top-right  combat log (colour-coded, wraps in a fixed column, newest at the bottom)
 ##   bottom     4 hero cards (portrait, name, HP, HP bar, spell-slot pips; active one framed in
-##              yellow) + action menu Attack / Spell / Item / Wait (Spell + Item: Phases 3-4)
+##              yellow) + action menu Attack / Spell / Item / Wait
 ## Shown only during combat. Reads state from the CombatManager every frame.
 
 const FONT := preload("res://assets/fonts/herra_pixel.fnt")
@@ -132,13 +132,14 @@ func _process(_delta: float) -> void:
 		return
 	var hero_turn := cur is Hero and not combat.moving
 	var busy := combat.targeting != null
-	_set_button(_buttons.attack, hero_turn and combat.attacks_left > 0, hero_turn and combat.attacks_left > 0 and not busy and _popup_kind != "spell")
+	var item_busy := CombatManager.is_item_power(combat.targeting)
+	_set_button(_buttons.attack, hero_turn and combat.attacks_left > 0, hero_turn and combat.attacks_left > 0 and not busy and not _popup_kind in ["spell", "item"])
 	if cur:
 		_buttons.spell.text = _buttons.spell.text.replace("Spell", "Ability") if cur.stats.spell_ability == "" else _buttons.spell.text.replace("Ability", "Spell")
-	_set_button(_buttons.spell, hero_turn and not cur.stats.powers.is_empty(), hero_turn and (busy or _popup_kind == "spell"))
+	_set_button(_buttons.spell, hero_turn and not cur.stats.powers.is_empty(), hero_turn and ((busy and not item_busy) or _popup_kind == "spell"))
 	if not hero_turn and _popup.visible:
 		_close_popup()
-	_set_button(_buttons.item, false, false)
+	_set_button(_buttons.item, hero_turn and _has_potions(), hero_turn and (item_busy or _popup_kind == "item"))
 	_set_button(_buttons.wait, hero_turn, false)
 
 
@@ -308,9 +309,9 @@ func _build_panel(root: Control) -> void:
 	_buttons.wait.pressed.connect(func(): if combat.current is Hero and not combat.moving: combat.end_turn())
 	_buttons.attack.pressed.connect(_open_weapons)
 	_buttons.spell.pressed.connect(_open_powers)
+	_buttons.item.pressed.connect(_open_items)
 	_build_popup(root)
 	_build_reaction(root)
-	_buttons.item.tooltip_text = "Items arrive in Phase 4"
 
 
 # --- updating --------------------------------------------------------------------------------
@@ -574,6 +575,36 @@ func _open_powers() -> void:
 	if rows.is_empty():
 		return
 	_show_popup("spell", rows)
+
+
+func _has_potions() -> bool:
+	var bag := combat.map.inventory
+	if bag:
+		for st: Dictionary in bag.stacks:
+			var it := ItemData.get_item(st.id)
+			if it and it.kind == ItemData.Kind.POTION:
+				return true
+	return false
+
+
+## Item menu: the bag's potions (action; drink, or give to an adjacent ally).
+func _open_items() -> void:
+	var h := combat.current
+	if not h is Hero or combat.moving:
+		return
+	if combat.targeting:
+		combat.cancel_targeting()
+	var rows := []
+	for m: Dictionary in combat.menu_items(h):
+		var it: ItemData = m.item
+		var iid := it.id
+		rows.append({text = it.display_name, tag = "x%d" % m.count, ok = m.ok, why = m.why,
+				desc = "Action: %s. Drink it, or give it to an ally next to you (also gets a downed ally back up)." % it.summary(),
+				pick = func(): combat.begin_item(iid)})
+	if rows.is_empty():
+		_hint.text = "Nothing in the bag to use."
+		return
+	_show_popup("item", rows)
 
 
 func _open_weapons() -> void:

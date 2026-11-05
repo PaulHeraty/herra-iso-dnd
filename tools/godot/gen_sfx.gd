@@ -33,6 +33,7 @@ func _init() -> void:
 	_save("bone_collapse", _bone_collapse())
 	_save("chest_open", _chest_open())
 	_save("coins", _coins())
+	_save("potion_drink", _potion_drink())
 	quit()
 
 
@@ -470,3 +471,21 @@ func _save(name: String, x: PackedFloat32Array, peak := 0.85) -> void:
 	f.store_buffer(data)
 	f.close()
 	print("wrote %s%s.wav  %.2fs" % [OUT, name, x.size() / float(RATE)])
+
+
+## Drinking a potion: a cork pop, then three glugs (falling sine bubbles over a soft gurgle).
+func _potion_drink() -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(_n(0.62))
+	var pn := _n(0.05)
+	var pop := _mul(_sine(pn, 900.0, 380.0), _env(pn, 0.001, 6.0))
+	pop = _mix(pop, _mul(_highpass(_noise(pn), 2500.0), _env(pn, 0.0005, 9.0)), 0.35)
+	out = _mix(out, pop, 0.8)
+	var pitches := [330.0, 290.0, 345.0]
+	for k in pitches.size():
+		var gn := _n(0.11)
+		var f: float = pitches[k]
+		var glug := _mul(_sine(gn, f, f * 0.55), _env(gn, 0.006, 2.5))
+		var gurgle := _mul(_lowpass(_noise(gn), 500.0), _env(gn, 0.01, 2.0))
+		out = _mix(out, _mix(glug, gurgle, 0.5), 0.9, _n(0.14 + 0.14 * k))
+	return out

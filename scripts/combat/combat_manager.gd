@@ -1049,6 +1049,8 @@ func valid_targets(caster: Actor, p: SpellData) -> Array[Actor]:
 				continue
 		if DungeonMap.grid_distance(caster.cell, a.cell) > rng:
 			continue
+		if is_item_power(p) and a.is_alive() and a.hp >= a.stats.max_hp:
+			continue                            # don't waste a potion on someone unhurt
 		if p.needs_los and a != caster and not map.has_line_of_sight(caster.cell, a.cell):
 			continue
 		out.append(a)
@@ -1130,6 +1132,8 @@ func _targeting_hint() -> String:
 		_:
 			var n := _max_picks(p)
 			what = "click a target" if n == 1 else "pick %d/%d (Enter casts)" % [picked.size(), n]
+			if is_item_power(p):
+				what = "click who drinks it (you or an ally next to you)"
 	return "%s%s: %s. Right-click cancels." % [p.display_name, slot, what]
 
 
@@ -1233,6 +1237,8 @@ func _cast(caster: Actor, p: SpellData, slot: int, targets: Array[Actor], aim: V
 		caster.spend_slot(slot)
 	if p.uses > 0 or p.recharge == SpellData.Recharge.DICE:
 		caster.spend_use(p)
+	if is_item_power(p):
+		map.inventory.remove(p.get_meta("item_id"))
 	match p.cast_time:
 		SpellData.CastTime.ACTION:
 			action_used = true
@@ -1258,7 +1264,14 @@ func _cast(caster: Actor, p: SpellData, slot: int, targets: Array[Actor], aim: V
 func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor], aim: Vector2i) -> void:
 	var lvl_txt := " (%s)" % power_tag_level(slot) if p.uses_slot() and slot > p.level else ""
 	var verb := "casts" if p.kind == SpellData.Kind.SPELL else "uses"
-	_say("%s %s %s%s" % [caster.display_name(), verb, p.display_name, lvl_txt])
+	if is_item_power(p):
+		var who: Actor = targets[0] if not targets.is_empty() else caster
+		if who == caster:
+			_say("%s drinks a %s" % [caster.display_name(), p.display_name])
+		else:
+			_say("%s gives %s a %s" % [caster.display_name(), who.display_name(), p.display_name])
+	else:
+		_say("%s %s %s%s" % [caster.display_name(), verb, p.display_name, lvl_txt])
 	if p.concentration:
 		_start_concentration(caster, p)
 	if aim != caster.cell:
@@ -1271,6 +1284,8 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 		elif p.id == "shove":
 			caster.play_action("attack")
 	Sfx.play(p.sfx)
+	if is_item_power(p):
+		await get_tree().create_timer(0.45).timeout     # the glugs, then the heal chime
 	if p.kind == SpellData.Kind.SPELL and p.vfx != "fireball":
 		await SpellFx.charge(map, _cast_from(caster) + Vector2(0, 2), _spell_colour(p))
 	var char_level := maxi(1, caster.stats.level)
@@ -1864,3 +1879,81 @@ func _escape(who: Actor) -> void:
 		FloatText.spawn(map, who.body_position() + Vector2(0, -10), "FREE", COL_ALLY, 10)
 	else:
 		_say("%s struggles in the web (%d vs DC %d)" % [who.display_name(), r.total, dc])
+
+
+# --- items (Phase 4 step 4) ---------------------------------------------------------------------
+## Potions in a fight: the Item action (SRD: drinking a potion or giving one to another creature
+## is an action). The drinker is the hero or an adjacent ally, downed ones included (it gets them
+## back up). Each potion kind becomes a small runtime power so it reuses the ally targeting.
+
+static var _item_powers := {}
+
+
+## The heal "power" behind a potion (cached per item id).
+static func item_power(it: ItemData) -> SpellData:
+	if _item_powers.has(it.id):
+		return _item_powers[it.id]
+	var p := SpellData.new()
+	p.id = "item_" + it.id
+	p.display_name = it.display_name
+	p.description = it.description
+	p.kind = SpellData.Kind.ABILITY
+	p.cast_time = SpellData.CastTime.ACTION
+	p.target = SpellData.Target.ALLY
+	p.range_ft = 5
+	p.needs_los = false
+	p.resolve = SpellData.Resolve.HEAL
+	p.heal = it.heal
+	p.sfx = "potion_drink"
+	p.set_meta("item_id", it.id)
+	_item_powers[it.id] = p
+	return p
+
+
+static func is_item_power(p: SpellData) -> bool:
+	return p != null and p.has_meta("item_id")
+
+
+## Bag items for the hero's Item menu: [{item, count, ok, why}]. Potions only for now.
+func menu_items(h: Actor) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if map.inventory == null:
+		return out
+	for st: Dictionary in map.inventory.stacks:
+		var it := ItemData.get_item(st.id)
+		if it == null or it.kind != ItemData.Kind.POTION or it.heal == "":
+			continue
+		var why := ""
+		if action_used or attacks_left < h.stats.attacks_per_action():
+			why = "action used"
+		elif valid_targets(h, item_power(it)).is_empty():
+			why = "no one in reach needs healing"
+		out.append({item = it, count = st.count, ok = why == "", why = why})
+	return out
+
+
+## Item menu pick: choose who drinks it (the hero or an adjacent ally).
+func begin_item(item_id: String) -> void:
+	var it := ItemData.get_item(item_id)
+	if it == null or not map.inventory.has(item_id):
+		return
+	begin_targeting(item_power(it))
+
+
+## Outside combat (inventory screen): `who` drinks a potion straight away, no action needed.
+## Returns the HP regained, or -1 if it couldn't (not a potion, none left, dead, already full).
+func drink_now(who: Actor, item_id: String) -> int:
+	var it := ItemData.get_item(item_id)
+	if it == null or it.kind != ItemData.Kind.POTION or it.heal == "" or who.dead \
+			or (who.is_alive() and who.hp >= who.stats.max_hp) or not map.inventory.remove(item_id):
+		return -1
+	var r := Dice.roll(it.heal)
+	var was_down := not who.is_alive()
+	var got := who.heal(r.total)
+	Sfx.play("potion_drink")
+	get_tree().create_timer(0.45).timeout.connect(func(): Sfx.play("heal_chime"))
+	SpellFx.sparkles(map, who.body_position(), Color8(150, 235, 140))
+	FloatText.spawn(map, who.body_position() + Vector2(0, -10), "+%d" % got, COL_ALLY, 10)
+	_detail("  %s: %s -> %d" % [it.display_name, r.describe(), r.total])
+	_say("%s drinks a %s and regains %d HP%s" % [who.display_name(), it.display_name, got, " (back up!)" if was_down else ""])
+	return got

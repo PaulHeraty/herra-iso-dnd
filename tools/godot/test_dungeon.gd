@@ -167,5 +167,41 @@ func _run() -> void:
 	_check(m.chest_at(Vector2i(19, 3)).opened, "opened chest stays open")
 	_check(m.is_explored(Vector2i(5, 5)) and not m.is_seen(Vector2i(5, 5)), "fog: guard room remembered (dimmed) on return")
 	_check(m.monsters.size() == 8, "the other monsters are still there (%d)" % m.monsters.size())
+
+	# --- potions: drink from the inventory screen (exploring), the Item action (combat) ---
+	var inv2 := m.hud.inventory_screen
+	var f2 := m.party[0]
+	var potions := m.inventory.count("potion_healing")
+	_check(inv2.equip(f2, "potion_healing") and f2.hp >= 24 and f2.hp <= 30, "clicking a potion: the fighter drinks it (HP %d)" % f2.hp)
+	_check(m.inventory.count("potion_healing") == potions - 1, "the potion is gone from the bag")
+	var rogue := m.party[1]
+	rogue.hp = rogue.stats.max_hp
+	_check(not inv2.drink(rogue, "potion_healing") and m.inventory.count("potion_healing") == potions - 1, "an unhurt hero doesn't waste a potion")
+	var cm := m.combat
+	var cleric := m.party[2]
+	var mage := m.party[3]
+	f2.hp = f2.stats.max_hp
+	cleric.hp = cleric.stats.max_hp
+	cleric.place_at(Vector2i(28, 21))
+	mage.place_at(Vector2i(29, 21))
+	f2.place_at(Vector2i(31, 21))
+	mage.hp = 0
+	cm.current = cleric
+	cm.action_used = false
+	cm.attacks_left = cleric.stats.attacks_per_action()
+	var items := cm.menu_items(cleric)
+	_check(items.size() == 1 and items[0].ok and items[0].count == potions - 1, "Item menu offers the potions")
+	cm.begin_item("potion_healing")
+	var pt := cm.valid_targets(cleric, cm.targeting)
+	_check(pt.size() == 1 and pt[0] == mage, "potion targets: only the downed mage next to the cleric")
+	_check(cm.pick_target(mage), "cleric gives the mage the potion")
+	for i in 300:
+		if not cm.moving:
+			break
+		await process_frame
+	_check(mage.is_alive() and mage.hp <= 12, "the mage is back up (HP %d)" % mage.hp)
+	_check(m.inventory.count("potion_healing") == potions - 2 and cm.action_used, "potion used up, action spent")
+	_check(not cm.menu_items(cleric)[0].ok, "no second potion this turn (action used)")
+	cm.current = null
 	print("test_dungeon: %s (%d failed)" % ["ALL PASS" if fails == 0 else "FAILURES", fails])
 	quit(1 if fails else 0)

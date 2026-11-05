@@ -96,7 +96,7 @@ scripts/
                         Spell/Ability + weapon popups; exploration: rest buttons, Bag (I), gold)
   ui/inventory_screen.gd  InventoryScreen (I / Bag button): bag grid, the shown hero's 6 slots + stats, description box
                         with what equipping changes; click = equip / take off, drag to a slot, hero tab or the bag;
-                        read-only in combat. Hero.equip_from(bag, id) / unequip_to(bag, slot) do the moves.
+                        read-only in combat (potions: click = drink, exploring only). Hero.equip_from(bag, id) / unequip_to(bag, slot) do the moves.
   combat/targeting.gd   Targeting: area (NxN) / line / cone cells. CombatManager: menu_powers, begin_targeting,
                         resolve_power (generic: spell attack / save / auto darts+conditions / heal / contest)
   fx/                   FloatText (damage numbers), Projectile (arrow / beam), SpellFx (bolt, dart, column,
@@ -117,7 +117,7 @@ tools/
               build_items.gd (items -> data/items/; hero kits in build_data.gd refer to these ids)
               build_data.gd (stat blocks -> data/), test_rules.gd (headless rules tests: PASS/FAIL)
               gen_spider.gd (procedural Giant Spider sheet: 3D-ish model projected to iso)
-              gen_sfx.gd (SFX: hits, miss, bow, hurt, hiss, ray, crit, mm_zip, radiant, heal_chime, fire_impact, chest_open, coins)
+              gen_sfx.gd (SFX: hits, miss, bow, hurt, hiss, ray, crit, mm_zip, radiant, heal_chime, fire_impact, chest_open, coins, potion_drink)
               gen_font.gd (our HerraPixel bitmap font -> assets/fonts/herra_pixel.fnt + .png)
               gen_icons.gd (9x9 condition icons -> assets/ui/condition_icons.png; order = Condition.ICON_INDEX)
               gen_item_art.gd (open chest + item icons; weapons drawn along the diagonal from code)
@@ -277,7 +277,10 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
   3. Inventory screen (I): bag grid with generated pixel icons, hero equipment slots, equip/unequip
      (outside combat only), tooltips, training rules. DONE (scripts/ui/inventory_screen.gd; click or
      drag; hero tabs or the party cards pick the hero; Sort button; hover shows AC/attack/speed changes).
-  4. Potions + the Item action in combat (drink, or feed an adjacent ally).
+  4. Potions + the Item action in combat (drink, or feed an adjacent ally). DONE (Item menu lists the
+     bag's potions; an action; targets = self or an adjacent ally that is hurt or downed (revives);
+     each potion becomes a runtime heal power, `CombatManager.item_power()`. Exploring: click a potion
+     in the inventory (or drag it onto a hero tab) to drink it, no action. potion_drink.wav.)
   5. Scrolls (cast from a scroll, class spell list check) + keys (locked doors / chests).
   6. Magic items (+1 weapons/armour, rings) + stocking both floors with loot.
 - [ ] **Phase 5 — Progression:** XP, levels 1–5, SRD class features, character sheet.

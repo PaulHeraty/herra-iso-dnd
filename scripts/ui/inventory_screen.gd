@@ -183,20 +183,38 @@ func _bag() -> Inventory:
 
 ## Put bag entry `id` on hero `h` (in `slot`, or its usual slot). True if it worked.
 func equip(h: Hero, item_id: String, slot := "") -> bool:
-	if _locked():
-		return _say("Equipment can't change during a fight.", COL_WARN)
 	var it := ItemData.get_item(item_id)
 	if it == null:
 		return false
+	if it.kind == ItemData.Kind.POTION:
+		return drink(h, item_id)
+	if _locked():
+		return _say("Equipment can't change during a fight.", COL_WARN)
 	if not it.is_equipment():
-		var use := "Drink potions with the Item action in a fight (coming soon)." if it.kind == ItemData.Kind.POTION else "%s isn't something to wear or wield." % it.display_name
-		return _say(use, CombatHud.COL_DIM)
+		return _say("%s isn't something to wear or wield." % it.display_name, CombatHud.COL_DIM)
 	var why := h.equip_from(_bag(), item_id, slot)
 	if why != "":
 		Sfx.play("fail_sting", -12.0)
 		return _say(why + ".", COL_BAD)
 	Sfx.play("lock_click", -4.0)
 	_say("%s equips the %s." % [h.display_name(), it.display_name], COL_GOOD)
+	_refresh()
+	return true
+
+
+## `h` drinks a potion from the bag (exploring only; in a fight it's the Item action).
+func drink(h: Hero, item_id: String) -> bool:
+	var it := ItemData.get_item(item_id)
+	if _locked():
+		return _say("In a fight, drink potions with the Item action on the hero's turn.", COL_WARN)
+	if h.dead:
+		return _say("%s is beyond the help of potions." % h.display_name(), COL_BAD)
+	if h.is_alive() and h.hp >= h.stats.max_hp:
+		return _say("%s is unhurt: no need for the %s." % [h.display_name(), it.display_name], CombatHud.COL_DIM)
+	var got := combat.drink_now(h, item_id)
+	if got < 0:
+		return false
+	_say("%s drinks the %s: +%d HP (%d/%d)." % [h.display_name(), it.display_name, got, h.hp, h.stats.max_hp], COL_GOOD)
 	_refresh()
 	return true
 
@@ -385,7 +403,7 @@ func _describe(it: ItemData, slot: String, count: int) -> void:
 		else:
 			lines.append_array(_compare(hero, it))
 	elif it.kind == ItemData.Kind.POTION:
-		lines.append(_c("Drunk with the Item action in a fight (coming soon).", CombatHud.COL_DIM))
+		lines.append(_c("Click: %s drinks it. In a fight: the Item action." % hero.display_name(), CombatHud.COL_DIM))
 	if it.value_gp > 0:
 		lines.append(_c("Worth %d gp" % it.value_gp, CombatHud.COL_GOLD.darkened(0.15)))
 	_info_body.text = "\n".join(lines)
