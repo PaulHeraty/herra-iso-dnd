@@ -43,6 +43,8 @@ func _process(_delta: float) -> void:
 	if party.is_empty() or not enabled:
 		return
 	var c := IsoGrid.world_to_cell(map.get_local_mouse_position())
+	if map.hud and map.hud.mouse_over_ui():
+		c = Vector2i(-99999, -99999)
 	if c != _hover:
 		_hover = c
 		_refresh_overlay()
@@ -52,6 +54,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if party.is_empty() or not enabled:
 		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if map.hud and map.hud.mouse_over_ui():
+			return
 		var target := IsoGrid.world_to_cell(map.get_local_mouse_position())
 		var p := map.find_path(party[0].cell, target)
 		if p.size() > 1:

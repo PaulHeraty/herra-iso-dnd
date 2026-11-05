@@ -179,6 +179,7 @@ func _eye_tyrant() -> CreatureStats:
 	var ray := _ranged(_attack("Gaze Ray", AttackData.Kind.RANGED, AttackData.Ability.DEX, "2d8+2", "necrotic"), 60, 0)
 	ray.to_hit_override = 5
 	s.attacks = [ray, bite]
+	s.powers = [sp.fear_ray]
 	s.skill_overrides = {"perception": 4}
 	return s
 
@@ -314,7 +315,18 @@ func _build_spells() -> void:
 	wb.sfx = "spider_hiss"
 	wb.vfx = "web"
 
-	for s: SpellData in [fb, mm, sh, fi, sf, cw, bl, sw, sv, hd, sa, wb]:
+	# Our own Eye Tyrant power (not from the SRD).
+	var fr := _spell("fear_ray", "Fear Ray", SpellData.Kind.MONSTER, 0, C.ACTION, T.ENEMY, 60, R.SAVE,
+			"Recharge 5-6. A pale ray from the central eye: WIS save DC 13 or frightened until the end of its next turn (disadvantage on attacks).")
+	fr.save_ability = "WIS"
+	fr.dc_override = 13
+	fr.condition = "frightened"
+	fr.condition_rounds = 2
+	fr.recharge = SpellData.Recharge.DICE
+	fr.sfx = "ray_zap"
+	fr.vfx = "fear_ray"
+
+	for s: SpellData in [fb, mm, sh, fi, sf, cw, bl, sw, sv, hd, sa, wb, fr]:
 		var path := SPELL_DIR + s.id + ".tres"
 		var err := ResourceSaver.save(s, path, ResourceSaver.FLAG_CHANGE_PATH)
 		print("wrote ", path, " err=", err)

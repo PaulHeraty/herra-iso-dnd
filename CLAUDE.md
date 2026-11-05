@@ -76,6 +76,7 @@ scripts/
   maps/camera_controller.gd  CameraController: follow leader, WASD/arrows + middle-drag pan, wheel zoom 1-3x, Space or C recentres, clamped to map
   maps/wall_fader.gd    WallFader: walls in front of a hero or revealed overlay cell fade to 55% (runtime alternative tiles 101-104)
   party/party_controller.gd  PartyController: exploration click-to-move, trail-follow, camera follow
+  party/rest.gd         Rest: short (hit dice, short-rest powers) / long (everything) rests; blocked near enemies
   markers/              MapMarker base + one script per marker
   actors/               Actor base (grid cell, shadow, step tween) + Hero + Monster (stats, named sheet anims)
   rules/                Dice + DiceRoll (really random, seedable), CreatureStats + AttackData (stat-block Resources),
@@ -199,7 +200,7 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
   Done. Simplifications to revisit: downed heroes come to with 1 HP after a victory (no death saves
   yet), a hit always deals at least 1 damage (house rule), unlimited thrown weapons, Large spider takes 1 cell, Web/recharge/conditions not used,
   slot pips not spent, portraits are walk-sprite crops. R restarts the map after a party wipe.
-- [ ] **Phase 3 — Spells & abilities:** data-driven (Resources); targeting (single, 3×3, line, cone,
+- [x] **Phase 3 — Spells & abilities:** data-driven (Resources); targeting (single, 3×3, line, cone,
   self, ally); spell slots, rests. Mage: Fireball, Magic Missile, Shield. Cleric: Cure Wounds, Bless,
   Sacred Flame. Rogue: Sneak Attack, Hide. Fighter: Second Wind, Shove. VFX + SFX hooks.
   Steps:
@@ -218,7 +219,9 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
   7. Dice-roll scene (freeze, spotlight, d20 save panel, damage dice + clacks); full/quick/off. DONE
      (scripts/ui/dice_scene.gd + spotlight.gdshader; F2 cycles Full / Big moments / Quick / Off;
      save spells pre-roll so the scene shows the real rolls; crits show the d20 + doubled dice).
-  8. Monster abilities (spider Web: restrained, recharge; Eye Tyrant fear ray) + short/long rests.
+  8. Monster abilities (spider Web: restrained, recharge; Eye Tyrant fear ray) + short/long rests. DONE
+     (AI scores condition powers; Recharge 5-6 rolled at turn start; "Break free" action; Rest.gd;
+     the party panel stays visible while exploring, with Short/Long rest buttons).
 - [ ] **Phase 4 — Items:** chests, loot, gold, inventory, equipment changing stats, potions, scrolls, keys.
 - [ ] **Phase 5 — Progression:** XP, levels 1–5, SRD class features, character sheet.
 - [ ] **Phase 6 — Dungeon features:** doors/locks/keys, traps (Rogue detect/disarm), secret walls,

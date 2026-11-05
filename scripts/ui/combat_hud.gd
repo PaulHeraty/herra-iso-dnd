@@ -75,7 +75,10 @@ func _ready() -> void:
 	combat.victory.connect(_on_victory)
 	combat.defeat.connect(_on_defeat)
 	_build_end_screen()
-	visible = false
+	_build_rest_buttons()
+	# The party panel stays up while exploring too (HP, slots, conditions, rests).
+	visible = true
+	combat.map.camera_controller.ui_bottom = PANEL_H
 
 
 ## True if the mouse is over the bottom panel (map input should ignore it).
@@ -102,6 +105,16 @@ func _process(_delta: float) -> void:
 	_next.position.y = _hint.position.y + maxf(12.0, _hint.get_line_count() * 11.0) + 1.0
 	for card in _cards:
 		_update_card(card, cur)
+	# Exploring: rest buttons instead of the combat actions.
+	var fighting := combat.in_combat
+	for b: Button in _buttons.values():
+		b.visible = fighting
+	for b: Button in _rest_buttons:
+		b.visible = not fighting
+	if not fighting:
+		_banner.text = ""
+		_next.text = ""
+		return
 	var hero_turn := cur is Hero and not combat.moving
 	var busy := combat.targeting != null
 	_set_button(_buttons.attack, hero_turn and combat.attacks_left > 0, hero_turn and combat.attacks_left > 0 and not busy and _popup_kind != "spell")
@@ -380,14 +393,12 @@ static func _escape(s: String) -> String:
 
 func _on_started() -> void:
 	visible = true
-	combat.map.camera_controller.ui_bottom = PANEL_H
 
 
 func _on_ended() -> void:
-	visible = false
 	_lines.clear()
 	_log.text = ""
-	combat.map.camera_controller.ui_bottom = 0
+	_hint.text = ""
 
 
 # --- end of combat -------------------------------------------------------------------------
@@ -689,3 +700,60 @@ func flash_hint(text: String) -> void:
 	_hint.text = text
 	if not visible:
 		print("[hud] ", text)
+
+
+# --- rests (exploration) -----------------------------------------------------------------------
+
+var _rest_buttons: Array[Button] = []
+
+
+func _build_rest_buttons() -> void:
+	var first: Button = _buttons.attack
+	var specs := [["Short rest", false], ["Long rest", true]]
+	for i in specs.size():
+		var b := Button.new()
+		b.text = specs[i][0]
+		b.focus_mode = Control.FOCUS_NONE
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.clip_text = true
+		b.position = Vector2(first.position.x, 3 + i * 14)
+		_panel.add_child(b)
+		b.set_deferred("size", Vector2(first.size.x, 13))
+		b.pressed.connect(_rest.bind(specs[i][1]))
+		b.mouse_entered.connect(func():
+			_hint.text = "Long rest: full HP, spell slots and abilities." if specs[i][1] else "Short rest: spend hit dice to heal; Second Wind comes back.")
+		_rest_buttons.append(b)
+
+
+func _rest(long: bool) -> void:
+	var why := Rest.blocked_reason(combat.map)
+	if why != "":
+		_hint.text = why
+		Sfx.play("fail_sting", -10.0)
+		return
+	_end_dim.visible = true
+	_end_big.text = ""
+	_end_small.text = ""
+	_end_layer.visible = true
+	var root := _end_dim.get_parent() as Control
+	root.modulate.a = 0.0
+	var tw := create_tween()
+	tw.tween_property(root, "modulate:a", 1.0, 0.35)
+	_centre(_end_small, "Resting...", 172, 1)
+	await tw.finished
+	var lines := Rest.long_rest(combat.map.party) if long else Rest.short_rest(combat.map.party)
+	Sfx.play("heal_chime")
+	await get_tree().create_timer(0.7).timeout
+	var tw2 := create_tween()
+	tw2.tween_property(root, "modulate:a", 0.0, 0.35)
+	await tw2.finished
+	_end_layer.visible = false
+	root.modulate.a = 1.0
+	_lines.clear()
+	_on_log("-- %s rest --" % ("Long" if long else "Short"))
+	for l in lines:
+		_on_log(l)
+	for h: Hero in combat.map.party:
+		if not h.dead:
+			SpellFx.sparkles(combat.map, h.body_position(), Color8(150, 235, 140), false)
+	_hint.text = "%s rest done." % ("Long" if long else "Short")

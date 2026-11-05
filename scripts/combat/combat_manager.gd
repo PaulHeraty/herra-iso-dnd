@@ -336,6 +336,14 @@ func roll_save(who: Actor, ability: String) -> DiceRoll:
 ## prone = stand up for half the speed.
 func _start_of_turn(a: Actor) -> void:
 	a.reaction_used = false
+	# Recharge 5-6: a used monster power comes back on a d6 roll of 5 or 6.
+	if a is Monster:
+		for p: SpellData in a.stats.powers:
+			if p.recharge == SpellData.Recharge.DICE and a.uses_left.get(p.id, 1) <= 0:
+				var r := Dice.die(6)
+				if r >= 5:
+					a.uses_left[p.id] = 1
+					_say("%s's %s recharges (%d)." % [a.display_name(), p.display_name, r])
 	for cid in a.tick_conditions():
 		_say("%s is no longer %s." % [a.display_name(), Condition.display(cid).to_lower()])
 		if cid == "blessed":
@@ -672,7 +680,12 @@ func _monster_turn(m: Monster) -> void:
 		await move_along(m, path)
 		if not in_combat or current != m or game_over:
 			return
-	if plan.target:
+	if plan.target and plan.power:
+		var who: Array[Actor] = [plan.target]
+		await _cast(m, plan.power, 0, who, plan.target.cell)
+		if _check_end():
+			return
+	elif plan.target:
 		var opts := attack_options_from(m, plan.target, m.cell)
 		var opt := {}
 		for o in opts:
@@ -703,7 +716,7 @@ const AI_FINISH_BONUS := 4.0        ## the attack would likely drop the target
 ## damage; if nothing can be attacked this turn, walks toward the nearest hero by real path.
 func plan_monster_turn(m: Monster) -> Dictionary:
 	var heroes := map.party.filter(func(h): return h.is_alive())
-	var plan := {path = [] as Array[Vector2i], target = null, attack = null}
+	var plan := {path = [] as Array[Vector2i], target = null, attack = null, power = null}
 	if heroes.is_empty():
 		return plan
 	var reach := map.combat_reach(m.cell, move_left, m)
@@ -716,7 +729,7 @@ func plan_monster_turn(m: Monster) -> Dictionary:
 			for o in attack_options_from(m, h, c):
 				var a: AttackData = o.attack
 				var ev := expected_damage(m, h, o)
-				var score := ev
+				var score := ev + randf() * AI_JITTER
 				if ev >= h.hp * 0.8:
 					score += AI_FINISH_BONUS
 				score -= reach[c].cost * AI_STEP_COST
@@ -726,6 +739,18 @@ func plan_monster_turn(m: Monster) -> Dictionary:
 					best = score
 					plan.target = h
 					plan.attack = a
+					plan.path = DungeonMap.reach_path(reach, c)
+			# Powers that put a condition on a hero (Web: restrained, Fear Ray: frightened).
+			for p: SpellData in m.stats.powers:
+				var pv := _power_value(m, p, h, c)
+				if pv <= 0.0:
+					continue
+				var pscore: float = pv + randf() * AI_JITTER - reach[c].cost * AI_STEP_COST - crowd * AI_RANGED_CROWDED
+				if pscore > best:
+					best = pscore
+					plan.target = h
+					plan.attack = null
+					plan.power = p
 					plan.path = DungeonMap.reach_path(reach, c)
 	if plan.target:
 		return plan
@@ -857,6 +882,9 @@ var chosen_attack: AttackData
 ## Powers for the hero's Spell/Ability menu: [{power, ok, why, tag}].
 func menu_powers(h: Actor) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
+	if h.has_condition("restrained"):
+		var busy := action_used or attacks_left < h.stats.attacks_per_action()
+		out.append({power = ESCAPE, ok = not busy, why = "action used" if busy else "", tag = "action"})
 	for p: SpellData in h.stats.powers:
 		if p.kind == SpellData.Kind.MONSTER or p.cast_time in [SpellData.CastTime.REACTION, SpellData.CastTime.FREE]:
 			continue
@@ -1302,6 +1330,9 @@ func _spell_save(caster: Actor, p: SpellData, target: Actor, dmg_roll: DiceRoll,
 		else:
 			_say("%s dodges the %s" % [target.display_name(), p.display_name])
 			FloatText.spawn(map, target.body_position() + Vector2(0, -10), "SAVED", Color8(200, 196, 210), 10)
+	elif saved:
+		_say("%s resists the %s" % [target.display_name(), p.display_name])
+		FloatText.spawn(map, target.body_position() + Vector2(0, -10), "RESISTED", Color8(200, 196, 210), 10)
 	if not saved and p.condition != "" and target.is_alive():
 		target.add_condition(p.condition, p.condition_rounds, caster, p)
 		_say("  %s is %s!" % [target.display_name(), Condition.display(p.condition).to_lower()])
@@ -1309,6 +1340,9 @@ func _spell_save(caster: Actor, p: SpellData, target: Actor, dmg_roll: DiceRoll,
 
 ## Skill contest: Shove (athletics vs athletics/acrobatics) or Hide (stealth vs passive perception).
 func _contest(caster: Actor, p: SpellData, target: Actor) -> void:
+	if p.id == "escape":
+		_escape(caster)
+		return
 	var mine := Dice.d20(caster.stats.skill_bonus(p.contest_skill))
 	if p.id == "hide":
 		var best := 0
@@ -1366,6 +1400,9 @@ func _deal(src: Actor, target: Actor, amount: int, dtype: String, crit: bool, no
 
 
 func _spell_colour(p: SpellData) -> Color:
+	match p.vfx:
+		"web": return Color8(232, 232, 236)
+		"fear_ray": return Color8(190, 130, 255)
 	match p.damage_type:
 		"fire": return Color8(255, 140, 50)
 		"radiant": return Color8(255, 236, 150)
@@ -1688,3 +1725,62 @@ func _dice_crit(attacker: Actor, target: Actor, what: String, roll: DiceRoll, ac
 	if sneak:
 		await map.dice.show_damage("SNEAK ATTACK: %s" % sneak.expr, sneak, dtype, Color8(214, 120, 230))
 	await map.dice.close()
+
+
+# --- monster powers + break free (Phase 3 step 8) ----------------------------------------------
+
+## How much a monster wants to use condition power `p` on hero `h` from cell `c` (0 = can't/won't).
+## chance the condition lands x how much it's worth (in expected-damage units).
+const CONDITION_VALUE := {"restrained": 9.0, "frightened": 12.0, "prone": 4.0}
+## A little randomness so monsters don't do exactly the same thing every turn.
+const AI_JITTER := 1.5
+
+
+func _power_value(m: Actor, p: SpellData, h: Actor, c: Vector2i) -> float:
+	if p.kind != SpellData.Kind.MONSTER or p.condition == "" or not m.can_use(p) or h.has_condition(p.condition):
+		return 0.0
+	var dist := DungeonMap.grid_distance(c, h.cell)
+	if dist > maxi(1, p.range_cells()) or (p.needs_los and not map.has_line_of_sight(c, h.cell)):
+		return 0.0
+	var chance := 0.0
+	match p.resolve:
+		SpellData.Resolve.ATTACK:
+			var adv := -1 if (p.range_cells() > 1 and _enemies_adjacent_at(m, c) > 0) else 0
+			chance = hit_chance(p.attack_bonus_for(m.stats), h.stats.armor_class, adv)
+		SpellData.Resolve.SAVE:
+			chance = clampf((p.dc_for(m.stats) - h.stats.save_bonus(p.save_ability) - 1) / 20.0, 0.05, 0.95)
+	return chance * CONDITION_VALUE.get(p.condition, 3.0)
+
+
+## "Break free" from a web (restrained): an action, STR check (Athletics or Acrobatics, whichever is
+## better) against the effect's DC. Offered in the Spell/Ability menu while restrained.
+static var ESCAPE: SpellData = _make_escape()
+
+
+static func _make_escape() -> SpellData:
+	var s := SpellData.new()
+	s.id = "escape"
+	s.display_name = "Break free"
+	s.kind = SpellData.Kind.ABILITY
+	s.cast_time = SpellData.CastTime.ACTION
+	s.target = SpellData.Target.SELF
+	s.resolve = SpellData.Resolve.CONTEST
+	s.needs_los = false
+	s.description = "Action: Strength (Athletics) or Dexterity (Acrobatics) check against the web's DC. Success: you are no longer restrained."
+	return s
+
+
+func _escape(who: Actor) -> void:
+	var c := who.get_condition("restrained")
+	if c == null:
+		return
+	var dc: int = c.spell.dc_override if c.spell and c.spell.dc_override != -99 else 12
+	var bonus := maxi(who.stats.skill_bonus("athletics"), who.stats.skill_bonus("acrobatics"))
+	var r := Dice.d20(bonus)
+	_detail("  break free: %s vs DC %d" % [r.describe(), dc])
+	if r.total >= dc:
+		who.remove_condition("restrained")
+		_say("%s breaks free! (%d vs DC %d)" % [who.display_name(), r.total, dc])
+		FloatText.spawn(map, who.body_position() + Vector2(0, -10), "FREE", COL_ALLY, 10)
+	else:
+		_say("%s struggles in the web (%d vs DC %d)" % [who.display_name(), r.total, dc])

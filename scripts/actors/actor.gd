@@ -46,6 +46,8 @@ var uses_left := {}
 var concentrating: SpellData
 var reaction_used := false
 ## Death saves (heroes at 0 HP; Phase 3 step 4).
+## Hit dice left to spend on short rests (= level when rested).
+var hit_dice_left := 0
 var death_successes := 0
 var death_failures := 0
 var stable := false
@@ -239,6 +241,7 @@ func reset_resources() -> void:
 	if stats == null:
 		return
 	slots_left = stats.spell_slots.duplicate()
+	hit_dice_left = maxi(1, stats.level)
 	uses_left.clear()
 	for p: SpellData in stats.powers:
 		if p.uses > 0:

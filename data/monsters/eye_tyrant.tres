@@ -1,12 +1,13 @@
 [gd_resource type="Resource" script_class="CreatureStats" format=3]
 
-[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_axuvi"]
-[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_nuxna"]
-[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="3_ubvt5"]
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_nuxna"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_ubvt5"]
+[ext_resource type="Resource" path="res://data/spells/fear_ray.tres" id="3_2sic5"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="4_aoay6"]
 
-[sub_resource type="Resource" id="Resource_2sic5"]
+[sub_resource type="Resource" id="Resource_pregw"]
 resource_name = "Gaze Ray"
-script = ExtResource("1_axuvi")
+script = ExtResource("1_nuxna")
 name = "Gaze Ray"
 kind = 1
 ability = 1
@@ -15,9 +16,9 @@ damage = "2d8+2"
 damage_type = "necrotic"
 to_hit_override = 5
 
-[sub_resource type="Resource" id="Resource_aoay6"]
+[sub_resource type="Resource" id="Resource_l254b"]
 resource_name = "Bite"
-script = ExtResource("1_axuvi")
+script = ExtResource("1_nuxna")
 name = "Bite"
 ability = 1
 damage = "2d6"
@@ -26,7 +27,7 @@ to_hit_override = 4
 
 [resource]
 resource_name = "Eye Tyrant"
-script = ExtResource("3_ubvt5")
+script = ExtResource("4_aoay6")
 id = "eye_tyrant"
 display_name = "Eye Tyrant"
 challenge = 3.0
@@ -44,7 +45,8 @@ armor_class = 14
 speed_ft = 20
 fly = true
 sight_ft = 60
-attacks = Array[ExtResource("1_axuvi")]([SubResource("Resource_2sic5"), SubResource("Resource_aoay6")])
+attacks = Array[ExtResource("1_nuxna")]([SubResource("Resource_pregw"), SubResource("Resource_l254b")])
+powers = Array[ExtResource("2_ubvt5")]([ExtResource("3_2sic5")])
 skill_overrides = {
 "perception": 4
 }
