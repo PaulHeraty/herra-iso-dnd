@@ -154,6 +154,8 @@ func _process(delta: float) -> void:
 	_parts = _parts.filter(func(p): return p.age < p.life)
 	if _done and _parts.is_empty() and (mode != Mode.FLY or _light.energy <= 0.01):
 		queue_free()
+	elif _t > _dur + 3.0:
+		queue_free()          # safety
 	queue_redraw()
 
 

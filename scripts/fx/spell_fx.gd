@@ -144,7 +144,7 @@ func _process(delta: float) -> void:
 		Kind.COLUMN:
 			if not _arrived and k >= 0.6:
 				_arrive()
-			if _rng.randf() < 0.7:
+			if _t < duration and _rng.randf() < 0.7:
 				_spawn(to + Vector2(_rng.randf_range(-6, 6), _rng.randf_range(-30, 0)) - position, Vector2(0, -_rng.randf_range(10, 30)), 0.5, color)
 		Kind.SPARKLES:
 			if _t < duration * 0.7:
@@ -153,7 +153,7 @@ func _process(delta: float) -> void:
 			if not _arrived and k >= 0.3:
 				_arrive()
 		Kind.CHARGE:
-			for i in 2:
+			for i in (2 if _t < duration else 0):
 				var ang := _t * 18.0 + i * PI
 				var r := 7.0 * (1.0 - k)
 				_spawn(Vector2(cos(ang), sin(ang) * 0.6) * r, Vector2.ZERO, 0.18, color.lightened(0.3))
@@ -175,6 +175,8 @@ func _process(delta: float) -> void:
 	var light_done := _light == null or _light.energy <= 0.01
 	if _t >= duration and _parts.is_empty() and _arrived and light_done:
 		queue_free()
+	elif _t > duration + 3.0:
+		queue_free()          # safety: no effect outlives its time by more than a few seconds
 	queue_redraw()
 
 

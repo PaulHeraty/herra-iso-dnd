@@ -92,7 +92,8 @@ func _process(_delta: float) -> void:
 		return
 	var cur := combat.current
 	if _announce_t > 0.0:
-		_announce_t -= _delta
+		if combat.map.dice == null or not combat.map.dice.visible:   # hold it through the dice scene
+			_announce_t -= _delta
 	else:
 		_banner.add_theme_color_override("font_color", COL_BANNER)
 		_banner.text = ("%s'S TURN" % cur.display_name().to_upper()) if cur else ""
@@ -681,3 +682,10 @@ func _on_announce(text: String) -> void:
 	_banner.text = text
 	_banner.add_theme_color_override("font_color", Color8(255, 170, 80))
 	_announce_t = 2.2
+
+
+## Show a short message in the hint line (also outside combat, e.g. the F2 dice setting).
+func flash_hint(text: String) -> void:
+	_hint.text = text
+	if not visible:
+		print("[hud] ", text)

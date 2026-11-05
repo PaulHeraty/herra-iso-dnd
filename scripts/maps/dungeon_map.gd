@@ -42,6 +42,7 @@ var controller: PartyController
 var camera_controller: CameraController
 var wall_fader: WallFader
 var scorch: ScorchLayer
+var dice: DiceScene
 var combat: CombatManager
 var hud: CombatHud
 ## Visible, rotated copies of the Floor / Walls layers.
@@ -98,6 +99,9 @@ func _ready() -> void:
 	combat.name = "CombatManager"
 	combat.map = self
 	add_child(combat)
+	dice = DiceScene.new()
+	dice.name = "DiceScene"
+	add_child(dice)
 	hud = CombatHud.new()
 	hud.name = "CombatHud"
 	hud.combat = combat

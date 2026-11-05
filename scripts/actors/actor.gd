@@ -208,6 +208,7 @@ func add_condition(cid: String, rounds: int, source: Actor = null, spell: SpellD
 		return c
 	c = Condition.new(cid, rounds, source, spell)
 	conditions.append(c)
+	_on_conditions_changed()
 	return c
 
 
@@ -215,6 +216,7 @@ func remove_condition(cid: String) -> void:
 	for i in range(conditions.size() - 1, -1, -1):
 		if conditions[i].id == cid:
 			conditions.remove_at(i)
+	_on_conditions_changed()
 
 
 ## Start of this creature's turn: count down timed conditions. Returns the ids that ended.
@@ -227,6 +229,8 @@ func tick_conditions() -> PackedStringArray:
 			if c.rounds == 0:
 				ended.append(c.id)
 				conditions.remove_at(i)
+	if not ended.is_empty():
+		_on_conditions_changed()
 	return ended
 
 
@@ -301,3 +305,13 @@ func heal(amount: int) -> int:
 
 func _on_revived() -> void:
 	pass
+
+
+## Visual hints for conditions on the figure itself: hidden = semi-transparent.
+## (self_modulate, so it doesn't fight the hurt flash / downed colouring on modulate.)
+const HIDDEN_ALPHA := 0.45
+
+
+func _on_conditions_changed() -> void:
+	if sprite:
+		sprite.self_modulate.a = HIDDEN_ALPHA if has_condition("hidden") else 1.0

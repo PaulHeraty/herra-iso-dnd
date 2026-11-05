@@ -62,6 +62,11 @@ var _starting := false
 
 
 func _ready() -> void:
+	if not InputMap.has_action("dice_mode"):
+		InputMap.add_action("dice_mode")
+		var e2 := InputEventKey.new()
+		e2.physical_keycode = KEY_F2
+		InputMap.action_add_event("dice_mode", e2)
 	if not InputMap.has_action("end_turn"):
 		InputMap.add_action("end_turn")
 		for k: Key in [KEY_ENTER, KEY_KP_ENTER]:
@@ -71,6 +76,10 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if Input.is_action_just_pressed("dice_mode"):
+		cycle_dice_mode()
+		if map.hud:
+			map.hud.flash_hint("Dice scene: %s  (F2 to change)" % DICE_MODE_NAMES[dice_mode])
 	if game_over:
 		if Input.is_key_pressed(KEY_R):
 			game_over = false
@@ -239,18 +248,22 @@ func perform_attack(attacker: Actor, target: Actor, opt: Dictionary) -> void:
 			expr = Dice.crit(expr)
 		var dr := Dice.roll(expr)
 		# House rule: a hit always deals at least 1 damage (before resistance/immunity).
+		var sneak_roll: DiceRoll = null
 		var dmg := _adjust(maxi(1, dr.total), a.damage_type, target)
 		var parts := "%d %s (%s)" % [dmg, a.damage_type, dr.describe()]
 		var short := ""
 		if _sneak_applies(attacker, target, a, adv):
 			var sp: SpellData = attacker.power("sneak_attack")
 			var sr := Dice.roll(Dice.crit(sp.damage) if crit else sp.damage)
+			sneak_roll = sr
 			var sd := _adjust(sr.total, a.damage_type, target)
 			dmg += sd
 			sneak_used = true
 			parts += " + %d sneak attack (%s)" % [sd, sr.describe()]
 			short += " (+sneak attack)"
 			FloatText.spawn(map, target.body_position() + Vector2(0, -22), "SNEAK", COL_MAGIC, 10)
+		if crit and show_dice(true):
+			await _dice_crit(attacker, target, a.name, roll, ac, dr, a.damage_type, sneak_roll)
 		if a.rider_damage != "":
 			var rexpr := Dice.crit(a.rider_damage) if crit else a.rider_damage
 			var rr := Dice.roll(rexpr)
@@ -1117,6 +1130,7 @@ func _confirm_targets() -> void:
 func _cast(caster: Actor, p: SpellData, slot: int, targets: Array[Actor], aim: Vector2i) -> void:
 	moving = true
 	_clear_move_overlay()
+	status_changed.emit("")
 	if p.uses_slot():
 		caster.spend_slot(slot)
 	if p.uses > 0 or p.recharge == SpellData.Recharge.DICE:
@@ -1156,6 +1170,8 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 		await SpellFx.charge(map, _cast_from(caster) + Vector2(0, 2), _spell_colour(p))
 	var char_level := maxi(1, caster.stats.level)
 	var affected: Array[Actor] = targets.duplicate()
+	if not _is_shaped(p):
+		_preroll(caster, p, slot, char_level, affected)
 	if _is_shaped(p):
 		affected.clear()
 		var cells := shape_cells(caster, p, aim)
@@ -1163,7 +1179,8 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 			if a.is_alive() and a.cell in cells and (p.hits_allies or not DungeonMap._same_side(a, caster)):
 				affected.append(a)
 		if p.vfx == "fireball":
-			await _fireball_show(caster, aim, cells)
+			_preroll(caster, p, slot, char_level, affected)
+			await _fireball_show(caster, aim, cells, p, affected)
 		else:
 			var beam := Projectile.fire(map, caster.body_position(), IsoGrid.cell_to_world(aim), Projectile.Style.BEAM, _spell_colour(p))
 			await beam.done
@@ -1178,16 +1195,17 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 				_:
 					var beam := Projectile.fire(map, caster.body_position(), a.body_position(), Projectile.Style.BEAM, _spell_colour(p))
 					await beam.done
+	if p.resolve == SpellData.Resolve.SAVE and p.vfx != "fireball" and not affected.is_empty() and show_dice(p.big_moment):
+		await _dice_save(caster, p, affected, affected[0].body_position())
 	match p.resolve:
 		SpellData.Resolve.ATTACK:
 			for a in affected:
 				await _spell_attack(caster, p, slot, a, char_level)
 		SpellData.Resolve.SAVE:
-			var dmg_roll: DiceRoll = Dice.roll(p.damage_for(char_level, slot)) if p.damage != "" else null
-			if dmg_roll:
-				_detail("  %s damage: %s" % [p.display_name, dmg_roll.describe()])
+			if _pre_dmg:
+				_detail("  %s damage: %s" % [p.display_name, _pre_dmg.describe()])
 			for a in affected:
-				_spell_save(caster, p, a, dmg_roll)
+				_spell_save(caster, p, a, _pre_dmg, _pre_saves.get(a))
 		SpellData.Resolve.AUTO:
 			if p.darts > 0:
 				var bend := 16.0
@@ -1257,6 +1275,8 @@ func _spell_attack(caster: Actor, p: SpellData, slot: int, target: Actor, char_l
 			SpellFx.burst(map, target.body_position() + Vector2(0, 10), 0.6, 1.0)
 			Sfx.play("fire_impact")
 		var d := Dice.roll(Dice.crit(expr) if crit else expr)
+		if crit and show_dice(true):
+			await _dice_crit(caster, target, p.display_name, r, ac, d, p.damage_type)
 		_deal(caster, target, d.total, p.damage_type, crit)
 	if p.condition != "" and target.is_alive():
 		target.add_condition(p.condition, p.condition_rounds, caster, p)
@@ -1264,11 +1284,11 @@ func _spell_attack(caster: Actor, p: SpellData, slot: int, target: Actor, char_l
 		FloatText.spawn(map, target.body_position() + Vector2(0, -18), Condition.display(p.condition).to_upper(), COL_MAGIC, 10)
 
 
-func _spell_save(caster: Actor, p: SpellData, target: Actor, dmg_roll: DiceRoll) -> void:
+func _spell_save(caster: Actor, p: SpellData, target: Actor, dmg_roll: DiceRoll, pre: DiceRoll = null) -> void:
 	if not target.is_alive():
 		return
 	var dc := p.dc_for(caster.stats)
-	var s := roll_save(target, p.save_ability)
+	var s := pre if pre else roll_save(target, p.save_ability)
 	var saved := s.total >= dc
 	_detail("  %s %s save: %s vs DC %d - %s" % [target.display_name(), p.save_ability, s.describe(), dc, "success" if saved else "FAILED"])
 	if p.vfx == "sacred_flame" and not saved:
@@ -1553,12 +1573,15 @@ func _cast_from(caster: Actor) -> Vector2:
 
 ## Charge at the staff gem, fly in an arc lighting the room, then the 3x3 blast with flash, shake,
 ## scorch and smoke. Returns at the moment of the blast (damage is resolved while it plays).
-func _fireball_show(caster: Actor, aim: Vector2i, cells: Array[Vector2i]) -> void:
+func _fireball_show(caster: Actor, aim: Vector2i, cells: Array[Vector2i], p: SpellData, affected: Array[Actor]) -> void:
 	announce.emit("%s CASTS %s!" % [caster.display_name().to_upper(), "FIREBALL"])
 	var gem := _cast_from(caster)
 	await FireballFx.charge(map, gem)
 	var centre := IsoGrid.cell_to_world(aim) + Vector2(0, 2)
 	await FireballFx.fly(map, gem, centre + Vector2(0, -8))
+	# Time freezes at the moment of impact: the dice scene (big moment).
+	if show_dice(true):
+		await _dice_save(caster, p, affected, IsoGrid.cell_to_world(aim) + Vector2(0, -8))
 	var worlds: Array[Vector2] = []
 	for c in cells:
 		worlds.append(IsoGrid.cell_to_world(c) + Vector2(0, 2))
@@ -1583,3 +1606,85 @@ func _leave_scorch(aim: Vector2i, cells: Array[Vector2i]) -> void:
 	for c in cells:
 		if map.has_floor(c):
 			map.scorch.add_mark(c, 1.0 if c == aim else 0.62)
+
+
+# --- dice-roll scene (Phase 3 step 7) ----------------------------------------------------------
+
+enum DiceMode { FULL, BIG, QUICK, OFF }
+const DICE_MODE_NAMES := ["Full", "Big moments", "Quick", "Off"]
+## Full = every spell save + every crit; Big moments = Fireball & area spells, crits; Quick / Off =
+## inline rolls only (Quick is a placeholder for a later short pop-up).
+var dice_mode := DiceMode.BIG
+var _pre_dmg: DiceRoll
+var _pre_saves := {}
+
+
+func show_dice(big: bool) -> bool:
+	if map.dice == null:
+		return false
+	match dice_mode:
+		DiceMode.FULL:
+			return true
+		DiceMode.BIG:
+			return big
+	return false
+
+
+func cycle_dice_mode() -> void:
+	dice_mode = ((dice_mode + 1) % DiceMode.size()) as DiceMode
+	_say("Dice scene: %s" % DICE_MODE_NAMES[dice_mode])
+
+
+## Roll a save spell's damage and every target's save up front, so the dice scene shows the very
+## rolls that are then applied.
+func _preroll(caster: Actor, p: SpellData, slot: int, char_level: int, affected: Array[Actor]) -> void:
+	_pre_dmg = null
+	_pre_saves.clear()
+	if p.resolve != SpellData.Resolve.SAVE:
+		return
+	if p.damage != "":
+		_pre_dmg = Dice.roll(p.damage_for(char_level, slot))
+	for a in affected:
+		if a.is_alive():
+			_pre_saves[a] = roll_save(a, p.save_ability)
+
+
+const ABILITY_WORDS := {"STR": "STRENGTH", "DEX": "DEXTERITY", "CON": "CONSTITUTION", "INT": "INTELLIGENCE", "WIS": "WISDOM", "CHA": "CHARISMA"}
+
+
+func _screen(world: Vector2) -> Vector2:
+	return map.get_viewport().get_canvas_transform() * world
+
+
+## Saves (first three targets in full, then a summary line) and the damage dice.
+func _dice_save(caster: Actor, p: SpellData, affected: Array[Actor], spot: Vector2) -> void:
+	await map.dice.open(_screen(spot))
+	var dc := p.dc_for(caster.stats)
+	var shown := 0
+	for a in affected:
+		if not _pre_saves.has(a):
+			continue
+		if shown >= 3:
+			break
+		var s: DiceRoll = _pre_saves[a]
+		var saved := s.total >= dc
+		var note := ("takes half damage" if p.half_on_save else "takes no damage") if saved else ("takes full damage" if _pre_dmg else "is affected")
+		await map.dice.show_d20("%s: %s SAVE" % [a.display_name().to_upper(), ABILITY_WORDS.get(p.save_ability, p.save_ability)],
+				"d20 %+d  vs  spell DC %d" % [a.stats.save_bonus(p.save_ability), dc], s,
+				"SAVED!" if saved else "FAILED!", saved if not DungeonMap._same_side(a, caster) else not saved, note)
+		shown += 1
+	if _pre_dmg:
+		await map.dice.show_damage("%s DAMAGE: %s" % [p.display_name.to_upper(), p.damage_for(maxi(1, caster.stats.level), 0) if p.upcast_dice == "" else _pre_dmg.expr],
+				_pre_dmg, p.damage_type, Color8(255, 170, 90))
+	await map.dice.close()
+
+
+## A critical hit: the natural 20, then the (doubled) damage dice.
+func _dice_crit(attacker: Actor, target: Actor, what: String, roll: DiceRoll, ac: int, dmg: DiceRoll, dtype: String, sneak: DiceRoll = null) -> void:
+	await map.dice.open(_screen(target.body_position()))
+	await map.dice.show_d20("%s: %s" % [attacker.display_name().to_upper(), what.to_upper()],
+			"d20 %+d  vs  AC %d" % [roll.modifier, ac], roll, "CRITICAL HIT!", attacker is Hero, "damage dice are doubled")
+	await map.dice.show_damage("DAMAGE: %s" % dmg.expr, dmg, dtype, Color8(255, 220, 90))
+	if sneak:
+		await map.dice.show_damage("SNEAK ATTACK: %s" % sneak.expr, sneak, dtype, Color8(214, 120, 230))
+	await map.dice.close()
