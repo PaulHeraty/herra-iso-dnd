@@ -171,6 +171,9 @@ func show_damage(title: String, roll: DiceRoll, dtype: String, col: Color) -> vo
 
 func _dice_words(roll: DiceRoll) -> String:
 	var s: int = roll.sides[0] if not roll.sides.is_empty() else 6
+	for x in roll.sides:
+		if x != s:
+			return "dice"                    # a mix (e.g. 2d8 + 1d6)
 	var names := {4: "four", 6: "six", 8: "eight", 10: "ten", 12: "twelve", 20: "twenty"}
 	return "%s-sided %s" % [names.get(s, str(s)), "die" if roll.dice.size() == 1 else "dice"]
 
@@ -298,27 +301,77 @@ func _draw_d20(c: Vector2, r: float, ang: float, num: int, shade_seed: int, flas
 		v.draw_polyline(ring, Color(1, 1, 1, flash), 1.0)
 
 
+## Outline of a damage die, unrotated, around (0, 0), by its number of sides: d4 a triangle, d6 a
+## rounded square, d8 a diamond, d10 a kite, d12 a pentagon (others: a hexagon).
+static func die_outline(sides: int, s: float) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	match sides:
+		4:
+			for k in 3:
+				var a := -PI / 2.0 + k * TAU / 3.0
+				pts.append(Vector2(cos(a), sin(a)) * s * 0.72 + Vector2(0, s * 0.1))
+		6:
+			for a in [45.0, 135.0, 225.0, 315.0]:
+				for da in [-14.0, 14.0]:
+					var aa := deg_to_rad(a + da)
+					pts.append(Vector2(cos(aa), sin(aa)) * s * 0.5 * sqrt(2.0) * 0.86)
+		8:
+			pts = PackedVector2Array([Vector2(0, -0.66), Vector2(0.5, 0), Vector2(0, 0.66), Vector2(-0.5, 0)])
+			for i in pts.size():
+				pts[i] *= s
+		10:
+			pts = PackedVector2Array([Vector2(0, -0.64), Vector2(0.52, -0.08), Vector2(0, 0.58), Vector2(-0.52, -0.08)])
+			for i in pts.size():
+				pts[i] *= s
+		12:
+			for k in 5:
+				var a := -PI / 2.0 + k * TAU / 5.0
+				pts.append(Vector2(cos(a), sin(a)) * s * 0.6)
+		_:
+			for k in 6:
+				var a := k * TAU / 6.0
+				pts.append(Vector2(cos(a), sin(a)) * s * 0.58)
+	return pts
+
+
 func _draw_die(c: Vector2, s: float, ang: float, val: int, sides: int) -> void:
 	var v := _view
-	var sq := func(off: Vector2) -> PackedVector2Array:
+	var base := die_outline(sides, s)
+	var shape := func(off: Vector2) -> PackedVector2Array:
 		var pts := PackedVector2Array()
-		for a in [45.0, 135.0, 225.0, 315.0]:
-			for da in [-14.0, 14.0]:
-				var aa := deg_to_rad(a + da) + ang
-				pts.append(c + off + Vector2(cos(aa), sin(aa)) * s * 0.5 * sqrt(2.0) * 0.86)
+		for p in base:
+			pts.append(c + off + p.rotated(ang))
 		return pts
-	v.draw_colored_polygon(sq.call(Vector2(1, 3)), FIREC.edge)
-	v.draw_colored_polygon(sq.call(Vector2(0, 1.5)), FIREC.side)
-	var face: PackedVector2Array = sq.call(Vector2.ZERO)
+	v.draw_colored_polygon(shape.call(Vector2(1, 3)), FIREC.edge)
+	v.draw_colored_polygon(shape.call(Vector2(0, 1.5)), FIREC.side)
+	var face: PackedVector2Array = shape.call(Vector2.ZERO)
 	v.draw_colored_polygon(face, FIREC.face)
+	# facet lines, so the shapes read as solids: d4 / d12 edges to the middle, d8 an equator
+	# with the top half lit, d10 a ridge down from the top
+	var mid := c + Vector2(0, s * 0.1).rotated(ang) if sides == 4 else c
+	match sides:
+		4, 12:
+			for p in face:
+				v.draw_line(mid, p, FIREC.side)
+		8:
+			v.draw_colored_polygon(PackedVector2Array([face[0], face[1], face[3]]), FIREC.hi.lerp(FIREC.face, 0.55))
+			v.draw_line(face[3], face[1], FIREC.edge)
+		10:
+			var low := c + Vector2(0, s * 0.18).rotated(ang)
+			v.draw_line(face[0], low, FIREC.side)
+			v.draw_line(face[1], low, FIREC.side)
+			v.draw_line(face[3], low, FIREC.side)
 	var fp := face.duplicate()
 	fp.append(face[0])
 	v.draw_polyline(fp, FIREC.edge)
-	v.draw_polyline(face.slice(1, 4), FIREC.hi)
+	if sides == 6:
+		v.draw_polyline(face.slice(1, 4), FIREC.hi)
+	else:
+		v.draw_line(face[face.size() - 1], face[0], FIREC.hi)
 	if sides == 6 and PIPS.has(val):
 		for pp: Vector2 in PIPS[val]:
 			var u := pp * s * 0.26
 			var q := c + u.rotated(ang)
 			v.draw_rect(Rect2(q.round() - Vector2(1, 1), Vector2(2, 2)), FIREC.pip)
 	else:
-		_text(str(val), c.x, c.y - 6, FIREC.pip, 1)
+		_text(str(val), c.x, c.y - (3 if sides == 4 else 6), FIREC.pip, 1)
