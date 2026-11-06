@@ -64,6 +64,8 @@ var floor_view: TileMapLayer
 var walls_view: TileMapLayer
 var _astar := AStarGrid2D.new()
 var fog := FogOfWar.new()
+## The map as a picture for the minimap / full map (follows the fog).
+var map_picture: MapPicture
 var _fog_key := ""
 var _wall_set := {}
 ## View cell -> map cell (floor) / [source, atlas, map cell] (walls) for the current rotation.
@@ -121,6 +123,7 @@ func _ready() -> void:
 	inventory = Inventory.from_dict(PartyState.bag) if not PartyState.bag.is_empty() else Inventory.starting()
 	_compute_fog()
 	refresh_navigation()
+	map_picture = MapPicture.new(self)
 	camera_controller = CameraController.new()
 	camera_controller.name = "CameraController"
 	camera_controller.camera = camera
@@ -840,6 +843,8 @@ func _draw_floor_cell(v: Vector2i) -> void:
 
 ## Redraw tiles, markers and decor for the current fog.
 func _refresh_fog_look() -> void:
+	if map_picture:
+		map_picture.dirty = true
 	if wall_fader == null:
 		return
 	for v: Vector2i in _view_floor:

@@ -49,6 +49,7 @@ doesn't supply.
 | Dice scene | Full animation for **big moments** (Fireball/area spells, crits, bosses); quick inline rolls otherwise; setting full / quick / off. |
 | Trader + quest | **Brannoc** (`Npc`) at his stall in the mine clearing hides until the goblins within `guard_radius` are dead, then calls the party over: quest **"The Wraith Below"** (`Quest`: stages = maps reached, keys found, Eye Tyrant + Wraith killed; a later stage ticks off the earlier ones), reward 3000 gold + Ring of Protection, and the **Rune of Return**. Shop: buys at `value_gp`, sells at half (not keys/rune). Quest log = Quest button / J. |
 | Rune of Return | Endless. Used from the Bag anywhere but the woods (not in combat): a portal opens next to the party; through it = the stall (`PartyStart` `portal`); the stall's portal leads back to that exact cell, then closes. One portal at a time (`RunePortal`). |
+| Maps (minimap / M) | Minimap top-left (`MiniMap`, - / + buttons or wheel zoom, click = full map; follows the leader); full map on **M** (`MapScreen`: fitted to the explored area, wheel / - + zoom, drag pan, Space = party, M / Esc closes; also in combat). Both honour the fog (unexplored hidden, out of sight dimmed, monsters only while seen) and the view rotation. The combat banner/hint sit right of the minimap (`CombatHud.TEXT_X`). |
 
 ## Licensing (important)
 - Rules, spells and monsters come only from the **5e SRD (CC-BY-4.0)**, with the attribution in
@@ -93,6 +94,8 @@ scripts/
   party/party_state.gd  PartyState: hero HP/slots/uses/hit dice carried between maps (static)
   maps/map_state.gd     MapState: per-map memory (open doors, dead spawns, opened chests) + the entry to use (static)
   maps/fog_of_war.gd    FogOfWar: explored + visible cells (shadowcasting); DungeonMap draws/dims/hides by it
+  maps/map_picture.gd  MapPicture: the map as an Image, 1 px per cell (tile average colour, fog: transparent / dimmed / lit),
+                        redrawn only where the fog changed; DungeonMap.map_picture, marked dirty by _refresh_fog_look
   markers/              MapMarker base + one script per marker
   actors/               Actor base (grid cell, shadow, step tween) + Hero + Monster (stats, named sheet anims)
   rules/progression.gd  Progression: levels 1-5 (XP table, HP, slots, ASI, powers by level, class numbers)
@@ -123,6 +126,8 @@ scripts/
   ui/dialogue_box.gd    DialogueBox: portrait, name, typed line, choices (1-4, Space, Esc = goodbye); camera frames the speaker
   ui/shop_screen.gd     ShopScreen: wares list + party bag; click = pick, Buy/Sell button or double-click
   ui/quest_screen.gd    QuestScreen (J): stages done (ticked) + the current one; HUD quest_toast() on updates
+  ui/map_view.gd        MapView: draws a MapPicture through an iso transform (pixel -> diamond, view rotation) + markers
+  ui/mini_map.gd        MiniMap: top-left panel, - / + zoom; ui/map_screen.gd MapScreen: the full map (M)
   game/save_game.gd     SaveGame (static): slots, header (name, map, level, gold, time), save / prepare_load; DungeonMap.load_game(slot)
   ui/save_screen.gd     SaveScreen (F5 / F9): own CanvasLayer 60, pauses the tree; slot rows, name LineEdit, Save/Overwrite/Load
 data/         heroes/*.tres (level 5 party), monsters/*.tres: CreatureStats + AttackData; spells/*.tres: SpellData

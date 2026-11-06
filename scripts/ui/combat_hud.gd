@@ -11,6 +11,8 @@ const FONT := preload("res://assets/fonts/herra_pixel.fnt")
 const SCREEN := Vector2(640, 360)
 const PANEL_H := 60
 const LOG_W := 250
+## Left edge of the turn banner / hint / next turns (right of the minimap).
+const TEXT_X := 142
 const LOG_ENTRIES := 9
 
 const COL_BG := Color8(20, 18, 26, 235)
@@ -45,6 +47,8 @@ var inventory_screen: InventoryScreen
 var dialogue: DialogueBox
 var shop: ShopScreen
 var quest_screen: QuestScreen
+var minimap: MiniMap
+var map_screen: MapScreen
 
 
 func _ready() -> void:
@@ -54,13 +58,13 @@ func _ready() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.theme = _make_theme()
 	add_child(root)
-	_banner = _label(root, Vector2(8, 4), COL_BANNER)
+	_banner = _label(root, Vector2(TEXT_X, 4), COL_BANNER)
 	_banner.scale = Vector2(2, 2)
-	_hint = _label(root, Vector2(8, 26), COL_TEXT)
+	_hint = _label(root, Vector2(TEXT_X, 26), COL_TEXT)
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_hint.size = Vector2(SCREEN.x - LOG_W - 30, 0)
-	_next = _label(root, Vector2(8, 38), COL_DIM)
-	_next.size = Vector2(SCREEN.x - LOG_W - 30, 0)
+	_hint.size = Vector2(SCREEN.x - LOG_W - 22 - TEXT_X, 0)
+	_next = _label(root, Vector2(TEXT_X, 38), COL_DIM)
+	_next.size = Vector2(SCREEN.x - LOG_W - 22 - TEXT_X, 0)
 	_next.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_log = RichTextLabel.new()
 	_log.bbcode_enabled = true
@@ -72,6 +76,10 @@ func _ready() -> void:
 	_log.add_theme_color_override("default_color", COL_TEXT)
 	root.add_child(_log)
 	_build_panel(root)
+	minimap = MiniMap.new()
+	minimap.name = "MiniMap"
+	minimap.hud = self
+	root.add_child(minimap)
 	combat.log_line.connect(_on_log)
 	combat.status_changed.connect(func(t: String): _hint.text = t)
 	combat.combat_started.connect(_on_started)
@@ -96,6 +104,10 @@ func _ready() -> void:
 	quest_screen.name = "Quests"
 	quest_screen.combat = combat
 	root.add_child(quest_screen)
+	map_screen = MapScreen.new()
+	map_screen.name = "MapScreen"
+	map_screen.hud = self
+	root.add_child(map_screen)
 	dialogue = DialogueBox.new()
 	dialogue.name = "Dialogue"
 	root.add_child(dialogue)
@@ -116,6 +128,8 @@ func mouse_over_ui() -> bool:
 		return true          # the whole map is off limits while the inventory is open
 	if (shop and shop.visible) or (quest_screen and quest_screen.visible) or (dialogue and dialogue.visible):
 		return true
+	if (map_screen and map_screen.visible) or (minimap and minimap.is_mouse_over()):
+		return true
 	if _panel.get_global_rect().has_point(_panel.get_global_mouse_position()):
 		return true
 	return _popup.visible and _popup.get_global_rect().has_point(_popup.get_global_mouse_position())
@@ -124,6 +138,8 @@ func mouse_over_ui() -> bool:
 func _process(_delta: float) -> void:
 	if not visible or combat == null:
 		return
+	# The dice scene's panel takes the left side; the full map shows it all already.
+	minimap.visible = not (combat.map.dice and combat.map.dice.visible) and not map_screen.visible
 	if _loot:
 		_loot_t -= _delta
 		if _loot_t <= 0.0:
@@ -756,7 +772,16 @@ func _inventory_input(event: InputEvent) -> bool:
 		return false
 	if dialogue and dialogue.visible:
 		return event is InputEventKey and dialogue.handle_key(event)
+	if map_screen.visible:
+		if event is InputEventKey and event.pressed:
+			return map_screen.handle_key(event)
+		if event is InputEventMouseButton and event.pressed:
+			map_screen.close()               # a click outside the map closes it
+			return true
 	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_M and not (combat.map.dice and combat.map.dice.visible):
+			open_map()
+			return true
 		if event.keycode == KEY_J and not (combat.map.dice and combat.map.dice.visible):
 			inventory_screen.close()
 			shop.close()
@@ -779,6 +804,7 @@ func _inventory_input(event: InputEvent) -> bool:
 				combat.cancel_targeting()
 			_close_popup()
 			quest_screen.close()
+			map_screen.close()
 			inventory_screen.toggle()
 			return true
 		if event.keycode == KEY_ESCAPE and inventory_screen.visible:
@@ -1062,6 +1088,7 @@ func show_level_ups(ups: Array) -> void:
 func ui_busy() -> bool:
 	return (inventory_screen and inventory_screen.visible) or (shop and shop.visible) \
 			or (quest_screen and quest_screen.visible) or (dialogue and dialogue.visible) \
+			or (map_screen and map_screen.visible) \
 			or reaction_open() or loot_open() or (combat.map.dice != null and combat.map.dice.visible)
 
 
@@ -1075,6 +1102,21 @@ func close_screens() -> void:
 		shop.close()
 	if quest_screen:
 		quest_screen.close()
+	if map_screen:
+		map_screen.close()
+
+
+## The full map (M or a click on the minimap): closes the other screens and any menu.
+func open_map() -> void:
+	if combat.map.dice and combat.map.dice.visible:
+		return
+	if map_screen.visible:
+		map_screen.close()
+		return
+	if combat.targeting:
+		combat.cancel_targeting()
+	close_screens()
+	map_screen.open()
 
 
 var _toast: Panel
