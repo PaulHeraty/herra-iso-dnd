@@ -61,6 +61,7 @@ doesn't supply.
 - Godot: `C:\Godot\Godot_v4.7.2-stable_win64.exe` (editor) and `..._console.exe` (for CLI output).
   Not on PATH. Headless script: `"/c/Godot/Godot_v4.7.2-stable_win64_console.exe" --headless --path . -s res://tools/godot/<script>.gd`
   Re-import after generating files: `... --headless --path . --import`
+- **Windowed runs (tests, screenshots, dev checks) go through `tools/run_godot.sh [-t secs] <godot args>`**: 60 s default limit, closes Godot 4 s after a SCRIPT ERROR, and closes any game window the run left (never the editor). Bare `timeout 300` left windows on the user's screen for minutes after a script error or a stopped run.
 - Screenshot check: run a SceneTree script **without** `--headless` that loads a scene, waits ~30
   frames, and saves `root.get_texture().get_image()` (keep such scripts in the scratchpad).
 - Python is **not installed** (as of 2026-11-04). The Python generators in `tools/python/` need
