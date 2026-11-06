@@ -4,7 +4,7 @@ extends SceneTree
 ## ring, the riddle face, room notes, an alarm, and all of it kept by MapState. Prints PASS/FAIL.
 ## Needs a window (no --headless), e.g.:
 ##   HERRA_AUTO_REACT=1 tools/run_godot.sh -t 120 --path . -s res://tools/godot/test_puzzles.gd
-## Uses the campaign maps built by tools/godot/build_dungeon.gd; things are found by name
+## Uses the campaign maps built by modules/wraith_below/build_maps.gd; things are found by name
 ## (Trap_AB_..., Puzzle_N, Block_K_0...) and puzzle pieces by their link, not by cell.
 
 var fails := 0
@@ -97,7 +97,7 @@ func _run() -> void:
 	Dice.seed_rng(6006)
 
 	# --- floor 1: notes, a corridor trap spotted and disarmed ------------------------------------
-	var m := await _open("res://scenes/maps/dungeon_1.tscn")
+	var m := await _open("res://modules/wraith_below/maps/dungeon_1.tscn")
 	_check(m.mech != null and not m.mech.traps.is_empty(), "floor 1 has traps (%d)" % m.mech.traps.size())
 	var note_a: RoomNote = _named(m, "Note_A")
 	_check(note_a != null and not note_a.seen and not note_a.modal, "the entrance hall has a room description")
@@ -220,7 +220,7 @@ func _run() -> void:
 
 	# --- everything is remembered (MapState) -----------------------------------------------------------
 	MapState.save(m)
-	m = await _open("res://scenes/maps/dungeon_1.tscn")
+	m = await _open("res://modules/wraith_below/maps/dungeon_1.tscn")
 	spikes = _named(m, "Trap_AB_")
 	pit = _named(m, "Trap_IJ_")
 	_check(spikes.disarmed and pit.sprung and not pit.armed(), "back on floor 1: traps stay disarmed / sprung")
@@ -238,7 +238,7 @@ func _run() -> void:
 	_check((_named(m, "Note_A") as RoomNote).seen, "... and seen notes don't show again")
 
 	# --- floor 2: blocks onto plates, the reset lever ------------------------------------------------
-	m = await _open("res://scenes/maps/dungeon_2.tscn")
+	m = await _open("res://modules/wraith_below/maps/dungeon_2.tscn")
 	var weigh: Puzzle = _named(m, "Puzzle_K")
 	_check(weigh != null and weigh.kind == Puzzle.Kind.ALL_ON, "floor 2: the weighing room (blocks + plates)")
 	var b0: Prop = _named(m, "Block_K_0")
@@ -290,12 +290,12 @@ func _run() -> void:
 			vault2 = d
 	_check(vault2 and vault2.is_open, "the treasury's portcullis rises")
 	MapState.save(m)
-	m = await _open("res://scenes/maps/dungeon_2.tscn")
+	m = await _open("res://modules/wraith_below/maps/dungeon_2.tscn")
 	b0 = _named(m, "Block_K_0")
 	_check(b0.get_cell() != start0, "pushed blocks stay where they were pushed")
 
 	# --- floor 3: an alarm tripwire --------------------------------------------------------------------
-	m = await _open("res://scenes/maps/dungeon_3.tscn")
+	m = await _open("res://modules/wraith_below/maps/dungeon_3.tscn")
 	var wire: Trap = _named(m, "Trap_AB_")
 	_check(wire.trap_type == Trap.TrapType.ALARM, "floor 3: a tripwire")
 	wire.detect_dc = 40
@@ -307,7 +307,7 @@ func _run() -> void:
 	_check(m.combat.in_combat or m.combat._starting, "... and the goblins come running (a fight starts)")
 
 	# --- floor 4: the ring of five fires -------------------------------------------------------------
-	m = await _open("res://scenes/maps/dungeon_4.tscn")
+	m = await _open("res://modules/wraith_below/maps/dungeon_4.tscn")
 	var ring: Puzzle = _named(m, "Puzzle_L")
 	var fires: Array = _all(m, Brazier).filter(func(b): return b.link == ring.link)
 	fires.sort_custom(func(a, b): return a.order < b.order)
@@ -329,7 +329,7 @@ func _run() -> void:
 	_check(fires[1].lit, "a solved ring can't be put out")
 
 	# --- floor 5: the speaking stone ------------------------------------------------------------------
-	m = await _open("res://scenes/maps/dungeon_5.tscn")
+	m = await _open("res://modules/wraith_below/maps/dungeon_5.tscn")
 	var face: StoneFace = _named(m, "StoneFace_K")
 	var hoard: Door = null
 	for d: Door in _all(m, Door):
@@ -350,7 +350,7 @@ func _run() -> void:
 	_check(hoard.found and hoard.is_open, "the secret door to the kings' hoard grinds open")
 
 	# --- the woods: the first trap ----------------------------------------------------------------------
-	m = await _open("res://scenes/maps/surface.tscn")
+	m = await _open("res://modules/wraith_below/maps/surface.tscn")
 	var hunt: Trap = _named(m, "Trap_start_")
 	_check(hunt != null and hunt.trap_type == Trap.TrapType.PIT, "the woods: a hunter's pit on the path")
 	_place_party(m, _cell_near(m, hunt.get_cell(), 3))

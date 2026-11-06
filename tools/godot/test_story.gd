@@ -1,7 +1,7 @@
 extends SceneTree
 ## The trader, the quest and the Rune of Return. Prints PASS/FAIL. Needs a window, like
 ## test_dungeon.gd:  HERRA_AUTO_REACT=1 Godot_console --path . -s res://tools/godot/test_story.gd
-## Uses scenes/maps/surface.tscn (Brannoc, his stall, the home portal) and dungeon_1.tscn.
+## Uses modules/wraith_below/maps/surface.tscn (Brannoc, his stall, the home portal) and dungeon_1.tscn.
 
 var fails := 0
 
@@ -33,7 +33,7 @@ func _run() -> void:
 	_quest_rules()
 	PartyState.reset()
 	MapState.reset()
-	var m: DungeonMap = (load("res://scenes/maps/surface.tscn") as PackedScene).instantiate()
+	var m: DungeonMap = (load("res://modules/wraith_below/maps/surface.tscn") as PackedScene).instantiate()
 	root.add_child(m)
 	current_scene = m
 	await _frames(5)
@@ -125,7 +125,7 @@ func _run() -> void:
 	await _until_scene_changes(m)
 	m = current_scene
 	await _frames(5)
-	_check(m.scene_file_path == RunePortal.HOME_MAP, "through the portal: back in the woods")
+	_check(m.scene_file_path == RunePortal.home_map(), "through the portal: back in the woods")
 	var hp2: Portal = m.entities.get_node("Portal_Home")
 	var arrive := Vector2i(-999, -999)
 	for n in m.entities.get_children():
@@ -152,8 +152,8 @@ func _run() -> void:
 	_check(Quest.is_done("wraith") and Quest.is_done("deep") and Quest.reward_due(), "the Wraith destroyed ticks off every stage before it")
 	var gold0 := m.inventory.gold
 	Quest.claim(m.inventory)
-	_check(Quest.claimed and Quest.finished() and m.inventory.gold == gold0 + Quest.REWARD_GOLD and m.inventory.has(Quest.REWARD_ITEM),
-			"Brannoc pays: %d gold and a %s" % [Quest.REWARD_GOLD, Quest.REWARD_ITEM])
+	_check(Quest.claimed and Quest.finished() and m.inventory.gold == gold0 + Quest.reward_gold() and m.inventory.has(Quest.reward_item()),
+			"Brannoc pays: %d gold and a %s" % [Quest.reward_gold(), Quest.reward_item()])
 
 	# --- the win screen: his last line's only choice opens it; it pauses the game ---
 	var trader: Npc = (load("res://scenes/markers/npc.tscn") as PackedScene).instantiate()
@@ -182,9 +182,10 @@ func _run() -> void:
 
 ## Quest bookkeeping without a map.
 func _quest_rules() -> void:
+	Modules.current = Modules.by_id("wraith_below")       # no map: say which module's quest
 	Quest.reset()
 	var bag := Inventory.new()
-	Quest.note_map("res://scenes/maps/dungeon_1.tscn")
+	Quest.note_map("res://modules/wraith_below/maps/dungeon_1.tscn")
 	_check(Quest.update(bag).is_empty() and not Quest.is_done("mine"), "nothing is ticked before the quest is given")
 	Quest.given = true
 	var newly := Quest.update(bag)

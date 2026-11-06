@@ -2,7 +2,7 @@ extends SceneTree
 ## Dungeon mechanics test (doors, locks, stairs, state carried between floors, items). Prints PASS/FAIL.
 ## Needs a window (no --headless needed for logic, but scenes use lights), e.g.:
 ##   HERRA_AUTO_REACT=1 Godot_console --path . -s res://tools/godot/test_dungeon.gd
-## Uses scenes/maps/dungeon_1.tscn and dungeon_2.tscn (tools/godot/build_dungeon.gd). Things are
+## Uses modules/wraith_below/maps/dungeon_1.tscn and dungeon_2.tscn (modules/wraith_below/build_maps.gd). Things are
 ## found by what they are (the locked crypt door, the DC 12 chest, the stairs down), not by cell,
 ## so the test survives the maps being rebuilt.
 
@@ -81,7 +81,7 @@ func _place_party(m: DungeonMap, at: Vector2i) -> void:
 
 
 func _run() -> void:
-	var first: DungeonMap = (load("res://scenes/maps/dungeon_1.tscn") as PackedScene).instantiate()
+	var first: DungeonMap = (load("res://modules/wraith_below/maps/dungeon_1.tscn") as PackedScene).instantiate()
 	root.add_child(first)
 	current_scene = first
 	await _frames(5)

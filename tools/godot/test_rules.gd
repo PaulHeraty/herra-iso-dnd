@@ -269,7 +269,7 @@ func _test_magic_items(fb: CreatureStats, rb: CreatureStats, wb: CreatureStats, 
 	check(I.call("ring_free_action").summary().contains("restrained") and I.call("ring_resistance").summary().contains("poison"),
 			"ring summaries name their effect")
 	# Loot: every chest item on both floors exists.
-	for path in ["res://scenes/maps/dungeon_1.tscn", "res://scenes/maps/dungeon_2.tscn"]:
+	for path in ["res://modules/wraith_below/maps/dungeon_1.tscn", "res://modules/wraith_below/maps/dungeon_2.tscn"]:
 		var st := (load(path) as PackedScene).get_state()
 		var n_chests := 0
 		for ni in st.get_node_count():

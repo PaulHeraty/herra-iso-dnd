@@ -14,6 +14,8 @@ static var story := {}
 ## Time played in this game (seconds, maps only; not while paused). DungeonMap._process counts
 ## it; a restart (R) keeps counting, a load goes back to the save's time.
 static var play_seconds := 0.0
+## Which roster party this is ({id, name, modules_done}; Roster), {} = a new party never saved there.
+static var roster := {}
 
 
 static func has_state() -> bool:
@@ -36,13 +38,14 @@ static func snapshot(map: DungeonMap) -> Dictionary:
 			level = h.level, xp = h.xp,
 		}
 	return {heroes = heroes, party_xp = map.party_xp, bag = map.inventory.to_dict(),
-			story = {quest = Quest.to_dict(), portal = RunePortal.to_dict()}, play_seconds = play_seconds}
+			story = {quest = Quest.to_dict(), portal = RunePortal.to_dict()}, play_seconds = play_seconds,
+			roster = roster.duplicate(true)}
 
 
 ## The kept state as plain data (for SaveGame).
 static func to_dict() -> Dictionary:
 	return {heroes = _heroes.duplicate(true), party_xp = party_xp, bag = bag.duplicate(true),
-			story = story.duplicate(true), play_seconds = play_seconds}
+			story = story.duplicate(true), play_seconds = play_seconds, roster = roster.duplicate(true)}
 
 
 static func from_dict(d: Dictionary) -> void:
@@ -51,6 +54,7 @@ static func from_dict(d: Dictionary) -> void:
 	bag = d.get("bag", {}).duplicate(true)
 	story = d.get("story", {}).duplicate(true)
 	play_seconds = d.get("play_seconds", 0.0)
+	roster = d.get("roster", {}).duplicate(true)
 
 
 ## Apply the saved values to a hero that has just been spawned (and _ready'd).
@@ -62,6 +66,10 @@ static func apply(h: Hero) -> void:
 	h.level = s.get("level", 1)
 	h.xp = s.get("xp", 0)
 	h.refresh_stats()
+	if not s.has("hp"):                 # a roster party starting a new adventure: rested
+		h.hp = h.stats.max_hp
+		h.reset_resources()
+		return
 	h.hp = s.hp
 	h.slots_left.assign(s.slots_left)
 	h.uses_left = s.uses_left.duplicate()
@@ -82,3 +90,4 @@ static func reset() -> void:
 	bag = {}
 	story = {}
 	play_seconds = 0.0
+	roster = {}

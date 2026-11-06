@@ -4,11 +4,11 @@ extends CanvasLayer
 ## DungeonMap.show_victory). The map darkens, "VICTORY" + a few lines of epilogue, the four heroes
 ## in their arms-raised cast pose (fallen heroes greyed), time played, monsters slain, gold and
 ## party XP, a fanfare, gold sparks drifting up. Keep exploring = back to the game (Brannoc still
-## trades); Quit = close the game. The game is paused while it is up. F9 still loads (the save
+## trades); Finish adventure = the party goes into the Roster (kept for the next module) and the
+## game goes back to the start screen. The game is paused while it is up. F9 still loads (the save
 ## screen sits above it, layer 60).
 
 const SCREEN := CombatHud.SCREEN
-const EPILOGUE := "The Wraith is destroyed. The dead lie still beneath the Harrow Woods, the old silver mine falls quiet, and the miners can go home. Songs will be sung about you in every tavern from here to the coast."
 ## Hero figure scale and the gap between their 32x32 cells (screen px).
 const HERO_SCALE := 3
 const HERO_GAP := 104
@@ -122,7 +122,7 @@ func _build() -> void:
 	var title := _label(Vector2.ZERO, CombatHud.COL_BANNER)
 	_centre(title, "VICTORY!", 18, 4)
 	var ep := _label(Vector2(110, 62), CombatHud.COL_TEXT)
-	ep.text = EPILOGUE
+	ep.text = Modules.current.epilogue if Modules.current else ""
 	ep.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	ep.size = Vector2(SCREEN.x - 220, 0)
 	ep.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -134,10 +134,10 @@ func _build() -> void:
 	_centre(by, "A Herrasoft game", 296, 1)
 	_keep = _button("Keep exploring", Vector2(SCREEN.x / 2.0 - 104, 314), 98)
 	_keep.pressed.connect(close)
-	var quit := _button("Quit game", Vector2(SCREEN.x / 2.0 + 6, 314), 98)
-	quit.pressed.connect(func(): get_tree().quit())
+	var fin := _button("Finish adventure", Vector2(SCREEN.x / 2.0 + 6, 314), 98)
+	fin.pressed.connect(_finish)
 	var hint := _label(Vector2.ZERO, CombatHud.COL_DIM)
-	_centre(hint, "Brannoc will still trade with you, and the woods are yours to wander.", 340, 1)
+	_centre(hint, "Finish: the party is kept for their next adventure (start screen). Keep exploring: stay here a while.", 340, 1)
 
 
 ## The four heroes, arms raised, name + level under each. y = top of their cells.
@@ -230,3 +230,12 @@ func _button(text: String, pos: Vector2, w: float) -> Button:
 	b.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_root.add_child(b)
 	return b
+
+
+## Finish the module: keep the party in the Roster and go back to the start screen's menu.
+func _finish() -> void:
+	if map:
+		Roster.keep(map, Modules.current)
+	get_tree().paused = false
+	Intro.start_at_menu = true
+	get_tree().change_scene_to_file(Intro.SCENE)

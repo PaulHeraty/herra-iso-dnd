@@ -90,6 +90,7 @@ var _placed := {}
 
 
 func _ready() -> void:
+	Modules.ensure_for(scene_file_path)      # a map run on its own: its module
 	# The quest and the rune's portal travel with the party (a new game starts them afresh).
 	if PartyState.has_state():
 		Quest.from_dict(PartyState.story.get("quest", {}))
@@ -1202,7 +1203,8 @@ func talk_to(n: Npc) -> void:
 		return
 	controller.stop()
 	n.greet(party[0].position if not party.is_empty() else n.position)
-	TraderTalk.start(self, n)
+	if Modules.current:
+		Modules.current.npc_talk(self, n)       # the module's dialogue for this NPC
 
 
 ## A present NPC under a world point: on the cell under it, or whose sprite the point is on.
@@ -1276,7 +1278,7 @@ static func map_title_of(path: String) -> String:
 func use_rune() -> String:
 	if combat.in_combat:
 		return "No time for that in the middle of a fight!"
-	if scene_file_path == RunePortal.HOME_MAP:
+	if scene_file_path == RunePortal.home_map():
 		return "The rune stays dark: Brannoc's stall is here in the woods."
 	var c := _portal_cell()
 	if c == NO_CELL:
@@ -1313,7 +1315,7 @@ func _portal_cell() -> Vector2i:
 func take_portal(p: Portal) -> void:
 	if _leaving or combat.in_combat or combat.game_over or not p.is_shown():
 		return
-	var target := RunePortal.map_path if p.home else RunePortal.HOME_MAP
+	var target := RunePortal.map_path if p.home else RunePortal.home_map()
 	if target == "" or not ResourceLoader.exists(target):
 		combat._say("The portal flickers. It leads nowhere.")
 		return

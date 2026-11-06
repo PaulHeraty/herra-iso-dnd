@@ -63,20 +63,20 @@ func _build() -> void:
 		return
 	var y := 2.0
 	var t := _label(_body, Vector2(10, y), CombatHud.COL_BANNER)
-	t.text = Quest.TITLE.to_upper()
+	t.text = Quest.title().to_upper()
 	t.scale = Vector2(2, 2)
 	y += 24
 	var by := _label(_body, Vector2(10, y), CombatHud.COL_DIM)
-	by.text = "From %s, at his stall by the old silver mine." % Quest.GIVER
+	by.text = "From %s, %s." % [Quest.giver(), Modules.current.quest_where if Modules.current else ""]
 	y += 12
 	var rw := _label(_body, Vector2(10, y), CombatHud.COL_GOLD)
-	var ring := ItemData.get_item(Quest.REWARD_ITEM)
-	rw.text = "Reward: %d gold and a %s%s" % [Quest.REWARD_GOLD, ring.display_name if ring else "magic ring",
+	var ring := ItemData.get_item(Quest.reward_item())
+	rw.text = "Reward: %d gold and a %s%s" % [Quest.reward_gold(), ring.display_name if ring else "magic ring",
 			"  (claimed)" if Quest.claimed else ""]
 	y += 16
 	var cur := Quest.current()
-	for i in Quest.STAGES.size():
-		var s: Dictionary = Quest.STAGES[i]
+	for i in Quest.stages().size():
+		var s: Dictionary = Quest.stages()[i]
 		if Quest.is_done(s.id):
 			var tick := TextureRect.new()
 			tick.texture = tick_texture()

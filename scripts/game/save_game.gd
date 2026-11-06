@@ -1,7 +1,7 @@
 class_name SaveGame
 ## Save games: SLOTS slots, one file each (user://saves/slot<N>.sav, Godot's binary var format,
 ## no objects). A file holds a small header (shown in the slot list) and the game itself:
-## PartyState + every map's MapState (the current one as it is now), where each hero stands and
+## the module being played, PartyState + every map's MapState (the current one as it is now), where each hero stands and
 ## faces, and the view rotation. Saving is outside combat only (the state model has no fights in
 ## it); loading works any time. Loading goes through the same path as the stairs: the static state
 ## is set, then the saved map scene is loaded with MapState.next_entry = MapState.AT_SAVE.
@@ -78,9 +78,11 @@ static func save(map: DungeonMap, slot: int, save_name: String) -> String:
 			name = save_name, number = n, time = int(Time.get_unix_time_from_system()),
 			map_path = map.scene_file_path, map_title = map.map_title, level = lead_level,
 			gold = map.inventory.gold,
+			module = Modules.current.id if Modules.current else "", module_title = Modules.current.title if Modules.current else "",
 		},
 		game = {
 			map_path = map.scene_file_path,
+			module = Modules.current.id if Modules.current else "",
 			party = PartyState.snapshot(map),
 			maps = MapState.to_dict(map),
 			cells = cells, facings = facings, rotation = IsoGrid.rotation,
@@ -110,6 +112,8 @@ static func prepare_load(slot: int, err: Array = []) -> String:
 	if path == "" or not ResourceLoader.exists(path):
 		err.append("That save's map (%s) is missing." % path)
 		return ""
+	var module := Modules.by_id(g.get("module", ""))
+	Modules.current = module if module else Modules.for_scene(path)
 	PartyState.from_dict(g.get("party", {}))
 	MapState.reset()
 	MapState.from_dict(g.get("maps", {}))

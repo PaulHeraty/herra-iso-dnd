@@ -1,12 +1,16 @@
 class_name RunePortal
 ## The Rune of Return's portal (one at a time). Using the rune anywhere but the woods opens a
 ## portal next to the party (DungeonMap.use_rune); its other end stands outside Brannoc's stall
-## (the `home` Portal marker on the surface, next to the PartyStart HOME_ENTRY). Stepping through
+## (the `home` Portal marker on the module's portal_home_map, next to the PartyStart HOME_ENTRY). Stepping through
 ## from below takes the party to the stall; stepping back through the stall's portal returns the
 ## party to the cell where the rune was used, and the portal closes. The rune itself is never used
 ## up. Static; snapshotted with the party by PartyState like Quest.
 
-const HOME_MAP := "res://scenes/maps/surface.tscn"
+## The map the portal comes out on (the current module's portal_home_map; "" = no rune here).
+static func home_map() -> String:
+	return Modules.current.portal_home_map if Modules.current else ""
+
+
 const HOME_ENTRY := "portal"
 ## MapState.next_entry for "arrive at RunePortal's cell" (no PartyStart marker for it).
 const ARRIVE := "@portal"

@@ -1,27 +1,33 @@
+class_name Intro
 extends Control
-## The game's opening (scenes/intro.tscn, the main scene):
+## The start screen (scenes/intro.tscn, the main scene):
 ##   1. Herrasoft splash: the name letter by letter in the fire palette, a shine sweeping across,
 ##      "presents", a chime.
 ##   2. Title: "HerraDnD" between two burning torches (the wall-torch flame, 4x, with a warm glow).
-##   3. The story so far: a text box typed out page by page, the four heroes standing above it.
-##   4. Fade to black, then the Harrow Woods (surface.tscn) fade in from black with their title.
-## Click / Space / Enter: skip ahead (finish the typing, next page). Esc: straight into the game.
+##   3. Menu: New adventure / Load game / Quit.
+##   4. New adventure: pick a party - a new one (level 1) or one from the Roster (parties that have
+##      finished an adventure; skipped while there are none) - then pick an adventure (Modules: the
+##      ones whose level range fits the party's level can be played; the rest are greyed).
+##   5. The adventure's story pages (AdventureModule.intro_pages), typed out over the four heroes.
+##   6. Fade to black, then the adventure's first map fades in from black with its title.
+## Splash / title / story: click / Space / Enter = skip ahead, Esc = skip to the menu (or, in the
+## story, straight into the game). Menus: click; Esc = back.
 
-const GAME_SCENE := "res://scenes/maps/surface.tscn"
+const SCENE := "res://scenes/intro.tscn"
 const SCREEN := CombatHud.SCREEN
 const FONT := CombatHud.FONT
 const FIRE := [Color8(200, 50, 20), Color8(255, 130, 30), Color8(255, 210, 80), Color8(255, 250, 200)]
 const BG := Color8(10, 8, 14)
-const PAGES := [
-	"You and your three oldest friends grew up together in a quiet village on the edge of the Harrow Woods. A fighter, a rogue, a cleric and a mage, and one shared dream: adventure.",
-	"One spring morning you packed your gear, said your goodbyes and took the forest road, in search of gold, glory and a story worth telling.",
-	"After a night camped beneath the old pines, you wake to birdsong and the smell of cold ashes. The woods are waiting. Time to see what adventure awaits...",
-]
 const HEROES := ["fighter", "rogue", "cleric", "mage"]
 const TYPE_SPEED := 45.0             ## letters per second
 const BOX := Rect2(110, 206, 420, 62)
+const COL_CARD := Color8(26, 23, 33)
+const COL_CARD_EDGE := Color8(90, 76, 60)
 
-enum Stage { LOGO, TITLE, STORY, LEAVING }
+## Set before changing to this scene to skip the splash and title (back from a finished adventure).
+static var start_at_menu := false
+
+enum Stage { LOGO, TITLE, MENU, LOAD, PARTY, MODULE, STORY, LEAVING }
 
 var _stage := Stage.LOGO
 var _layer: Control               ## everything of the current stage (faded / freed as one)
@@ -29,12 +35,16 @@ var _tween: Tween
 var _shine := -1.0                ## logo shine position (letters), animated
 var _letters: Array[Label] = []
 var _page := 0
+var _pages: Array[String] = []
 var _text: Label
 var _more: Label
 var _typing: Tween
 var _flames: Array[TextureRect] = []
 var _flame_t := 0.0
 var _black: ColorRect
+## The party picked for the new adventure ({} = a new level-1 party) and the adventure.
+var _party := {}
+var _module: AdventureModule
 
 
 func _ready() -> void:
@@ -49,7 +59,11 @@ func _ready() -> void:
 	_black.color = Color(0, 0, 0, 0)
 	_black.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_black)
-	_logo()
+	if start_at_menu:
+		start_at_menu = false
+		_menu()
+	else:
+		_logo()
 
 
 func _process(delta: float) -> void:
@@ -68,27 +82,38 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	var menus := _stage in [Stage.MENU, Stage.LOAD, Stage.PARTY, Stage.MODULE]
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+		match _stage:
+			Stage.LOGO, Stage.TITLE:
+				_menu()
+			Stage.LOAD, Stage.PARTY:
+				_menu()
+			Stage.MODULE:
+				_choose_party(true)
+			Stage.STORY:
+				_start_game()
+		get_viewport().set_input_as_handled()
+		return
+	if menus:
+		return                                   # the buttons take the clicks
 	var go := false
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		go = true
 	elif event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_ESCAPE:
-			_start_game()
-			get_viewport().set_input_as_handled()
-			return
 		go = event.keycode in [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER]
 	if go:
 		_advance()
 		get_viewport().set_input_as_handled()
 
 
-## Skip ahead one step.
+## Skip ahead one step (splash, title, story).
 func _advance() -> void:
 	match _stage:
 		Stage.LOGO:
 			_title()
 		Stage.TITLE:
-			_story()
+			_menu()
 		Stage.STORY:
 			if _is_typing():
 				_typing.kill()
@@ -110,6 +135,12 @@ func _new_layer() -> Control:
 	add_child(_layer)
 	move_child(_layer, _black.get_index())       # under the curtain
 	return _layer
+
+
+func _fade_in(l: Control, sec := 0.35) -> void:
+	l.modulate.a = 0.0
+	_tween = create_tween()
+	_tween.tween_property(l, "modulate:a", 1.0, sec)
 
 
 # --- 1. Herrasoft --------------------------------------------------------------------------------
@@ -150,17 +181,22 @@ func _logo() -> void:
 
 # --- 2. HerraDnD ---------------------------------------------------------------------------------
 
+## The game's name between two torches (the title and the menu).
+func _game_title(l: Control, y: float, k: int) -> void:
+	var t := _label(l, Vector2.ZERO, CombatHud.COL_BANNER)
+	_centre(t, "HerraDnD", y, k)
+	t.add_theme_color_override("font_shadow_color", Color8(110, 20, 10))
+	var tw := FONT.get_string_size("HerraDnD", HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x * k
+	for side in [-1, 1]:
+		_flame(l, Vector2(SCREEN.x / 2.0 + side * (tw / 2.0 + 7 * k), y + 38.0 * k / 5.0), k - 1)
+
+
 func _title() -> void:
 	_stage = Stage.TITLE
 	var l := _new_layer()
-	var t := _label(l, Vector2.ZERO, CombatHud.COL_BANNER)
-	_centre(t, "HerraDnD", 128, 5)
-	t.add_theme_color_override("font_shadow_color", Color8(110, 20, 10))
-	var tw := FONT.get_string_size("HerraDnD", HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x * 5
-	for side in [-1, 1]:
-		_flame(l, Vector2(SCREEN.x / 2.0 + side * (tw / 2.0 + 34), 166), 4)
+	_game_title(l, 128, 5)
 	var sub := _label(l, Vector2.ZERO, CombatHud.COL_TEXT)
-	_centre(sub, "The Wraith Below", 186, 2)
+	_centre(sub, "Adventures for four heroes", 186, 2)
 	var by := _label(l, Vector2.ZERO, CombatHud.COL_DIM)
 	_centre(by, "A Herrasoft game", 214, 1)
 	var hint := _label(l, Vector2.ZERO, Color8(84, 80, 96))
@@ -169,14 +205,144 @@ func _title() -> void:
 	_tween = create_tween()
 	_tween.tween_property(l, "modulate:a", 1.0, 1.0)
 	_tween.tween_interval(3.5)
-	_tween.tween_property(l, "modulate:a", 0.0, 0.8)
-	_tween.tween_callback(_story)
+	_tween.tween_callback(_menu)
 
 
-# --- 3. The story so far -------------------------------------------------------------------------
+# --- 3. Menu -------------------------------------------------------------------------------------
+
+func _menu() -> void:
+	_stage = Stage.MENU
+	var l := _new_layer()
+	_game_title(l, 60, 4)
+	var y := 170.0
+	for spec in [["New adventure", _new_adventure], ["Load game", _load_menu], ["Quit", func(): get_tree().quit()]]:
+		var b := _button(l, spec[0], Vector2(SCREEN.x / 2.0 - 80, y), 160)
+		b.pressed.connect(spec[1])
+		y += 22
+	var by := _label(l, Vector2.ZERO, CombatHud.COL_DIM)
+	_centre(by, "A Herrasoft game", 330, 1)
+	_fade_in(l)
+
+
+func _new_adventure() -> void:
+	Sfx.play("ui_select", -8.0)
+	_choose_party(false)
+
+
+# --- Load game -----------------------------------------------------------------------------------
+
+func _load_menu() -> void:
+	Sfx.play("ui_select", -8.0)
+	_stage = Stage.LOAD
+	var l := _new_layer()
+	_heading(l, "Load a game", "")
+	var y := 74.0
+	for slot in range(1, SaveGame.SLOTS + 1):
+		var h := SaveGame.info(slot)
+		var lines: Array[String] = []
+		if h.is_empty():
+			lines = ["Slot %d: empty" % slot]
+		else:
+			lines = ["Slot %d: %s" % [slot, h.get("name", "")],
+				"%s - %s, level %d, %d gold" % [h.get("module_title", "The Wraith Below"), h.get("map_title", ""), h.get("level", 1), h.get("gold", 0)],
+				SaveGame.time_text(int(h.get("time", 0)))]
+		y += _card(l, Rect2(150, y, 340, 44), lines, not h.is_empty(), _load_slot.bind(slot)) + 6
+	_back(l, _menu)
+	_fade_in(l)
+
+
+func _load_slot(slot: int) -> void:
+	var err := []
+	var target := SaveGame.prepare_load(slot, err)
+	if target == "":
+		_flash_note(err[0] if not err.is_empty() else "That save can't be loaded.")
+		return
+	_leave_to(target, false)
+
+
+# --- 4. Party, then adventure ----------------------------------------------------------------------
+
+## Pick the party: a new one (level 1) or one from the Roster. With no saved parties, straight on
+## to the adventures with a new party (`back` = coming back from the adventure list: then to the
+## menu instead).
+func _choose_party(back: bool) -> void:
+	var parties := Roster.parties()
+	if parties.is_empty():
+		_party = {}
+		if back:
+			_menu()
+		else:
+			_choose_module()
+		return
+	_stage = Stage.PARTY
+	var l := _new_layer()
+	_heading(l, "Choose your party", "A new party starts at level 1. Parties that finished an adventure carry on from there.")
+	var y := 82.0
+	y += _card(l, Rect2(150, y, 340, 32), ["A new party", "Fighter, Rogue, Cleric and Mage, level 1"], true, _pick_party.bind({})) + 6
+	for p in parties.slice(0, 5):
+		var done: Array = p.get("modules_done", [])
+		var titles: Array[String] = []
+		for mid in done:
+			var m := Modules.by_id(mid)
+			titles.append(m.title if m else mid)
+		var gold: int = p.get("party", {}).get("bag", {}).get("gold", 0)
+		y += _card(l, Rect2(150, y, 340, 32), ["%s (level %d)" % [p.name, p.level],
+			"%d gold. Finished: %s" % [gold, ", ".join(titles) if not titles.is_empty() else "nothing yet"]], true, _pick_party.bind(p)) + 6
+	_back(l, _menu)
+	_fade_in(l)
+
+
+func _pick_party(p: Dictionary) -> void:
+	Sfx.play("ui_select", -8.0)
+	_party = p
+	_choose_module()
+
+
+func _party_level() -> int:
+	return int(_party.get("level", 1)) if not _party.is_empty() else 1
+
+
+## Pick the adventure: every module, the ones that fit the party's level playable.
+func _choose_module() -> void:
+	_stage = Stage.MODULE
+	var l := _new_layer()
+	var who := "A new party" if _party.is_empty() else String(_party.name)
+	_heading(l, "Choose an adventure", "%s, level %d" % [who, _party_level()])
+	var y := 80.0
+	var done: Array = _party.get("modules_done", [])
+	for m in Modules.all():
+		var ok := m.fits_level(_party_level())
+		var status := ""
+		if m.id in done:
+			status = "  (finished)"
+		var lines: Array[String] = ["%s%s" % [m.title, status],
+			"%s, ends around level %d. %s" % [m.level_text(), m.level_end, m.tagline]]
+		if ok:
+			lines.append(m.description)
+		else:
+			lines.append("Your party is level %d: this adventure is for a party of %s." % [_party_level(), m.level_text().to_lower()])
+		y += _card(l, Rect2(100, y, 440, 40), lines, ok, _pick_module.bind(m)) + 6
+	if Modules.all().is_empty():
+		var none := _label(l, Vector2.ZERO, CombatHud.COL_DIM)
+		_centre(none, "No adventures found (res://modules/).", 120, 1)
+	_back(l, func(): _choose_party(true))
+	_fade_in(l)
+
+
+func _pick_module(m: AdventureModule) -> void:
+	Sfx.play("ui_select", -8.0)
+	_module = m
+	_story()
+
+
+# --- 5. The adventure's story ----------------------------------------------------------------------
 
 func _story() -> void:
 	_stage = Stage.STORY
+	_pages.assign(_module.intro_pages if _module else [])
+	if _pages.is_empty():
+		_start_game()
+		return
 	var l := _new_layer()
 	# The party: four heroes, front idle frame of their walk sheets, 3x.
 	const K := 3
@@ -203,6 +369,8 @@ func _story() -> void:
 		shadow.size = Vector2(10 * K, 3)
 		l.add_child(shadow)
 		l.move_child(shadow, pic.get_index())
+	var name_l := _label(l, Vector2.ZERO, CombatHud.COL_BANNER)
+	_centre(name_l, _module.title.to_upper(), 30, 2)
 	var box := Panel.new()
 	box.position = BOX.position
 	box.size = BOX.size
@@ -225,16 +393,16 @@ func _story() -> void:
 
 func _next_page() -> void:
 	_page += 1
-	if _page >= PAGES.size():
+	if _page >= _pages.size():
 		_start_game()
 		return
-	_text.text = PAGES[_page]
+	_text.text = _pages[_page]
 	_text.visible_characters = 0
 	if _typing:
 		_typing.kill()
 	_typing = create_tween()
 	_typing.tween_interval(0.5 if _page == 0 else 0.1)
-	_typing.tween_property(_text, "visible_ratio", 1.0, PAGES[_page].length() / TYPE_SPEED)
+	_typing.tween_property(_text, "visible_ratio", 1.0, _pages[_page].length() / TYPE_SPEED)
 	if _page > 0:
 		Sfx.play("ui_select", -10.0)
 
@@ -243,9 +411,31 @@ func _is_typing() -> bool:
 	return _typing != null and _typing.is_valid() and _typing.is_running()
 
 
-# --- 4. Into the woods ---------------------------------------------------------------------------
+# --- 6. Into the adventure -------------------------------------------------------------------------
 
+## Set up the picked party and adventure and go to its first map.
 func _start_game() -> void:
+	if _stage == Stage.LEAVING or _module == null:
+		return
+	begin(_module, _party)
+	_leave_to(_module.start_map, true)
+
+
+## Everything a new adventure needs before its first map loads: the module, a fresh map memory, and
+## the party (new = PartyState empty, so the map makes a level-start_level party; else the Roster's).
+static func begin(module: AdventureModule, party: Dictionary) -> void:
+	Modules.current = module
+	MapState.reset()
+	MapState.next_entry = module.start_entry
+	if party.is_empty():
+		PartyState.reset()
+	else:
+		Roster.load_party(party)
+	Quest.reset()
+	RunePortal.reset()
+
+
+func _leave_to(scene: String, from_black: bool) -> void:
 	if _stage == Stage.LEAVING:
 		return
 	_stage = Stage.LEAVING
@@ -254,13 +444,11 @@ func _start_game() -> void:
 	if _tween:
 		_tween.kill()
 	var tw := create_tween()
-	tw.tween_property(_black, "color:a", 1.0, 1.0)
+	tw.tween_property(_black, "color:a", 1.0, 1.0 if from_black else 0.5)
 	tw.tween_interval(0.3)
 	tw.tween_callback(func():
-		PartyState.reset()
-		MapState.reset()
-		DungeonMap.fade_from_black = true
-		get_tree().change_scene_to_file(GAME_SCENE))
+		DungeonMap.fade_from_black = from_black
+		get_tree().change_scene_to_file(scene))
 
 
 # --- helpers -------------------------------------------------------------------------------------
@@ -279,6 +467,76 @@ func _centre(lab: Label, text: String, y: float, k: float) -> void:
 	lab.scale = Vector2(k, k)
 	var w := FONT.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x * k
 	lab.position = Vector2(roundf((SCREEN.x - w) / 2.0), y)
+
+
+func _button(parent: Control, text: String, pos: Vector2, w: float) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	b.position = pos
+	parent.add_child(b)
+	b.set_deferred("size", Vector2(w, 16))
+	return b
+
+
+## A menu screen's heading (2x) and a line under it.
+func _heading(l: Control, text: String, sub: String) -> void:
+	var h := _label(l, Vector2.ZERO, CombatHud.COL_BANNER)
+	_centre(h, text, 24, 2)
+	if sub != "":
+		var s := _label(l, Vector2.ZERO, CombatHud.COL_DIM)
+		_centre(s, sub, 50, 1)
+
+
+## "Back" at the bottom of a menu screen.
+func _back(l: Control, call: Callable) -> void:
+	var b := _button(l, "Back (Esc)", Vector2(SCREEN.x / 2.0 - 50, 326), 100)
+	b.pressed.connect(func():
+		Sfx.play("ui_select", -8.0)
+		call.call())
+
+
+## A clickable box: the first line in gold, the rest wrapped under it (the box grows to fit; returns
+## its height). Greyed and not clickable when `enabled` is false.
+func _card(l: Control, r: Rect2, lines: Array[String], enabled: bool, on_click: Callable) -> float:
+	var p := Panel.new()
+	p.position = r.position
+	p.size = r.size
+	p.add_theme_stylebox_override("panel", CombatHud._box_static(COL_CARD, COL_CARD_EDGE))
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.add_child(p)
+	var y := 4.0
+	for i in lines.size():
+		var lab := _label(p, Vector2(8, y), CombatHud.COL_BANNER if i == 0 else (CombatHud.COL_TEXT if i == 1 else CombatHud.COL_DIM))
+		lab.text = lines[i]
+		lab.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		lab.size = Vector2(r.size.x - 16, 0)
+		var rows := maxi(1, roundi(FONT.get_multiline_string_size(lines[i], HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 16, 10).y / FONT.get_height(10)))
+		y += (rows - 1) * 14.0 + 12.0          # a wrapped label puts its lines 14 px apart
+	r.size.y = maxf(r.size.y, y + 4.0)
+	p.size = r.size
+	if not enabled:
+		p.modulate = Color(0.55, 0.55, 0.6)
+		return r.size.y
+	# a flat button over the whole card: hover lights the edge, click picks it
+	var b := Button.new()
+	b.flat = true
+	b.focus_mode = Control.FOCUS_NONE
+	b.position = Vector2.ZERO
+	b.size = r.size
+	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	p.add_child(b)
+	b.mouse_entered.connect(func(): p.add_theme_stylebox_override("panel", CombatHud._box_static(COL_CARD.lightened(0.08), CombatHud.COL_GOLD)))
+	b.mouse_exited.connect(func(): p.add_theme_stylebox_override("panel", CombatHud._box_static(COL_CARD, COL_CARD_EDGE)))
+	b.pressed.connect(on_click)
+	return r.size.y
+
+
+## A short message at the bottom (e.g. why a save can't be loaded).
+func _flash_note(text: String) -> void:
+	var n := _label(_layer, Vector2.ZERO, CombatHud.COL_HP)
+	_centre(n, text, 306, 1)
+	Sfx.play("fail_sting", -10.0)
 
 
 ## A burning torch (the wall torch's sheet, scale k) with a soft warm glow; `base` = the bracket's

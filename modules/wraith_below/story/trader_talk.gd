@@ -50,8 +50,8 @@ static func _intro(map: DungeonMap, npc: Npc, page: int) -> void:
 			_say(map, npc, "Something woke in the old silver mine. The miners dug into a sealed vault five levels down, and a [color=#c8d8ff]wraith[/color] came out of it. Now the dead walk the tunnels, and nobody who goes down comes back up.",
 					[{text = "Continue", call = next}])
 		2:
-			var ring := ItemData.get_item(Quest.REWARD_ITEM)
-			_say(map, npc, "You look like you can handle yourselves. Go down there and destroy that wraith, and I'll pay you [color=#ffd75a]%d gold[/color] and give you the best thing in my stock: a [color=#96aaff]%s[/color]." % [Quest.REWARD_GOLD, ring.display_name],
+			var ring := ItemData.get_item(Quest.reward_item())
+			_say(map, npc, "You look like you can handle yourselves. Go down there and destroy that wraith, and I'll pay you [color=#ffd75a]%d gold[/color] and give you the best thing in my stock: a [color=#96aaff]%s[/color]." % [Quest.reward_gold(), ring.display_name],
 					[{text = "We'll do it.", call = next}])
 		3:
 			Quest.given = true
@@ -86,7 +86,7 @@ static func _hub(map: DungeonMap, npc: Npc, line: String) -> void:
 
 static func _about(map: DungeonMap, npc: Npc) -> void:
 	var cur := Quest.current()
-	var s: String = Quest.STAGES[cur].text if cur >= 0 else ""
+	var s: String = Quest.stages()[cur].text if cur >= 0 else ""
 	var tip: String = {
 		"mine": "The mine entrance is just there in the hillside.",
 		"deep": "The Upper Halls were the miners' old workings. The way down is somewhere at the far end.",
@@ -98,23 +98,23 @@ static func _about(map: DungeonMap, npc: Npc) -> void:
 		"vault": "The Sealed Vault is the bottom of it all. That's where the wraith came from.",
 		"sun_key": "The vault was sealed with a gold key, they say. Someone down there has it.",
 		"wraith": "Magic or silver hurts it most. Don't let it touch you; it drains the life right out of you.",
-	}.get(Quest.STAGES[cur].id if cur >= 0 else "", "")
+	}.get(Quest.stages()[cur].id if cur >= 0 else "", "")
 	_hub(map, npc, ("Next: [color=#ffdc78]%s[/color] %s" % [s, tip]).strip_edges())
 
 
 static func _reward(map: DungeonMap, npc: Npc) -> void:
 	Quest.claim(map.inventory)
 	Sfx.play("coins")
-	var ring := ItemData.get_item(Quest.REWARD_ITEM)
-	FloatText.spawn(map, npc.position + Vector2(0, -28), "+%d gold" % Quest.REWARD_GOLD, Color8(255, 215, 90))
+	var ring := ItemData.get_item(Quest.reward_item())
+	FloatText.spawn(map, npc.position + Vector2(0, -28), "+%d gold" % Quest.reward_gold(), Color8(255, 215, 90))
 	SpellFx.sparkles(map, npc.position + Vector2(0, -14), Color8(255, 220, 120), false)
 	map.quest_check()
 	# Then the win screen (VictoryScreen); after it the game goes on (he still trades).
-	_say(map, npc, "As promised: [color=#ffd75a]%d gold[/color], and my [color=#96aaff]%s[/color]. Wear it well. You've earned it." % [Quest.REWARD_GOLD, ring.display_name],
+	_say(map, npc, "As promised: [color=#ffd75a]%d gold[/color], and my [color=#96aaff]%s[/color]. Wear it well. You've earned it." % [Quest.reward_gold(), ring.display_name],
 			[{text = "Farewell, Brannoc.", call = func(): _bye(map); map.show_victory(), bye = true}])
 	# the quest's own update (the last stage) shows too
 	if map.hud:
-		map.hud.quest_toast([Quest.STAGES[-1]])
+		map.hud.quest_toast([Quest.stages()[-1]])
 
 
 static func _trade(map: DungeonMap, npc: Npc) -> void:

@@ -1226,7 +1226,7 @@ func quest_toast(stages: Array) -> void:
 	var cur := Quest.current()
 	if cur >= 0:
 		var n := _label(_toast, Vector2(8, y + 1), COL_TEXT)
-		n.text = "Next: " + Quest.STAGES[cur].text
+		n.text = "Next: " + Quest.stages()[cur].text
 		y += 12
 	_toast.size = Vector2(TOAST_W, y + 4)
 	var top := dialogue and dialogue.visible
