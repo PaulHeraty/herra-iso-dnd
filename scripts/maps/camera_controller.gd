@@ -18,6 +18,8 @@ var following := true
 ## Screen pixels covered by UI at the bottom (combat panel): the camera keeps its target centred
 ## in the area above it and clamps to the map within that area.
 var ui_bottom := 0.0
+## ui_bottom as shown (eases toward ui_bottom, e.g. when the dialogue box opens).
+var _ui_cur := -1.0
 
 var _zoom_i := 0
 var _dragging := false
@@ -59,7 +61,10 @@ func _process(delta: float) -> void:
 	elif following and target:
 		camera.position = camera.position.lerp(target.position, 1.0 - exp(-FOLLOW_RATE * delta))
 	camera.position = _clamped(camera.position)
-	camera.offset = Vector2(0, ui_bottom * 0.5 / camera.zoom.x)
+	if _ui_cur < 0.0:
+		_ui_cur = ui_bottom
+	_ui_cur = lerpf(_ui_cur, ui_bottom, 1.0 - exp(-8.0 * delta)) if absf(_ui_cur - ui_bottom) > 0.5 else ui_bottom
+	camera.offset = Vector2(0, _ui_cur * 0.5 / camera.zoom.x)
 	if _shake_t > 0.0:
 		_shake_t -= delta
 		var amt := _shake_px * clampf(_shake_t / 0.4, 0.0, 1.0)

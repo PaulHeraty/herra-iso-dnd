@@ -12,6 +12,7 @@ const COL_BLOCKED := Color8(255, 80, 60)
 const COL_PATH := Color8(90, 150, 255)
 const COL_LOCKED := Color8(255, 150, 60)
 const COL_STAIRS := Color8(120, 220, 255)
+const COL_TALK := Color8(140, 240, 150)
 
 var map: DungeonMap
 var overlay: GridOverlay
@@ -24,6 +25,8 @@ var _path: Array[Vector2i] = []
 var _door_goal: Door
 ## Chest to open when the leader gets there (clicked a closed chest).
 var _chest_goal: Chest
+## NPC to talk to when the leader gets there (clicked him).
+var _npc_goal: Npc
 var _walking := false
 var _hover := Vector2i(-99999, -99999)
 ## False while combat runs (CombatManager takes over input).
@@ -63,12 +66,25 @@ func _unhandled_input(event: InputEvent) -> void:
 		if map.hud and map.hud.mouse_over_ui():
 			return
 		var mouse := map.get_local_mouse_position()
-		var chest := map.closed_chest_under(mouse)
-		var door: Door = null if chest else map.closed_door_under(mouse)
+		var npc := map.npc_under(mouse)
+		var chest: Chest = null if npc else map.closed_chest_under(mouse)
+		var door: Door = null if chest or npc else map.closed_door_under(mouse)
 		var target := IsoGrid.world_to_cell(mouse)
 		_door_goal = null
 		_chest_goal = null
-		if chest:
+		_npc_goal = null
+		if npc:
+			var np := approach_path(npc.sides())
+			if np.is_empty():
+				get_viewport().set_input_as_handled()
+				return
+			_npc_goal = npc
+			target = np[-1]
+			if target == party[0].cell:
+				get_viewport().set_input_as_handled()
+				_arrived()
+				return
+		elif chest:
 			var cp := approach_path(chest.sides())
 			if cp.is_empty():
 				get_viewport().set_input_as_handled()
@@ -91,8 +107,15 @@ func _unhandled_input(event: InputEvent) -> void:
 				_arrived()
 				return
 		else:
-			var st := map.stairs_under(mouse)
-			if st:
+			var pt := map.portal_under(mouse)
+			var st: Stairs = null if pt else map.stairs_under(mouse)
+			if pt:
+				target = pt.get_cell()
+				if target == party[0].cell:
+					get_viewport().set_input_as_handled()
+					map.take_portal(pt)
+					return
+			elif st:
 				target = st.get_cell()
 				if target == party[0].cell:
 					get_viewport().set_input_as_handled()
@@ -137,6 +160,14 @@ func _arrived() -> void:
 	if not enabled:            # combat started on the way
 		_door_goal = null
 		_chest_goal = null
+		_npc_goal = null
+		return
+	var npc := _npc_goal
+	_npc_goal = null
+	if npc and npc.present and party[0].cell in npc.sides():
+		party[0].facing = npc.get_cell() - party[0].cell
+		map.talk_to(npc)
+		_refresh_overlay()
 		return
 	var chest := _chest_goal
 	_chest_goal = null
@@ -153,6 +184,10 @@ func _arrived() -> void:
 		_refresh_overlay()
 		return
 	if not _path.is_empty():
+		return
+	var pt := map.portal_at(party[0].cell)
+	if pt:
+		map.take_portal(pt)
 		return
 	var st := map.stairs_at(party[0].cell)
 	if st:
@@ -181,6 +216,28 @@ func _refresh_overlay() -> void:
 	if not enabled:
 		return
 	var preview: Array[Vector2i] = []
+	var npc: Npc = null if _walking else map.npc_under(map.get_local_mouse_position())
+	if npc and not (map.hud and map.hud.mouse_over_ui()):
+		preview = approach_path(npc.sides())
+		if not preview.is_empty():
+			preview.remove_at(0)
+		overlay.set_cells("path", preview, COL_PATH, 0.12, 0.35, true)
+		overlay.clear("destination")
+		overlay.set_cells("cursor", [npc.get_cell()], COL_TALK, 0.15, 0.7, true)
+		if map.hud:
+			map.hud.flash_hint("%s: click to talk." % npc.display_name)
+		return
+	var pt: Portal = null if _walking else map.portal_under(map.get_local_mouse_position())
+	if pt and not (map.hud and map.hud.mouse_over_ui()):
+		preview = map.find_path(party[0].cell, pt.get_cell())
+		if not preview.is_empty():
+			preview.remove_at(0)
+		overlay.set_cells("path", preview.slice(0, -1), COL_PATH, 0.12, 0.35, true)
+		overlay.clear("destination")
+		overlay.set_cells("cursor", [pt.get_cell()], COL_STAIRS, 0.2, 0.75, true)
+		if map.hud:
+			map.hud.flash_hint(pt.hint())
+		return
 	var chest: Chest = null if _walking else map.closed_chest_under(map.get_local_mouse_position())
 	if chest and not (map.hud and map.hud.mouse_over_ui()):
 		preview = approach_path(chest.sides())

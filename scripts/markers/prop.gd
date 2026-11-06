@@ -5,7 +5,7 @@ extends MapMarker
 ## cocoon, urn. Blocks movement (not sight) unless `blocks` is off. Art from
 ## tools/godot/gen_dungeon_art.gd. Drop it under Entities; pick the kind in the inspector.
 
-enum Kind { BARREL, CRATE, SARCOPHAGUS, RUBBLE, COCOON, URN, TREE_OAK, TREE_PINE, BUSH, BOULDER, STUMP, LOG, TENT, GRAVE }
+enum Kind { BARREL, CRATE, SARCOPHAGUS, RUBBLE, COCOON, URN, TREE_OAK, TREE_PINE, BUSH, BOULDER, STUMP, LOG, TENT, GRAVE, STALL }
 
 ## texture, feet offset (top-left of the image relative to the cell centre), shadow radius
 const KINDS := {
@@ -24,6 +24,8 @@ const KINDS := {
 	Kind.LOG: ["log", Vector2(-15, -9), 0.0],
 	Kind.TENT: ["tent", Vector2(-18, -27), 0.0],
 	Kind.GRAVE: ["grave", Vector2(-7, -16), 4.0],
+	# Brannoc's market stall (tools/godot/gen_trader_art.gd)
+	Kind.STALL: ["stall", Vector2(-24, -48), 0.0],
 }
 
 @export var kind := Kind.BARREL:
@@ -41,7 +43,7 @@ const KINDS := {
 ## Kinds you can't see through (trees, boulders, tents): they block line of sight and fog sight.
 const SIGHT_BLOCKERS := [Kind.TREE_OAK, Kind.TREE_PINE, Kind.BOULDER, Kind.TENT]
 ## Tall kinds fade when someone stands behind them (DungeonMap).
-const TALL := [Kind.TREE_OAK, Kind.TREE_PINE, Kind.TENT]
+const TALL := [Kind.TREE_OAK, Kind.TREE_PINE, Kind.TENT, Kind.STALL]
 
 
 func blocks_sight() -> bool:

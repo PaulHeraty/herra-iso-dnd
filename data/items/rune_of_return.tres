@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_n1uer"]
+
+[resource]
+resource_name = "Rune of Return"
+script = ExtResource("1_n1uer")
+id = "rune_of_return"
+display_name = "Rune of Return"
+kind = 8
+description = "A smooth grey stone with a blue rune that never stops glowing. Speak its word anywhere below ground and a portal opens back to Brannoc's stall; step through it again to return. It never runs out."
+wondrous = true

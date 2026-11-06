@@ -192,6 +192,8 @@ func equip(h: Hero, item_id: String, slot := "") -> bool:
 		return read(h, item_id)
 	if it.kind == ItemData.Kind.KEY:
 		return _say("Keys are used by themselves: click the locked door or chest.", CombatHud.COL_DIM)
+	if it.kind == ItemData.Kind.RUNE:
+		return use_rune()
 	if _locked():
 		return _say("Equipment can't change during a fight.", COL_WARN)
 	if not it.is_equipment():
@@ -236,6 +238,17 @@ func read(h: Hero, item_id: String) -> bool:
 	_say("%s reads the %s: %s +%d HP (%d/%d)." % [r.reader.display_name(), it.display_name,
 			h.display_name(), r.got, h.hp, h.stats.max_hp], COL_GOOD)
 	_refresh()
+	return true
+
+
+## The Rune of Return: open a portal next to the party (DungeonMap.use_rune); the screen closes
+## so the portal can be seen.
+func use_rune() -> bool:
+	var why := combat.map.use_rune()
+	if why != "":
+		Sfx.play("fail_sting", -12.0)
+		return _say(why, COL_WARN)
+	close()
 	return true
 
 
@@ -434,6 +447,8 @@ func _describe(it: ItemData, slot: String, count: int) -> void:
 			lines.append(_c("Read it in a fight: the Item action.", CombatHud.COL_DIM))
 	elif it.kind == ItemData.Kind.KEY:
 		lines.append(_c("Used by itself when you open its lock.", CombatHud.COL_DIM))
+	elif it.kind == ItemData.Kind.RUNE:
+		lines.append(_c("Click: open a portal back to Brannoc's stall (not in a fight).", CombatHud.COL_DIM))
 	if it.value_gp > 0:
 		lines.append(_c("Worth %d gp" % it.value_gp, CombatHud.COL_GOLD.darkened(0.15)))
 	_info_body.text = "\n".join(lines)

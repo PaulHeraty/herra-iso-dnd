@@ -42,6 +42,9 @@ var _panel: Panel
 var _cards: Array[Dictionary] = []
 var _buttons := {}
 var inventory_screen: InventoryScreen
+var dialogue: DialogueBox
+var shop: ShopScreen
+var quest_screen: QuestScreen
 
 
 func _ready() -> void:
@@ -85,6 +88,21 @@ func _ready() -> void:
 	inventory_screen.combat = combat
 	root.add_child(inventory_screen)
 	combat.combat_started.connect(inventory_screen.close)
+	shop = ShopScreen.new()
+	shop.name = "Shop"
+	shop.combat = combat
+	root.add_child(shop)
+	quest_screen = QuestScreen.new()
+	quest_screen.name = "Quests"
+	quest_screen.combat = combat
+	root.add_child(quest_screen)
+	dialogue = DialogueBox.new()
+	dialogue.name = "Dialogue"
+	root.add_child(dialogue)
+	dialogue.closed.connect(frame_speaker.bind(null))
+	combat.combat_started.connect(func():
+		close_screens()
+		dialogue.close())
 	# The party panel stays up while exploring too (HP, slots, conditions, rests).
 	visible = true
 	combat.map.camera_controller.ui_bottom = PANEL_H
@@ -96,6 +114,8 @@ func mouse_over_ui() -> bool:
 		return false
 	if inventory_screen and inventory_screen.visible:
 		return true          # the whole map is off limits while the inventory is open
+	if (shop and shop.visible) or (quest_screen and quest_screen.visible) or (dialogue and dialogue.visible):
+		return true
 	if _panel.get_global_rect().has_point(_panel.get_global_mouse_position()):
 		return true
 	return _popup.visible and _popup.get_global_rect().has_point(_popup.get_global_mouse_position())
@@ -175,6 +195,15 @@ func _make_theme() -> Theme:
 	t.set_color("font_pressed_color", "Button", Color.WHITE)
 	t.set_color("font_disabled_color", "Button", Color8(84, 80, 96))
 	return t
+
+
+static func _box_static(bg: Color, edge: Color, width := 1) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.border_color = edge
+	sb.set_border_width_all(width)
+	sb.anti_aliasing = false
+	return sb
 
 
 func _box(bg: Color, edge: Color, width := 1) -> StyleBoxFlat:
@@ -719,15 +748,37 @@ func _build_reaction(root: Control) -> void:
 	combat.reaction_prompt.connect(_on_reaction_prompt)
 
 
-## I opens / closes the inventory; Esc or a click on the map closes it. True = input used.
+## I opens / closes the inventory; Esc or a click on the map closes it. J: the quest log. While
+## someone is talking, keys go to the dialogue box; the shop and the quest log close like the
+## inventory. True = input used.
 func _inventory_input(event: InputEvent) -> bool:
 	if inventory_screen == null:
 		return false
+	if dialogue and dialogue.visible:
+		return event is InputEventKey and dialogue.handle_key(event)
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_J and not (combat.map.dice and combat.map.dice.visible):
+			inventory_screen.close()
+			shop.close()
+			_close_popup()
+			quest_screen.toggle()
+			return true
+		if event.keycode == KEY_ESCAPE and (shop.visible or quest_screen.visible):
+			shop.close()
+			quest_screen.close()
+			return true
+		if event.keycode == KEY_I and shop.visible:
+			return true                      # the shop shows the bag already
+	if (shop.visible or quest_screen.visible) and event is InputEventMouseButton and event.pressed:
+		shop.close()
+		quest_screen.close()
+		return true
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_I and (not combat.map.dice or not combat.map.dice.visible):
 			if not inventory_screen.visible and combat.targeting:
 				combat.cancel_targeting()
 			_close_popup()
+			quest_screen.close()
 			inventory_screen.toggle()
 			return true
 		if event.keycode == KEY_ESCAPE and inventory_screen.visible:
@@ -821,6 +872,8 @@ func _build_rest_buttons() -> void:
 		b.mouse_entered.connect(func():
 			_hint.text = "Long rest: full HP, spell slots and abilities." if specs[i][1] else "Short rest: spend hit dice to heal; Second Wind comes back.")
 		_rest_buttons.append(b)
+	# Bag and Quest share the third row.
+	var half := floorf((first.size.x - 2) / 2.0)
 	var bag := Button.new()
 	bag.text = "Bag (I)"
 	bag.focus_mode = Control.FOCUS_NONE
@@ -828,10 +881,25 @@ func _build_rest_buttons() -> void:
 	bag.clip_text = true
 	bag.position = Vector2(first.position.x, 31)
 	_panel.add_child(bag)
-	bag.set_deferred("size", Vector2(first.size.x, 13))
-	bag.pressed.connect(func(): inventory_screen.toggle())
+	bag.set_deferred("size", Vector2(half, 13))
+	bag.pressed.connect(func():
+		quest_screen.close()
+		inventory_screen.toggle())
 	bag.mouse_entered.connect(func(): _hint.text = "The party bag and everyone's equipment.")
 	_rest_buttons.append(bag)
+	var quest := Button.new()
+	quest.text = "Quest (J)"
+	quest.focus_mode = Control.FOCUS_NONE
+	quest.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	quest.clip_text = true
+	quest.position = Vector2(first.position.x + half + 2, 31)
+	_panel.add_child(quest)
+	quest.set_deferred("size", Vector2(first.size.x - half - 2, 13))
+	quest.pressed.connect(func():
+		inventory_screen.close()
+		quest_screen.toggle())
+	quest.mouse_entered.connect(func(): _hint.text = "The quest log: what the party is doing, and what comes next.")
+	_rest_buttons.append(quest)
 	_gold = _label(_panel, Vector2(first.position.x + 2, 46), COL_GOLD)
 
 
@@ -986,3 +1054,86 @@ func show_level_ups(ups: Array) -> void:
 	_loot.modulate.a = 0.0
 	create_tween().tween_property(_loot, "modulate:a", 1.0, 0.15)
 	Sfx.play("level_up")
+
+
+# --- the trader, the quest log ------------------------------------------------------------------
+
+## Something on screen wants the player's attention (a talk shouldn't start over it).
+func ui_busy() -> bool:
+	return (inventory_screen and inventory_screen.visible) or (shop and shop.visible) \
+			or (quest_screen and quest_screen.visible) or (dialogue and dialogue.visible) \
+			or reaction_open() or loot_open() or (combat.map.dice != null and combat.map.dice.visible)
+
+
+## Close the inventory, the shop, the quest log and any menu (not the dialogue box).
+func close_screens() -> void:
+	_close_popup()
+	_close_loot()
+	if inventory_screen:
+		inventory_screen.close()
+	if shop:
+		shop.close()
+	if quest_screen:
+		quest_screen.close()
+
+
+var _toast: Panel
+const TOAST_W := 280
+
+
+## "QUEST UPDATED": the stages just done (ticked) and what comes next, for a few seconds. Sits
+## above the party panel (at the top while someone is talking).
+func quest_toast(stages: Array) -> void:
+	if stages.is_empty():
+		return
+	if _toast:
+		_toast.queue_free()
+	_toast = Panel.new()
+	_toast.add_theme_stylebox_override("panel", _box(COL_BG, COL_BANNER.darkened(0.4)))
+	_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_panel.get_parent().add_child(_toast)
+	var title := _label(_toast, Vector2(6, 3), COL_BANNER)
+	title.text = "QUEST UPDATED" if Quest.current() != -1 else "QUEST COMPLETE!"
+	var y := 16.0
+	for s in stages:
+		var tick := TextureRect.new()
+		tick.texture = QuestScreen.tick_texture()
+		tick.position = Vector2(8, y + 2)
+		tick.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_toast.add_child(tick)
+		var l := _label(_toast, Vector2(19, y), QuestScreen.COL_DONE)
+		l.text = s.text
+		y += 11
+	var cur := Quest.current()
+	if cur >= 0:
+		var n := _label(_toast, Vector2(8, y + 1), COL_TEXT)
+		n.text = "Next: " + Quest.STAGES[cur].text
+		y += 12
+	_toast.size = Vector2(TOAST_W, y + 4)
+	var top := dialogue and dialogue.visible
+	_toast.position = Vector2(roundf((SCREEN.x - TOAST_W) / 2.0), 30.0 if top else SCREEN.y - PANEL_H - _toast.size.y - 6)
+	_toast.modulate.a = 0.0
+	Sfx.play("quest_update", -6.0)
+	var t := _toast
+	var tw := create_tween()
+	tw.tween_property(t, "modulate:a", 1.0, 0.2)
+	tw.tween_interval(4.5)
+	tw.tween_property(t, "modulate:a", 0.0, 0.5)
+	tw.tween_callback(func():
+		if is_instance_valid(t):
+			t.queue_free()
+		if _toast == t:
+			_toast = null)
+
+
+## While someone talks, the camera centres on them in the space above the dialogue box; null =
+## back to following the leader above the party panel.
+func frame_speaker(who: Node2D) -> void:
+	var cc := combat.map.camera_controller
+	if who:
+		cc.target = who
+		cc.ui_bottom = SCREEN.y - DialogueBox.RECT.position.y
+	else:
+		cc.target = combat.map.party[0] if not combat.map.party.is_empty() else null
+		cc.ui_bottom = PANEL_H
+	cc.following = true

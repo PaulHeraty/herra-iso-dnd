@@ -118,6 +118,12 @@ func _init() -> void:
 	_key("warren_key", "Chief's Key", "warren", "A crude iron key on a thong of goblin hide.")
 	_key("vault_key", "Sun Key", "vault", "A gold key shaped like a sunburst. It is warm in the dark.")
 
+	# --- the Rune of Return: Brannoc the trader's gift (Quest); not SRD, our own ---
+	var rune := _item("rune_of_return", "Rune of Return", ItemData.Kind.RUNE, 0,
+			"A smooth grey stone with a blue rune that never stops glowing. Speak its word anywhere below ground and a portal opens back to Brannoc's stall; step through it again to return. It never runs out.")
+	rune.wondrous = true
+	_save(rune)
+
 	# --- magic: +1 / +2 and named items ---
 	_plus1("warhammer", "Dwarf-made. The head rings like a bell on every blow.")
 	_plus1("scimitar", "A desert blade with a moon etched near the hilt.")

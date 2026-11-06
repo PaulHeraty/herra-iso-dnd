@@ -80,6 +80,13 @@ var _placed := {}
 
 
 func _ready() -> void:
+	# The quest and the rune's portal travel with the party (a new game starts them afresh).
+	if PartyState.has_state():
+		Quest.from_dict(PartyState.story.get("quest", {}))
+		RunePortal.from_dict(PartyState.story.get("portal", {}))
+	else:
+		Quest.reset()
+		RunePortal.reset()
 	IsoGrid.rotation = 0
 	var fr := floor_layer.get_used_rect()
 	IsoGrid.pivot = fr.position + fr.size / 2
@@ -102,6 +109,9 @@ func _ready() -> void:
 	add_child(overlay)
 	move_child(overlay, scorch.get_index() + 1)          # above the floor, below World
 	_spawn_monsters()
+	for n in entities.get_children():
+		if n is Npc:
+			n.present = _npc_area_clear(n)
 	invalidate_static()
 	refresh_navigation()
 	_spawn_party()
@@ -133,7 +143,12 @@ func _ready() -> void:
 	hud.name = "CombatHud"
 	hud.combat = combat
 	add_child(hud)
+	Quest.note_map(scene_file_path)
+	_place_portals(false)
+	inventory.changed.connect(quest_check)
+	combat.combat_ended.connect(_on_combat_ended)
 	_apply_view()
+	quest_check.call_deferred()
 	if PartyState.has_state() or map_title != "":
 		_arrival_fade(PartyState.has_state())
 
@@ -145,6 +160,7 @@ func _process(delta: float) -> void:
 	if _pending_turns != 0 and not _anyone_moving():
 		apply_pending_rotation()
 	_tick_fog()
+	_tick_npcs(delta)
 	var reveal: Array[Rect2] = []
 	for h in party:
 		reveal.append(WallFader.figure_rect(h.position))
@@ -215,6 +231,9 @@ func _static_cells() -> Dictionary:
 		for n in entities.get_children():
 			if n is Door:
 				doors.append(n)
+			elif n is Npc:
+				if n.present:
+					move[n.get_cell()] = true
 			elif n is Chest or n is Brazier:
 				move[n.get_cell()] = true
 			elif n is Prop:
@@ -799,7 +818,7 @@ func _refresh_fog_look() -> void:
 		if n is Torch:                      # torches and braziers: hidden until seen, never dimmed
 			n.visible = is_explored(n.get_cell())
 		elif n is MapMarker:
-			n.visible = is_explored(n.get_cell())
+			n.visible = is_explored(n.get_cell()) and (not n.has_method("is_shown") or n.is_shown())
 			n.modulate = Color.WHITE if is_seen(n.get_cell()) else FOG_DIM
 	for s: Node2D in _placed:
 		var c: Vector2i = _placed[s][0]
@@ -850,15 +869,18 @@ func _find_party_start() -> PartyStart:
 
 func _spawn_party() -> void:
 	var start := _find_party_start()
-	if start == null:
+	# Back through the rune's portal: arrive where the rune was used (no marker there).
+	var via_portal := MapState.next_entry == RunePortal.ARRIVE
+	if start == null and not via_portal:
 		push_warning("%s: no PartyStart marker, party not spawned" % name)
 		return
-	var cells := _formation_cells(start.get_cell(), PARTY_ORDER.size())
+	var origin := MapState.arrive_cell if via_portal else start.get_cell()
+	var cells := _formation_cells(origin, PARTY_ORDER.size())
 	for i in cells.size():
 		var hero: Hero = HERO_SCENE.instantiate()
 		hero.hero_class = PARTY_ORDER[i]
 		entities.add_child(hero)
-		hero.facing = PartyStart.FACING_DIR[start.facing]
+		hero.facing = PartyStart.FACING_DIR[start.facing] if start else Vector2i(1, 0)
 		hero.place_at(cells[i])
 		if PartyState.has_state():
 			PartyState.apply(hero)
@@ -964,3 +986,208 @@ func _fade_tall_props(delta: float) -> void:
 				break
 		var target := 0.45 if hide else 1.0
 		p.modulate.a = move_toward(p.modulate.a, target, delta * 3.0)
+
+
+# --- the trader, the quest and the Rune of Return -------------------------------------------------
+
+## Tick off quest stages that have happened (map reached, key found, monster killed) and tell the
+## player about each one.
+func quest_check() -> void:
+	var newly := Quest.update(inventory)
+	if newly.is_empty():
+		return
+	for s in newly:
+		combat._say("Quest: %s (done)" % s.text)
+	if hud:
+		hud.quest_toast(newly)
+
+
+## After a fight: count the dead for the quest (each monster once), then let the trader step out.
+func _on_combat_ended() -> void:
+	for m in monsters:
+		if not m.is_alive() and not m.has_meta("quest_counted"):
+			m.set_meta("quest_counted", true)
+			if m.stats:
+				Quest.note_kill(m.stats.id)
+	quest_check()
+	_npc_t = 0.6
+
+
+## No living monster within the NPC's guard_radius (he only comes out once they're dead).
+func _npc_area_clear(n: Npc) -> bool:
+	if n.guard_radius <= 0:
+		return true
+	for m in monsters:
+		if m.is_alive() and grid_distance(m.cell, n.get_cell()) <= n.guard_radius:
+			return false
+	return true
+
+
+var _npc_t := 0.0
+
+
+## NPCs come out of hiding once their area is clear, and call the party over the first time the
+## party sees them (Brannoc's intro, where he gives the quest and the rune).
+func _tick_npcs(delta: float) -> void:
+	_npc_t -= delta
+	if _npc_t > 0.0 or combat == null or combat.in_combat or combat.game_over or _leaving:
+		return
+	_npc_t = 0.25
+	for n in entities.get_children():
+		if not n is Npc:
+			continue
+		if not n.present:
+			if _npc_area_clear(n):
+				n.appear()
+				invalidate_static()
+				refresh_navigation()
+				_refresh_fog_look()
+				_npc_t = 1.2                  # a moment before he speaks up
+			continue
+		if not Quest.met and is_seen(n.get_cell()) and hud and not hud.ui_busy() \
+				and not controller.is_walking() and controller.enabled:
+			talk_to(n)
+			return
+
+
+## Talk to an NPC (he turns to the party and raises a hand; the dialogue box opens).
+func talk_to(n: Npc) -> void:
+	if combat.in_combat or not n.present:
+		return
+	controller.stop()
+	n.greet(party[0].position if not party.is_empty() else n.position)
+	TraderTalk.start(self, n)
+
+
+## A present NPC under a world point: on the cell under it, or whose sprite the point is on.
+func npc_under(pos: Vector2) -> Npc:
+	var c := IsoGrid.world_to_cell(pos)
+	for n in entities.get_children():
+		if n is Npc and n.present and n.visible and (n.get_cell() == c or n.sprite_rect().has_point(pos)):
+			return n
+	return null
+
+
+## The (shown) portal on a cell, or null.
+func portal_at(cell: Vector2i) -> Portal:
+	for n in entities.get_children():
+		if n is Portal and n.is_shown() and n.get_cell() == cell:
+			return n
+	return null
+
+
+## A shown portal under a world point (its cell or its oval of light).
+func portal_under(pos: Vector2) -> Portal:
+	var p := portal_at(IsoGrid.world_to_cell(pos))
+	if p:
+		return p
+	for n in entities.get_children():
+		if n is Portal and n.is_shown() and n.visible \
+				and Rect2(n.position + Portal.OFFSET, Portal.FRAME_SIZE).has_point(pos):
+			return n
+	return null
+
+
+const PORTAL_SCENE := preload("res://scenes/markers/portal.tscn")
+
+
+## Put the rune's portal ends on this map: the runtime one where the rune was used (if it was used
+## here), and tell the home one (outside the stall) where it leads. `fresh` = just opened (grows).
+func _place_portals(fresh: bool) -> void:
+	for n in entities.get_children():
+		if n is Portal and not n.home:
+			n.queue_free()
+			entities.remove_child(n)
+	for n in entities.get_children():
+		if n is Portal and n.home:
+			n.where = "back down to %s" % map_title_of(RunePortal.map_path)
+	if RunePortal.active and RunePortal.map_path == scene_file_path:
+		var p: Portal = PORTAL_SCENE.instantiate()
+		p.name = "RunePortal"
+		p.position = IsoGrid.view_cell_to_world(RunePortal.cell)
+		p.where = "back to Brannoc's stall"
+		entities.add_child(p)
+		p.lock_cell()
+		p.apply_view()
+		if fresh:
+			p.open_fx()
+	_refresh_fog_look()
+
+
+## A map scene's map_title (read from the file without loading the map), or "".
+static func map_title_of(path: String) -> String:
+	if path == "" or not ResourceLoader.exists(path):
+		return "the dungeon"
+	var st := (load(path) as PackedScene).get_state()
+	for i in st.get_node_property_count(0):
+		if st.get_node_property_name(0, i) == "map_title":
+			return str(st.get_node_property_value(0, i))
+	return "the dungeon"
+
+
+## Use the Rune of Return: a portal opens next to the party (anywhere but the woods; not in a
+## fight). Returns "" if it opened, else why not. Any portal open elsewhere moves here.
+func use_rune() -> String:
+	if combat.in_combat:
+		return "No time for that in the middle of a fight!"
+	if scene_file_path == RunePortal.HOME_MAP:
+		return "The rune stays dark: Brannoc's stall is here in the woods."
+	var c := _portal_cell()
+	if c == NO_CELL:
+		return "There's no room here for a portal."
+	RunePortal.open_at(scene_file_path, c)
+	_place_portals(true)
+	Sfx.play("portal_open")
+	SpellFx.sparkles(self, IsoGrid.cell_to_world(c) + Vector2(0, -16), Color8(150, 186, 255))
+	combat._say("The rune flares blue and a portal opens. Brannoc's stall waits on the other side.")
+	return ""
+
+
+const NO_CELL := Vector2i(-99999, -99999)
+
+
+## A free, explored floor cell next to the leader for the portal (in front of them if it can be).
+func _portal_cell() -> Vector2i:
+	if party.is_empty():
+		return NO_CELL
+	var lead := party[0]
+	var dirs: Array = DIRS8.duplicate()
+	dirs.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		return Vector2(a).normalized().dot(Vector2(lead.facing)) > Vector2(b).normalized().dot(Vector2(lead.facing)))
+	for d: Vector2i in dirs:
+		var c: Vector2i = lead.cell + d
+		if terrain_walkable(c) and is_explored(c) and actor_at(c) == null and stairs_at(c) == null \
+				and door_at(c) == null and npc_under(IsoGrid.cell_to_world(c)) == null:
+			return c
+	return NO_CELL
+
+
+## Step through a portal (outside combat): from below to Brannoc's stall, or from the stall back to
+## where the rune was used, which closes the portal.
+func take_portal(p: Portal) -> void:
+	if _leaving or combat.in_combat or combat.game_over or not p.is_shown():
+		return
+	var target := RunePortal.map_path if p.home else RunePortal.HOME_MAP
+	if target == "" or not ResourceLoader.exists(target):
+		combat._say("The portal flickers. It leads nowhere.")
+		return
+	_leaving = true
+	controller.enabled = false
+	Sfx.play("portal_travel")
+	for h in party:
+		var tw := h.create_tween()
+		tw.tween_property(h, "modulate", Color(0.6, 0.75, 1.6, 0.0), 0.5)
+	var fade := _fade_rect()
+	var tw2 := create_tween()
+	tw2.tween_interval(0.25)
+	tw2.tween_property(fade, "color:a", 1.0, 0.5)
+	await tw2.finished
+	MapState.save(self)
+	if p.home:
+		MapState.next_entry = RunePortal.ARRIVE
+		MapState.arrive_cell = RunePortal.cell
+		RunePortal.close()                  # the way back is used: the portal is gone
+	else:
+		MapState.next_entry = RunePortal.HOME_ENTRY
+	PartyState.save(self)
+	get_tree().change_scene_to_file(target)

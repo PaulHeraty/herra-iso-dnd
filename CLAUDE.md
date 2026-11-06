@@ -46,6 +46,8 @@ doesn't supply.
 | Reactions | **Prompt the player** (e.g. "Cast Shield?") when a reaction could change the outcome. |
 | Hero at 0 HP | **5e death saves** (3 successes stabilise, 3 failures = dead); any healing revives. |
 | Dice scene | Full animation for **big moments** (Fireball/area spells, crits, bosses); quick inline rolls otherwise; setting full / quick / off. |
+| Trader + quest | **Brannoc** (`Npc`) at his stall in the mine clearing hides until the goblins within `guard_radius` are dead, then calls the party over: quest **"The Wraith Below"** (`Quest`: stages = maps reached, keys found, Eye Tyrant + Wraith killed; a later stage ticks off the earlier ones), reward 3000 gold + Ring of Protection, and the **Rune of Return**. Shop: buys at `value_gp`, sells at half (not keys/rune). Quest log = Quest button / J. |
+| Rune of Return | Endless. Used from the Bag anywhere but the woods (not in combat): a portal opens next to the party; through it = the stall (`PartyStart` `portal`); the stall's portal leads back to that exact cell, then closes. One portal at a time (`RunePortal`). |
 
 ## Licensing (important)
 - Rules, spells and monsters come only from the **5e SRD (CC-BY-4.0)**, with the attribution in
@@ -69,14 +71,14 @@ doesn't supply.
 assets/
   tiles/      floor_atlas.png, wall_atlas.png, dungeon_tileset.tres; outdoor_floor_atlas.png, cliff_atlas.png,
               forest_atlas.png, outdoor_tileset.tres (same layout: 0 ground, 1 cliffs, 2 forest)   (generated)
-  sprites/    heroes/ (walk sheets 16×24, action sheets 32×32), monsters/ (Eye Tyrant), props/ (chest, chest_open, bones, torch_sheet, web, stairs_up/down, barrel, crate, sarcophagus, rubble, cocoon, urn, brazier)
+  sprites/    heroes/ (walk sheets 16×24, action sheets 32×32), monsters/ (Eye Tyrant), npcs/ (trader_sheet 16x24: idle, idle, talk), props/ (chest, chest_open, bones, torch_sheet, web, stairs_up/down, barrel, crate, sarcophagus, rubble, cocoon, urn, brazier, stall, portal_sheet 8x24x40)
   effects/    fireball_sheet.png (6×16px), explosion_sheet.png (7×32px)
   fonts/      herra_pixel.fnt/.png: our pixel font (use size 10; scale the Control 2x/3x for big text)
   sfx/        13 WAVs from the concept session (torch_ambience imports as a forward loop) + generated ones (gen_sfx.gd)
   ui/         condition_icons.png (gen_icons.gd), item_icons.png (16x16 per item, columns = ItemData.ICON_ORDER; row 0 plain, row 1 = magic glimmer (ItemData.is_magic); gen_item_art.gd)
 scenes/
   maps/       map_template.tscn (copy this for new maps), test_room.tscn, surface.tscn (main scene), dungeon_1..5.tscn
-  markers/    party_start, monster_spawn, chest, torch, door, trap, prop, brazier, stairs (.tscn)
+  markers/    party_start, monster_spawn, chest, torch, door, trap, prop, brazier, stairs, npc, portal (.tscn)
   actors/     hero.tscn (Actor/Hero; spawned by DungeonMap at PartyStart), monsters/<monster_id>.tscn (Monster)
 scripts/
   iso_grid.gd           IsoGrid: cell <-> world maths, view rotation
@@ -113,6 +115,12 @@ scripts/
                         Hero.base_stats = data/heroes/ file, Hero.stats = derived; Hero.equip()/unequip()
   items/inventory.gd   Inventory: the shared bag (gold, stacks), on DungeonMap.inventory; PartyState carries it
   audio/sfx.gd          Sfx.play("name"): static, self-creating player for assets/sfx/<name>.wav
+  story/quest.gd        Quest (static): the campaign quest, its stages, reward; snapshotted with the party (PartyState.story)
+  story/rune_portal.gd  RunePortal (static): the Rune of Return's open portal (map + cell); DungeonMap.use_rune / take_portal
+  story/trader_talk.gd  TraderTalk: Brannoc's lines (intro, quest, reward), his STOCK; uses CombatHud.dialogue / .shop
+  ui/dialogue_box.gd    DialogueBox: portrait, name, typed line, choices (1-4, Space, Esc = goodbye); camera frames the speaker
+  ui/shop_screen.gd     ShopScreen: wares list + party bag; click = pick, Buy/Sell button or double-click
+  ui/quest_screen.gd    QuestScreen (J): stages done (ticked) + the current one; HUD quest_toast() on updates
 data/         heroes/*.tres (level 5 party), monsters/*.tres: CreatureStats + AttackData; spells/*.tres: SpellData
               (spells, class abilities, monster powers) — all from tools/godot/build_data.gd;
               items/*.tres: ItemData — from tools/godot/build_items.gd
@@ -127,6 +135,7 @@ tools/
               gen_font.gd (our HerraPixel bitmap font -> assets/fonts/herra_pixel.fnt + .png)
               gen_icons.gd (9x9 condition icons -> assets/ui/condition_icons.png; order = Condition.ICON_INDEX)
               gen_item_art.gd (open chest + item icons; weapons drawn along the diagonal from code)
+              gen_trader_art.gd (Brannoc, his stall, the portal sheet), test_story.gd (trader, quest, shop, rune portal: PASS/FAIL; run without --headless)
               gen_dungeon_art.gd (stairs + props), gen_skeleton.gd (Skeleton sheet), build_dungeon.gd (all six
               maps; OVERWRITES them; `-- <map ids>` for some), gen_monsters.gd (the Phase 5 monsters: sheets + scenes;
               `-- <ids>`), gen_outdoor_art.gd + build_outdoor_tileset.gd (the woods), gen_sfx.gd `-- <names>` = only those, test_dungeon.gd (doors, locks, stairs,
@@ -321,7 +330,8 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
   5. Five floors + loot: new SRD gear (scimitar, battleaxe, greataxe, morningstar, heavy crossbow,
      breastplate, half plate, +2 items, Flame Tongue, Mace of Disruption, Ring of Resistance
      (necrotic), Potion of Superior Healing, new scrolls, Chief's Key, Sun Key). DONE.
-  6. Next: playtest + balance, character sheet screen, the win screen after the Wraith.
+  6. Brannoc the trader + the quest "The Wraith Below" + shop + Rune of Return portal + quest log (J). DONE.
+  7. Next: playtest + balance, character sheet screen, the win screen after the Wraith.
 - [ ] **Phase 6 — Dungeon features:** doors/locks/keys (doors, locks and stairs/level transitions done early for the first dungeon; keys wait for Phase 4), traps (Rogue detect/disarm), secret walls,
   levers, room descriptions, triggers, level transitions, more monsters.
 - [ ] **Phase 7 — Story:** quests, NPCs, dialogue, lore notes.

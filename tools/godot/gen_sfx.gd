@@ -39,6 +39,9 @@ func _init() -> void:
 		"scroll_read": _scroll_read,
 		"lightning_crack": _lightning_crack,
 		"level_up": _level_up,
+		"portal_open": _portal_open,
+		"portal_travel": _portal_travel,
+		"quest_update": _quest_update,
 	}
 	var only := OS.get_cmdline_user_args()
 	for nm: String in all:
@@ -563,4 +566,50 @@ func _level_up() -> PackedFloat32Array:
 	var sp := _n(0.6)
 	var spark := _mul(_sine(sp, 2093.0, 2637.0), _env(sp, 0.002, 4.0))
 	out = _mix(out, spark, 0.18, start + _n(0.05))
+	return out
+
+
+## Portal opening: a rising shimmer (detuned sines sweeping up with a fast wobble) over a soft
+## airy swell of filtered noise, settling into a hum. ~1.4 s.
+func _portal_open() -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(_n(1.4))
+	var n := _n(1.3)
+	var e := PackedFloat32Array()
+	e.resize(n)
+	for i in n:
+		var t := float(i) / n
+		e[i] = minf(1.0, t * 4.0) * pow(1.0 - t, 1.4) * (0.75 + 0.25 * sin(TAU * 9.0 * t * (1.0 + t)))
+	for f in [220.0, 331.0, 442.0]:
+		out = _mix(out, _mul(_sine(n, f, f * 2.6), e), 0.22)
+	var air := _lowpass(_highpass(_noise(n), 600.0), 1200.0, 5000.0)
+	out = _mix(out, _mul(air, e), 0.5)
+	var sp := _n(0.5)
+	out = _mix(out, _mul(_sine(sp, 1760.0, 2637.0), _env(sp, 0.002, 4.0)), 0.12, _n(0.45))
+	return out
+
+
+## Stepping through: a falling whoosh (noise sweeping down) with a low thrum. ~0.9 s.
+func _portal_travel() -> PackedFloat32Array:
+	var n := _n(0.9)
+	var e := PackedFloat32Array()
+	e.resize(n)
+	for i in n:
+		var t := float(i) / n
+		e[i] = minf(1.0, t * 8.0) * pow(1.0 - t, 2.0)
+	var whoosh := _mul(_lowpass(_noise(n), 6000.0, 300.0), e)
+	var thrum := _mul(_sine(n, 180.0, 70.0), e)
+	return _mix(_mix(PackedFloat32Array(), whoosh, 0.9), thrum, 0.5)
+
+
+## Quest updated: two bright square-wave notes (G then C up a fourth) with a soft echo. ~0.7 s.
+func _quest_update() -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(_n(0.75))
+	var notes := [783.99, 1046.5]
+	for k in notes.size():
+		var n := _n(0.3 if k == 0 else 0.45)
+		var t := _mul(_square(n, notes[k], notes[k], 0.25), _env(n, 0.004, 2.0))
+		out = _mix(out, t, 0.28, _n(0.12 * k))
+		out = _mix(out, t, 0.08, _n(0.12 * k + 0.2))     # echo
 	return out

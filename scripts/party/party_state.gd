@@ -9,6 +9,8 @@ static var _heroes := {}
 static var party_xp := 0
 ## The shared bag (Inventory.to_dict()); empty = a fresh party (Inventory.starting()).
 static var bag := {}
+## Quest + RunePortal state (their to_dict()), taken with the party; empty = a new game.
+static var story := {}
 
 
 static func has_state() -> bool:
@@ -19,6 +21,7 @@ static func save(map: DungeonMap) -> void:
 	_heroes.clear()
 	party_xp = map.party_xp
 	bag = map.inventory.to_dict()
+	story = {quest = Quest.to_dict(), portal = RunePortal.to_dict()}
 	for h in map.party:
 		_heroes[h.hero_class] = {
 			hp = h.hp, slots_left = h.slots_left.duplicate(), uses_left = h.uses_left.duplicate(),
@@ -56,3 +59,4 @@ static func reset() -> void:
 	_heroes.clear()
 	party_xp = 0
 	bag = {}
+	story = {}

@@ -728,6 +728,24 @@ func _icon_mace_of_disruption(cv: Canvas) -> void:
 			"m": cv.px[p] = "o"
 
 
+## Rune of Return: a smooth grey river stone with a glowing blue rune (an arrow curling back).
+func _icon_rune_of_return(cv: Canvas) -> void:
+	cv.rows([
+		"..............",
+		"..............",
+		"....mmmmmm....",
+		"...msmmmmmm...",
+		"..msmmBmmmmm..",
+		"..mmmmBwBmmm..",
+		"..mmmBmmwBmm..",
+		"..mmBmmmBmmm..",
+		"..mmwBBBmmsm..",
+		"..mmmmmBmssm..",
+		"...mmmmmssm...",
+		"....mmmmmm....",
+	], 0, 1)
+
+
 ## Gold band with a dark violet stone.
 func _icon_ring_resistance_necrotic(cv: Canvas) -> void:
 	_ring(cv, "Y", "y", "o")

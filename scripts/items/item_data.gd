@@ -6,7 +6,8 @@ extends Resource
 ##
 ## Rules content: 5e SRD 5.1 (CC-BY-4.0, see CREDITS.md).
 
-enum Kind { WEAPON, ARMOR, SHIELD, POTION, SCROLL, KEY, RING, TREASURE }
+## RUNE: the Rune of Return (opens a portal back to the trader; never used up).
+enum Kind { WEAPON, ARMOR, SHIELD, POTION, SCROLL, KEY, RING, TREASURE, RUNE }
 
 const DIR := "res://data/items/"
 
@@ -55,11 +56,12 @@ const ICON_ORDER := [
 	"scroll", "key", "gem", "gold",
 	"scimitar", "battleaxe", "greataxe", "morningstar", "heavy_crossbow", "breastplate", "half_plate",
 	"potion_superior_healing", "flame_tongue", "mace_of_disruption", "ring_resistance_necrotic",
+	"rune_of_return",
 ]
 const KIND_ICON := {
 	Kind.WEAPON: "longsword", Kind.ARMOR: "leather_armor", Kind.SHIELD: "shield",
 	Kind.POTION: "potion_healing", Kind.SCROLL: "scroll", Kind.KEY: "key", Kind.RING: "ring",
-	Kind.TREASURE: "gem",
+	Kind.TREASURE: "gem", Kind.RUNE: "rune_of_return",
 }
 const ICON_SIZE := 16
 const ICONS_PATH := "res://assets/ui/item_icons.png"

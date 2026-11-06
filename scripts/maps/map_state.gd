@@ -10,6 +10,8 @@ static var _maps := {}
 ## The PartyStart entry_id the map should use ("" = the map's own entry_id). Set by the stairs;
 ## kept, so a restart (R) after a wipe puts the party back where it arrived.
 static var next_entry := ""
+## With next_entry == RunePortal.ARRIVE: the (map) cell to arrive at (through the rune's portal).
+static var arrive_cell := Vector2i.ZERO
 
 
 ## Remember the state of `map` (call when leaving it).

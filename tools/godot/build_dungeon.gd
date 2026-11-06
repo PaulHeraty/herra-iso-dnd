@@ -42,7 +42,7 @@ const PROPS := {
 	"rubble": Prop.Kind.RUBBLE, "cocoon": Prop.Kind.COCOON, "urn": Prop.Kind.URN,
 	"oak": Prop.Kind.TREE_OAK, "pine": Prop.Kind.TREE_PINE, "bush": Prop.Kind.BUSH,
 	"boulder": Prop.Kind.BOULDER, "stump": Prop.Kind.STUMP, "log": Prop.Kind.LOG,
-	"tent": Prop.Kind.TENT, "grave": Prop.Kind.GRAVE,
+	"tent": Prop.Kind.TENT, "grave": Prop.Kind.GRAVE, "stall": Prop.Kind.STALL,
 }
 ## theme -> what furnishes a room: wall props (along the walls), mid props (in the middle, on a
 ## grid), bones, web, braziers (corners), pillars.
@@ -236,7 +236,10 @@ var SURFACE := {
 		"mine": {"rect": Rect2i(44, 4, 15, 12), "spawn": "Gggg", "campfire": [Vector2i(4, 7)],
 			"props": [["tent", Vector2i(2, 4)], ["crate", Vector2i(11, 1)], ["barrel", Vector2i(12, 1)], ["rubble", Vector2i(13, 7)]],
 			"stairs": [Vector2i(7, 0), "res://scenes/maps/dungeon_1.tscn", "from_above"], "arrive": [Vector2i(7, 2), "from_below", F.SOUTH_WEST],
-			"chests": [[50, ["scimitar", "potion_healing"], Vector2i(13, 2)]]},
+			"chests": [[50, ["scimitar", "potion_healing"], Vector2i(13, 2)]],
+			# Brannoc the trader (Npc) at his stall; he hides until the goblins here are dead. The Rune of
+			# Return's portal opens beside the stall, the party arriving next to it.
+			"trader": {"stall": Vector2i(11, 6), "npc": Vector2i(11, 7), "portal": Vector2i(8, 8), "arrive": Vector2i(8, 9)}},
 	},
 	# dirt paths (2 wide): [from, to] cells, drawn as an L (x first, then y)
 	"paths": [
@@ -741,6 +744,22 @@ func _build_surface(d: Dictionary, root_name: String, path: String) -> bool:
 			blocked[cc] = true
 		for b: Vector2i in cl.get("bones", []):
 			_bones(decor, root, o + b, cn)
+		if cl.has("trader"):
+			var tr: Dictionary = cl.trader
+			_prop("stall", o + tr.stall, entities, root, cn)
+			var npc := _inst("npc", entities, root, o + tr.npc, "Npc_Brannoc")
+			npc.npc_id = "brannoc"
+			npc.display_name = "Brannoc"
+			npc.guard_radius = 12
+			var pt := _inst("portal", entities, root, o + tr.portal, "Portal_Home")
+			pt.home = true
+			var ps := _inst("party_start", entities, root, o + tr.arrive, "PartyStart_portal")
+			ps.entry_id = RunePortal.HOME_ENTRY
+			ps.facing = F.NORTH_EAST
+			for c: Vector2i in [tr.stall, tr.npc, tr.portal, tr.arrive]:
+				used[o + c] = true
+			blocked[o + tr.stall] = true
+			blocked[o + tr.npc] = true
 		var entry_cells: Array = []
 		if cl.has("start"):
 			var ps := _inst("party_start", entities, root, o + cl.start[0], "PartyStart")
