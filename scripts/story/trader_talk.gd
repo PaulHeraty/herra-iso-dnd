@@ -109,8 +109,9 @@ static func _reward(map: DungeonMap, npc: Npc) -> void:
 	FloatText.spawn(map, npc.position + Vector2(0, -28), "+%d gold" % Quest.REWARD_GOLD, Color8(255, 215, 90))
 	SpellFx.sparkles(map, npc.position + Vector2(0, -14), Color8(255, 220, 120), false)
 	map.quest_check()
+	# Then the win screen (VictoryScreen); after it the game goes on (he still trades).
 	_say(map, npc, "As promised: [color=#ffd75a]%d gold[/color], and my [color=#96aaff]%s[/color]. Wear it well. You've earned it." % [Quest.REWARD_GOLD, ring.display_name],
-			[{text = "Trade", call = func(): _trade(map, npc)}, {text = "Goodbye", call = func(): _bye(map), bye = true}])
+			[{text = "Farewell, Brannoc.", call = func(): _bye(map); map.show_victory(), bye = true}])
 	# the quest's own update (the last stage) shows too
 	if map.hud:
 		map.hud.quest_toast([Quest.STAGES[-1]])

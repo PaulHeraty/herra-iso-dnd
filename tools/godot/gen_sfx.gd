@@ -42,6 +42,8 @@ func _init() -> void:
 		"portal_open": _portal_open,
 		"portal_travel": _portal_travel,
 		"quest_update": _quest_update,
+		"logo_chime": _logo_chime,
+		"victory_fanfare": _victory_fanfare,
 	}
 	var only := OS.get_cmdline_user_args()
 	for nm: String in all:
@@ -612,4 +614,51 @@ func _quest_update() -> PackedFloat32Array:
 		var t := _mul(_square(n, notes[k], notes[k], 0.25), _env(n, 0.004, 2.0))
 		out = _mix(out, t, 0.28, _n(0.12 * k))
 		out = _mix(out, t, 0.08, _n(0.12 * k + 0.2))     # echo
+	return out
+
+
+## Herrasoft splash: a soft bell chord rolled upward (E A C# E, sine + a quieter octave partial),
+## long ring with a gentle shimmer. ~2.2 s.
+func _logo_chime() -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(_n(2.3))
+	var notes := [659.25, 880.0, 1108.73, 1318.51]
+	for k in notes.size():
+		var n := _n(2.3 - 0.12 * k)
+		var e := _env(n, 0.004, 3.2)
+		var bell := _mix(_sine(n, notes[k], notes[k]), _sine(n, notes[k] * 2.0, notes[k] * 2.0), 0.3)
+		bell = _mix(bell, _sine(n, notes[k] * 3.01, notes[k] * 3.01), 0.08)
+		out = _mix(out, _mul(bell, e), 0.22, _n(0.12 * k))
+	var sp := _n(0.9)
+	out = _mix(out, _mul(_sine(sp, 2637.0, 2637.0), _env(sp, 0.01, 3.0)), 0.06, _n(0.5))
+	return out
+
+
+## Victory: a chiptune fanfare. Pickup triplet (G G G), then C - G - C' - E' rising, a held bright
+## C major chord with vibrato, a little bass under it and a sparkle on top. ~3.2 s.
+func _victory_fanfare() -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(_n(3.3))
+	# [start s, length s, Hz]
+	var lead := [
+		[0.00, 0.10, 392.0], [0.13, 0.10, 392.0], [0.26, 0.10, 392.0],
+		[0.40, 0.28, 523.25], [0.70, 0.18, 392.0], [0.90, 0.18, 523.25], [1.10, 0.20, 659.25],
+		[1.32, 1.9, 783.99],
+	]
+	for nt in lead:
+		var n := _n(nt[1])
+		var vib := 5.5 if nt[1] > 1.0 else 0.0
+		var t := _mul(_square(n, nt[2], nt[2], 0.25, vib, 0.007), _env(n, 0.004, 1.6 if nt[1] > 1.0 else 1.2))
+		out = _mix(out, t, 0.26, _n(nt[0]))
+	# harmony under the held note: C E G (half-duty squares, quieter)
+	for f in [523.25, 659.25, 392.0]:
+		var n := _n(1.9)
+		out = _mix(out, _mul(_square(n, f, f, 0.5, 5.0, 0.005), _env(n, 0.02, 1.8)), 0.08, _n(1.32))
+	# bass: triangle-ish (sine) C2 - G2 - C3 pulses
+	var bass := [[0.40, 0.28, 130.81], [0.70, 0.18, 98.0], [0.90, 0.18, 130.81], [1.10, 0.20, 164.81], [1.32, 1.6, 130.81]]
+	for b in bass:
+		var n := _n(b[1])
+		out = _mix(out, _mul(_sine(n, b[2], b[2]), _env(n, 0.005, 1.5)), 0.30, _n(b[0]))
+	var sp := _n(0.8)
+	out = _mix(out, _mul(_sine(sp, 2093.0, 3136.0), _env(sp, 0.002, 4.0)), 0.12, _n(1.36))
 	return out

@@ -33,7 +33,7 @@ doesn't supply.
 | Story | Placeholder. One pitch exists (below), not chosen. |
 | Party level | The party starts at **level 1** in the woods and reaches **5** by the last floor (Phase 5). Data files hold level-1 stat blocks; `Progression` grows them. Each map has `start_level` for playing it on its own. |
 | XP | SRD thresholds (300 / 900 / 2700 / 6500 per hero); a fight's XP is split between the heroes who aren't dead; level-ups happen right after the fight (fixed average HP, "LEVEL UP!" box + fanfare). |
-| Campaign | `surface.tscn` "The Harrow Woods" (main scene, L1→2) → mine entrance → 5 floors: Upper Halls (L2→3), Webbed Deep (L3, Eye Tyrant), Goblin Warrens (L3→4), Sunken Crypts (L4), Sealed Vault (L4→5, the **Wraith**). All built by `build_dungeon.gd`; it prints each map's XP (planned total ~29,000). |
+| Campaign | `surface.tscn` "The Harrow Woods" (first map, after the intro; L1→2) → mine entrance → 5 floors: Upper Halls (L2→3), Webbed Deep (L3, Eye Tyrant), Goblin Warrens (L3→4), Sunken Crypts (L4), Sealed Vault (L4→5, the **Wraith**). All built by `build_dungeon.gd`; it prints each map's XP (planned total ~29,000). |
 | Combat start | A monster with **line of sight** to a hero within its sight range (~8 cells) starts combat; its whole `group_id` joins. Walls block sight. |
 | UI font | **Our own** generated bitmap pixel font (no third-party font). |
 | Monsters | Eye Tyrant + **Giant Spider** (SRD), Phase 2; **Skeleton** (SRD: shortsword/shortbow, vulnerable to bludgeoning) added with the first dungeon. |
@@ -49,6 +49,7 @@ doesn't supply.
 | Dice scene | Full animation for **big moments** (Fireball/area spells, crits, bosses); quick inline rolls otherwise; setting full / quick / off. |
 | Trader + quest | **Brannoc** (`Npc`) at his stall in the mine clearing hides until the goblins within `guard_radius` are dead, then calls the party over: quest **"The Wraith Below"** (`Quest`: stages = maps reached, keys found, Eye Tyrant + Wraith killed; a later stage ticks off the earlier ones), reward 3000 gold + Ring of Protection, and the **Rune of Return**. Shop: buys at `value_gp`, sells at half (not keys/rune). Quest log = Quest button / J. |
 | Rune of Return | Endless. Used from the Bag anywhere but the woods (not in combat): a portal opens next to the party; through it = the stall (`PartyStart` `portal`); the stall's portal leads back to that exact cell, then closes. One portal at a time (`RunePortal`). |
+| Intro / win | Main scene `scenes/intro.tscn` (`scripts/ui/intro.gd`): **Herrasoft** splash -> **HerraDnD** title ("The Wraith Below", two torches) -> 3 typed story pages over the four heroes -> fade to black -> the woods fade in (`DungeonMap.fade_from_black`). Click/Space = skip ahead, Esc = straight in. Win: Brannoc's reward line -> "Farewell" -> `VictoryScreen` (pauses; heroes in the cast pose, time played (`PartyState.play_seconds`, saved), monsters slain, gold, party XP; Keep exploring / Quit). Sounds `logo_chime`, `victory_fanfare`. |
 | Maps (minimap / M) | Minimap top-left (`MiniMap`, - / + buttons or wheel zoom, click = full map; follows the leader); full map on **M** (`MapScreen`: fitted to the explored area, wheel / - + zoom, drag pan, Space = party, M / Esc closes; also in combat). Both honour the fog (unexplored hidden, out of sight dimmed, monsters only while seen) and the view rotation. The combat banner/hint sit right of the minimap (`CombatHud.TEXT_X`). |
 
 ## Licensing (important)
@@ -80,7 +81,7 @@ assets/
   sfx/        13 WAVs from the concept session (torch_ambience imports as a forward loop) + generated ones (gen_sfx.gd)
   ui/         condition_icons.png (gen_icons.gd), item_icons.png (16x16 per item, columns = ItemData.ICON_ORDER; row 0 plain, row 1 = magic glimmer (ItemData.is_magic); gen_item_art.gd)
 scenes/
-  maps/       map_template.tscn (copy this for new maps), test_room.tscn, surface.tscn (main scene), dungeon_1..5.tscn
+  maps/       map_template.tscn (copy this for new maps), test_room.tscn, surface.tscn (first map), dungeon_1..5.tscn
   markers/    party_start, monster_spawn, chest, torch, door, trap, prop, brazier, stairs, npc, portal (.tscn)
   actors/     hero.tscn (Actor/Hero; spawned by DungeonMap at PartyStart), monsters/<monster_id>.tscn (Monster)
 scripts/
@@ -132,6 +133,8 @@ scripts/
   ui/map_view.gd        MapView: draws a MapPicture through an iso transform (pixel -> diamond, view rotation) + markers
   ui/mini_map.gd        MiniMap: top-left panel, - / + zoom; ui/map_screen.gd MapScreen: the full map (M)
   game/save_game.gd     SaveGame (static): slots, header (name, map, level, gold, time), save / prepare_load; DungeonMap.load_game(slot)
+  ui/intro.gd           the opening (scenes/intro.tscn = main scene): Herrasoft splash, HerraDnD title, story pages, into the woods
+  ui/victory_screen.gd  VictoryScreen: the win screen after Brannoc pays for the Wraith (DungeonMap.show_victory)
   ui/save_screen.gd     SaveScreen (F5 / F9): own CanvasLayer 60, pauses the tree; slot rows, name LineEdit, Save/Overwrite/Load
 data/         heroes/*.tres (level 5 party), monsters/*.tres: CreatureStats + AttackData; spells/*.tres: SpellData
               (spells, class abilities, monster powers) — all from tools/godot/build_data.gd;
@@ -143,7 +146,7 @@ tools/
               build_items.gd (items -> data/items/; hero kits in build_data.gd refer to these ids)
               build_data.gd (stat blocks -> data/), test_rules.gd (headless rules tests: PASS/FAIL)
               gen_spider.gd (procedural Giant Spider sheet: 3D-ish model projected to iso)
-              gen_sfx.gd (SFX: hits, miss, bow, hurt, hiss, ray, crit, mm_zip, radiant, heal_chime, fire_impact, chest_open, coins, potion_drink, scroll_read, lightning_crack)
+              gen_sfx.gd (SFX: hits, miss, bow, hurt, hiss, ray, crit, mm_zip, radiant, heal_chime, fire_impact, chest_open, coins, potion_drink, scroll_read, lightning_crack, logo_chime, victory_fanfare)
               gen_font.gd (our HerraPixel bitmap font -> assets/fonts/herra_pixel.fnt + .png)
               gen_icons.gd (9x9 condition icons -> assets/ui/condition_icons.png; order = Condition.ICON_INDEX)
               gen_item_art.gd (open chest + item icons; weapons drawn along the diagonal from code)
@@ -322,7 +325,7 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
      Studded Leather/Shield +1; Ring of Free Action (`ItemData.condition_immunities` -> `CreatureStats.condition_immunities`:
      never restrained; `CombatManager._shrugs_off`, the AI skips webbing them), Ring of Resistance (poison) (`resistances`).
      Magic names in blue, glimmer icons. 8 chests, 4 per floor. No attunement yet.)
-- [ ] **Phase 5 — Progression + the campaign:** XP, levels 1–5, SRD class features, an outdoor start, a
+- [x] **Phase 5 — Progression + the campaign:** XP, levels 1–5, SRD class features, an outdoor start, a
   five-floor dungeon, new monsters and gear. Steps:
   1. Progression core: `scripts/rules/progression.gd` (XP table, HP per level, slots, ASI at 4,
      powers learned by level), level-1 hero data, `Hero.level/xp/add_xp/gain_level`, XP split on
@@ -343,7 +346,9 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
      breastplate, half plate, +2 items, Flame Tongue, Mace of Disruption, Ring of Resistance
      (necrotic), Potion of Superior Healing, new scrolls, Chief's Key, Sun Key). DONE.
   6. Brannoc the trader + the quest "The Wraith Below" + shop + Rune of Return portal + quest log (J). DONE.
-  7. Character sheet (C). DONE. Next: playtest + balance, the win screen after the Wraith.
+  7. Character sheet (C). DONE.
+  8. Intro (Herrasoft splash, HerraDnD title, story pages) + the win screen after the reward. DONE.
+  Phase 5 complete (playtested start to finish by the user).
 - [ ] **Phase 6 — Dungeon features:** doors/locks/keys (doors, locks and stairs/level transitions done early for the first dungeon; keys wait for Phase 4), traps (Rogue detect/disarm), secret walls,
   levers, room descriptions, triggers, level transitions, more monsters.
 - [ ] **Phase 7 — Story:** quests, NPCs, dialogue, lore notes.

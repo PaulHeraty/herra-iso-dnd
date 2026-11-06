@@ -59,6 +59,10 @@ var combat: CombatManager
 var hud: CombatHud
 ## Save / load slots (F5 / F9).
 var save_screen: SaveScreen
+## The victory screen (after Brannoc pays for the Wraith), made when first shown.
+var victory_screen: VictoryScreen
+## Set by the intro: the next map to load fades in from black (a new game starts from it).
+static var fade_from_black := false
 ## Visible, rotated copies of the Floor / Walls layers.
 var floor_view: TileMapLayer
 var walls_view: TileMapLayer
@@ -165,9 +169,12 @@ func _ready() -> void:
 			camera_controller.jump_to(party[0].position)
 	quest_check.call_deferred()
 	if PartyState.has_state() or map_title != "":
-		_arrival_fade(PartyState.has_state())
+		_arrival_fade(PartyState.has_state() or fade_from_black)
+	fade_from_black = false
+
 
 func _process(delta: float) -> void:
+	PartyState.play_seconds += delta
 	if Input.is_action_just_pressed("view_rotate_right"):
 		rotate_view(1)
 	elif Input.is_action_just_pressed("view_rotate_left"):
@@ -1067,6 +1074,16 @@ func _fade_tall_props(delta: float) -> void:
 
 
 # --- the trader, the quest and the Rune of Return -------------------------------------------------
+
+## The win screen (VictoryScreen): Brannoc has paid for the Wraith.
+func show_victory() -> void:
+	if victory_screen == null:
+		victory_screen = VictoryScreen.new()
+		victory_screen.name = "VictoryScreen"
+		victory_screen.map = self
+		add_child(victory_screen)
+	victory_screen.open()
+
 
 ## Tick off quest stages that have happened (map reached, key found, monster killed) and tell the
 ## player about each one.

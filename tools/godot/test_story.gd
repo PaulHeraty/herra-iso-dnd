@@ -154,6 +154,28 @@ func _run() -> void:
 	Quest.claim(m.inventory)
 	_check(Quest.claimed and Quest.finished() and m.inventory.gold == gold0 + Quest.REWARD_GOLD and m.inventory.has(Quest.REWARD_ITEM),
 			"Brannoc pays: %d gold and a %s" % [Quest.REWARD_GOLD, Quest.REWARD_ITEM])
+
+	# --- the win screen: his last line's only choice opens it; it pauses the game ---
+	var trader: Npc = (load("res://scenes/markers/npc.tscn") as PackedScene).instantiate()
+	m.entities.add_child(trader)                   # (we're on floor 1: a stand-in Brannoc)
+	await _frames(2)
+	TraderTalk._reward(m, trader)
+	await _frames(2)
+	var ch: Array = m.hud.dialogue._choices
+	_check(m.hud.dialogue.visible and ch.size() == 1, "after the reward, one choice: farewell")
+	if ch.size() == 1:
+		ch[0].call.call()
+	await _frames(3)
+	_check(m.victory_screen != null and m.victory_screen.visible and paused, "farewell opens the victory screen, game paused")
+	_check(not m.hud.visible and not m.hud.dialogue.visible, "the HUD and the talk are hidden behind it")
+	var t0 := PartyState.play_seconds
+	await _frames(10)
+	_check(PartyState.play_seconds == t0, "play time stops while it is up")
+	m.victory_screen._keep.pressed.emit()
+	await _frames(10)
+	_check(not m.victory_screen.visible and not paused and m.hud.visible, "Keep exploring: back to the game")
+	_check(PartyState.play_seconds > t0 and PartyState.snapshot(m).get("play_seconds", -1.0) == PartyState.play_seconds,
+			"play time counts again and travels with the party")
 	print("test_story: %s (%d failed)" % ["ALL PASS" if fails == 0 else "FAILURES", fails])
 	quit(1 if fails else 0)
 

@@ -16,7 +16,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 config/name="herra-iso-dnd"
 config/description="Isometric turn-based party dungeon RPG (5e SRD rules)."
-run/main_scene="res://scenes/maps/surface.tscn"
+run/main_scene="res://scenes/intro.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.svg"
 

@@ -190,6 +190,11 @@ func _process(_delta: float) -> void:
 # --- building --------------------------------------------------------------------------------
 
 func _make_theme() -> Theme:
+	return make_theme()
+
+
+## The HUD look (pixel font, label shadows, button boxes); also used by screens outside a map.
+static func make_theme() -> Theme:
 	var t := Theme.new()
 	t.default_font = FONT
 	t.default_font_size = 10
@@ -201,7 +206,7 @@ func _make_theme() -> Theme:
 	t.set_constant("shadow_offset_y", "RichTextLabel", 1)
 	t.set_constant("line_separation", "RichTextLabel", 0)
 	for state in ["normal", "hover", "pressed", "disabled"]:
-		var sb := _box(COL_CARD, COL_EDGE)
+		var sb := _box_static(COL_CARD, COL_EDGE)
 		if state == "hover":
 			sb.border_color = COL_TEXT
 		if state == "pressed":

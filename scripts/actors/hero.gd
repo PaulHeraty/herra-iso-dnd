@@ -273,6 +273,11 @@ func walk_texture() -> Texture2D:
 	return _walk_tex
 
 
+## The action sheet (32x32 cells, columns = ACTION_ANIMS), or null.
+func action_texture() -> Texture2D:
+	return _action_tex
+
+
 # --- equipment ---------------------------------------------------------------------------------
 
 ## Work `stats` out again from the base stat block + equipment (after equipping something).
