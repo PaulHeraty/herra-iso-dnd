@@ -87,7 +87,7 @@ scripts/
   iso_grid.gd           IsoGrid: cell <-> world maths, view rotation
   maps/dungeon_map.gd   DungeonMap: root script of every map (walk grid/A*, view rotation, spawns party + overlay + controllers)
   maps/grid_overlay.gd  GridOverlay: unlit tinted floor diamonds (cursor, path, later ranges/areas)
-  maps/camera_controller.gd  CameraController: follow leader, WASD/arrows + middle-drag pan, wheel zoom 1-3x, Space or C recentres, clamped to map
+  maps/camera_controller.gd  CameraController: follow leader, WASD/arrows + middle-drag pan, wheel zoom 1-3x, Space recentres, clamped to map
   maps/wall_fader.gd    WallFader: walls in front of a hero or revealed overlay cell fade to 55% (runtime alternative tiles 101-104)
   party/party_controller.gd  PartyController: exploration click-to-move, trail-follow, camera follow
   party/rest.gd         Rest: short (hit dice, short-rest powers) / long (everything) rests; blocked near enemies
@@ -126,6 +126,9 @@ scripts/
   ui/dialogue_box.gd    DialogueBox: portrait, name, typed line, choices (1-4, Space, Esc = goodbye); camera frames the speaker
   ui/shop_screen.gd     ShopScreen: wares list + party bag; click = pick, Buy/Sell button or double-click
   ui/quest_screen.gd    QuestScreen (J): stages done (ticked) + the current one; HUD quest_toast() on updates
+  ui/character_sheet.gd CharacterSheet (C / Sheet button / right-click a hero card; also in combat, read-only): portrait,
+                        level + XP, HP + hit dice, AC/init/speed/prof, abilities, saves, skills, attacks, spell slots,
+                        powers + Progression.FEATURES (hover = details); rebuilds live while open
   ui/map_view.gd        MapView: draws a MapPicture through an iso transform (pixel -> diamond, view rotation) + markers
   ui/mini_map.gd        MiniMap: top-left panel, - / + zoom; ui/map_screen.gd MapScreen: the full map (M)
   game/save_game.gd     SaveGame (static): slots, header (name, map, level, gold, time), save / prepare_load; DungeonMap.load_game(slot)
@@ -340,7 +343,7 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
      breastplate, half plate, +2 items, Flame Tongue, Mace of Disruption, Ring of Resistance
      (necrotic), Potion of Superior Healing, new scrolls, Chief's Key, Sun Key). DONE.
   6. Brannoc the trader + the quest "The Wraith Below" + shop + Rune of Return portal + quest log (J). DONE.
-  7. Next: playtest + balance, character sheet screen, the win screen after the Wraith.
+  7. Character sheet (C). DONE. Next: playtest + balance, the win screen after the Wraith.
 - [ ] **Phase 6 — Dungeon features:** doors/locks/keys (doors, locks and stairs/level transitions done early for the first dungeon; keys wait for Phase 4), traps (Rogue detect/disarm), secret walls,
   levers, room descriptions, triggers, level transitions, more monsters.
 - [ ] **Phase 7 — Story:** quests, NPCs, dialogue, lore notes.

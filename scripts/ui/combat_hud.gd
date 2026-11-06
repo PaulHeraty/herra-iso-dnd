@@ -47,6 +47,7 @@ var inventory_screen: InventoryScreen
 var dialogue: DialogueBox
 var shop: ShopScreen
 var quest_screen: QuestScreen
+var sheet: CharacterSheet
 var minimap: MiniMap
 var map_screen: MapScreen
 
@@ -104,6 +105,10 @@ func _ready() -> void:
 	quest_screen.name = "Quests"
 	quest_screen.combat = combat
 	root.add_child(quest_screen)
+	sheet = CharacterSheet.new()
+	sheet.name = "CharacterSheet"
+	sheet.combat = combat
+	root.add_child(sheet)
 	map_screen = MapScreen.new()
 	map_screen.name = "MapScreen"
 	map_screen.hud = self
@@ -126,7 +131,8 @@ func mouse_over_ui() -> bool:
 		return false
 	if inventory_screen and inventory_screen.visible:
 		return true          # the whole map is off limits while the inventory is open
-	if (shop and shop.visible) or (quest_screen and quest_screen.visible) or (dialogue and dialogue.visible):
+	if (shop and shop.visible) or (quest_screen and quest_screen.visible) or (dialogue and dialogue.visible) \
+			or (sheet and sheet.visible):
 		return true
 	if (map_screen and map_screen.visible) or (minimap and minimap.is_mouse_over()):
 		return true
@@ -699,7 +705,15 @@ func _open_weapons() -> void:
 
 
 func _on_card_input(event: InputEvent, h: Hero) -> void:
-	if not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
+	if not (event is InputEventMouseButton and event.pressed):
+		return
+	if event.button_index == MOUSE_BUTTON_RIGHT and not combat.targeting and not (combat.map.dice and combat.map.dice.visible):
+		open_sheet(h)                    # right-click a card: that hero's character sheet
+		return
+	if event.button_index != MOUSE_BUTTON_LEFT:
+		return
+	if sheet.visible:
+		sheet.select(h)
 		return
 	if inventory_screen.visible:
 		inventory_screen.select(h)
@@ -785,18 +799,27 @@ func _inventory_input(event: InputEvent) -> bool:
 		if event.keycode == KEY_J and not (combat.map.dice and combat.map.dice.visible):
 			inventory_screen.close()
 			shop.close()
+			sheet.close()
 			_close_popup()
 			quest_screen.toggle()
 			return true
-		if event.keycode == KEY_ESCAPE and (shop.visible or quest_screen.visible):
+		if event.keycode == KEY_C and not (combat.map.dice and combat.map.dice.visible):
+			if sheet.visible:
+				sheet.close()
+			else:
+				open_sheet()
+			return true
+		if event.keycode == KEY_ESCAPE and (shop.visible or quest_screen.visible or sheet.visible):
 			shop.close()
 			quest_screen.close()
+			sheet.close()
 			return true
 		if event.keycode == KEY_I and shop.visible:
 			return true                      # the shop shows the bag already
-	if (shop.visible or quest_screen.visible) and event is InputEventMouseButton and event.pressed:
+	if (shop.visible or quest_screen.visible or sheet.visible) and event is InputEventMouseButton and event.pressed:
 		shop.close()
 		quest_screen.close()
+		sheet.close()
 		return true
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_I and (not combat.map.dice or not combat.map.dice.visible):
@@ -804,6 +827,7 @@ func _inventory_input(event: InputEvent) -> bool:
 				combat.cancel_targeting()
 			_close_popup()
 			quest_screen.close()
+			sheet.close()
 			map_screen.close()
 			inventory_screen.toggle()
 			return true
@@ -910,6 +934,7 @@ func _build_rest_buttons() -> void:
 	bag.set_deferred("size", Vector2(half, 13))
 	bag.pressed.connect(func():
 		quest_screen.close()
+		sheet.close()
 		inventory_screen.toggle())
 	bag.mouse_entered.connect(func(): _hint.text = "The party bag and everyone's equipment.")
 	_rest_buttons.append(bag)
@@ -923,10 +948,27 @@ func _build_rest_buttons() -> void:
 	quest.set_deferred("size", Vector2(first.size.x - half - 2, 13))
 	quest.pressed.connect(func():
 		inventory_screen.close()
+		sheet.close()
 		quest_screen.toggle())
 	quest.mouse_entered.connect(func(): _hint.text = "The quest log: what the party is doing, and what comes next.")
 	_rest_buttons.append(quest)
 	_gold = _label(_panel, Vector2(first.position.x + 2, 46), COL_GOLD)
+	# The character sheet shares the gold row (right half).
+	var sheet_b := Button.new()
+	sheet_b.text = "Sheet (C)"
+	sheet_b.focus_mode = Control.FOCUS_NONE
+	sheet_b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	sheet_b.clip_text = true
+	sheet_b.position = Vector2(first.position.x + half + 2, 45)
+	_panel.add_child(sheet_b)
+	sheet_b.set_deferred("size", Vector2(first.size.x - half - 2, 13))
+	sheet_b.pressed.connect(func():
+		if sheet.visible:
+			sheet.close()
+		else:
+			open_sheet())
+	sheet_b.mouse_entered.connect(func(): _hint.text = "Character sheet: abilities, skills, attacks, spells and features (right-click a hero card too).")
+	_rest_buttons.append(sheet_b)
 
 
 func _rest(long: bool) -> void:
@@ -1088,7 +1130,7 @@ func show_level_ups(ups: Array) -> void:
 func ui_busy() -> bool:
 	return (inventory_screen and inventory_screen.visible) or (shop and shop.visible) \
 			or (quest_screen and quest_screen.visible) or (dialogue and dialogue.visible) \
-			or (map_screen and map_screen.visible) \
+			or (map_screen and map_screen.visible) or (sheet and sheet.visible) \
 			or reaction_open() or loot_open() or (combat.map.dice != null and combat.map.dice.visible)
 
 
@@ -1104,6 +1146,20 @@ func close_screens() -> void:
 		quest_screen.close()
 	if map_screen:
 		map_screen.close()
+	if sheet:
+		sheet.close()
+
+
+## The character sheet (C, the Sheet button, right-click on a hero card): closes the other
+## screens; also works in a fight (read-only). `h` = that hero, else the one shown last.
+func open_sheet(h: Hero = null) -> void:
+	if combat.targeting:
+		combat.cancel_targeting()
+	if sheet.visible and h != null:
+		sheet.select(h)
+		return
+	close_screens()
+	sheet.open(h)
 
 
 ## The full map (M or a click on the minimap): closes the other screens and any menu.

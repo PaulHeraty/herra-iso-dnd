@@ -65,6 +65,31 @@ const CLASSES := {
 }
 
 
+## Class features that work by themselves (no menu entry), for the character sheet:
+## [level learned, name, what it does]. The powers (data/spells/) describe themselves.
+const FEATURES := {
+	"fighter": [
+		[1, "Fighting Style: Defense", "+1 AC while wearing armour."],
+		[3, "Improved Critical", "Champion: your weapon attacks score a critical hit on a roll of 19 or 20."],
+		[5, "Extra Attack", "You attack twice, instead of once, whenever you take the Attack action."],
+	],
+	"rogue": [
+		[1, "Expertise", "Double proficiency bonus on Stealth and Perception checks."],
+	],
+	"cleric": [
+		[1, "Disciple of Life", "Life Domain: your healing spells of 1st level or higher restore an extra 2 + the spell's level hit points."],
+		[5, "Destroy Undead", "When an undead fails its save against your Turn Undead, it is destroyed outright if its challenge rating is 1/2 or lower."],
+	],
+	"wizard": [
+		[1, "Arcane Recovery", "Once per long rest, a short rest brings back spent spell slots with a combined level of up to half your wizard level (rounded up)."],
+	],
+}
+## Class name as the character sheet shows it.
+const CLASS_TITLES := {
+	"fighter": "Fighter (Champion)", "rogue": "Rogue", "cleric": "Cleric (Life Domain)", "wizard": "Wizard",
+}
+
+
 static func level_for_xp(xp: int) -> int:
 	var lvl := 1
 	for i in XP_FOR_LEVEL.size():

@@ -115,7 +115,7 @@ func _clamped(p: Vector2) -> Vector2:
 static func _ensure_actions() -> void:
 	var keys := {
 		cam_left = [KEY_A, KEY_LEFT], cam_right = [KEY_D, KEY_RIGHT],
-		cam_up = [KEY_W, KEY_UP], cam_down = [KEY_S, KEY_DOWN], cam_recenter = [KEY_SPACE, KEY_C],
+		cam_up = [KEY_W, KEY_UP], cam_down = [KEY_S, KEY_DOWN], cam_recenter = [KEY_SPACE],
 		view_rotate_left = [KEY_Q], view_rotate_right = [KEY_E],
 	}
 	for action: String in keys:
