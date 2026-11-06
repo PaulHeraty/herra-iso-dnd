@@ -14,6 +14,10 @@ const CAMPFIRE_OFFSET := Vector2(-10, -7)
 	set(v):
 		campfire = v
 		queue_redraw()
+## Phase 6: a brazier the party can light and douse (click it), part of the Puzzle with this link.
+@export var link := ""
+## Its place in a RING puzzle (neighbours = order - 1 and order + 1, round the ring).
+@export var order := 0
 
 
 func _init() -> void:
@@ -56,3 +60,27 @@ func _draw() -> void:
 		draw_texture(BOWL, BOWL_OFFSET)
 	if Engine.is_editor_hint():
 		_draw_gizmo()
+
+
+func sides() -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for d in DungeonMap.DIRS8:
+		out.append(get_cell() + d)
+	return out
+
+
+func sprite_rect() -> Rect2:
+	return Rect2(position + Vector2(-10, -22), Vector2(20, 26))
+
+
+func hint() -> String:
+	return "A brazier (%s): click to %s it." % ["lit" if lit else "cold", "douse" if lit else "light"]
+
+
+func save_state() -> Variant:
+	return {l = lit} if link != "" else null
+
+
+func load_state(s: Variant) -> void:
+	if s is Dictionary:
+		lit = s.get("l", lit)

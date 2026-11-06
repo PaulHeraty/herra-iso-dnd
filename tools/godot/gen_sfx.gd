@@ -44,6 +44,22 @@ func _init() -> void:
 		"quest_update": _quest_update,
 		"logo_chime": _logo_chime,
 		"victory_fanfare": _victory_fanfare,
+		# Phase 6: traps, mechanisms, puzzles
+		"trap_spikes": _trap_spikes,
+		"trap_darts": _trap_darts,
+		"trap_fire": _trap_fire,
+		"trap_pit": _trap_pit,
+		"trap_alarm": _trap_alarm,
+		"lever": _lever,
+		"plate_click": _plate_click,
+		"gate_rise": _gate_rise,
+		"stone_slide": _stone_slide,
+		"stone_push": _stone_push,
+		"puzzle_solved": _puzzle_solved,
+		"puzzle_fail": _puzzle_fail,
+		"discover": _discover,
+		"search": _search,
+		"flame_whoosh": _flame_whoosh,
 	}
 	var only := OS.get_cmdline_user_args()
 	for nm: String in all:
@@ -662,3 +678,198 @@ func _victory_fanfare() -> PackedFloat32Array:
 	var sp := _n(0.8)
 	out = _mix(out, _mul(_sine(sp, 2093.0, 3136.0), _env(sp, 0.002, 4.0)), 0.12, _n(1.36))
 	return out
+
+
+# --- Phase 6: traps, mechanisms, puzzles ----------------------------------------------------------
+
+## A click under the plate, then steel spikes ringing up out of the floor.
+func _trap_spikes() -> PackedFloat32Array:
+	var c := _n(0.04)
+	var x := _mul(_highpass(_noise(c), 2500.0), _env(c, 0.001, 4.0))
+	var n := _n(0.45)
+	var shing := _mul(_highpass(_noise(n), 3500.0), _env(n, 0.002, 5.0))
+	for f in [2150.0, 3370.0, 4410.0]:
+		shing = _mix(shing, _mul(_sine(n, f, f * 0.98), _env(n, 0.002, 4.0)), 0.25)
+	return _mix(x, shing, 1.0, _n(0.07))
+
+
+## Three darts: short airy thwips, a tick as each leaves its hole.
+func _trap_darts() -> PackedFloat32Array:
+	var x := PackedFloat32Array()
+	x.resize(_n(0.5))
+	for k in 3:
+		var m := _n(0.11)
+		var e := PackedFloat32Array()
+		e.resize(m)
+		for i in m:
+			var t := float(i) / m
+			e[i] = sin(PI * t) * (1.0 - t)
+		var thwip := _mul(_lowpass(_highpass(_noise(m), 1500.0), 5000.0, 2500.0), e)
+		var tick := _mul(_square(_n(0.015), 1800.0, 1400.0, 0.3), _env(_n(0.015), 0.001, 4.0))
+		x = _mix(x, _mix(tick, thwip, 0.9), 1.0 - k * 0.15, _n(0.02 + k * 0.11))
+	return x
+
+
+## A roaring gout of flame: low noise swelling and dying away.
+func _trap_fire() -> PackedFloat32Array:
+	var n := _n(0.9)
+	var e := PackedFloat32Array()
+	e.resize(n)
+	for i in n:
+		var t := float(i) / n
+		e[i] = minf(1.0, t * 8.0) * pow(1.0 - t, 1.6)
+	var roar := _mul(_lowpass(_noise(n), 900.0, 400.0), e)
+	var hiss := _mul(_highpass(_noise(n), 3000.0), e)
+	return _mix(roar, hiss, 0.25)
+
+
+## The floor gives: a crack, crumbling stone, a thud far below.
+func _trap_pit() -> PackedFloat32Array:
+	var c := _n(0.08)
+	var x := _mul(_lowpass(_noise(c), 3000.0), _env(c, 0.001, 3.0))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 606
+	for k in 10:
+		var m := _n(0.05)
+		var bit := _mul(_lowpass(_noise(m), rng.randf_range(600.0, 1600.0)), _env(m, 0.001, 4.0))
+		x = _mix(x, bit, rng.randf_range(0.3, 0.7), _n(0.05 + k * 0.04 + rng.randf_range(0.0, 0.02)))
+	var tn := _n(0.3)
+	var thud := _mix(_mul(_sine(tn, 90.0, 40.0), _env(tn, 0.002, 3.0)), _mul(_lowpass(_noise(tn), 300.0), _env(tn, 0.001, 3.0)), 0.7)
+	return _mix(x, thud, 1.2, _n(0.55))
+
+
+## A hand bell jangled hard: inharmonic clangs, quickly repeated.
+func _trap_alarm() -> PackedFloat32Array:
+	var x := PackedFloat32Array()
+	x.resize(_n(1.3))
+	for k in 6:
+		var m := _n(0.5)
+		var f := 1480.0 if k % 2 == 0 else 1395.0
+		var bell := _mix(_sine(m, f, f), _sine(m, f * 2.43, f * 2.43), 0.5)
+		bell = _mix(bell, _sine(m, f * 3.9, f * 3.9), 0.25)
+		bell = _mul(bell, _env(m, 0.001, 4.0))
+		var clap := _mul(_highpass(_noise(_n(0.01)), 3000.0), _env(_n(0.01), 0.001, 3.0))
+		x = _mix(x, _mix(bell, clap, 0.6), 0.8 - k * 0.08, _n(k * 0.13))
+	return x
+
+
+## A heavy lever: a ratchet of clicks, then a deep clunk.
+func _lever() -> PackedFloat32Array:
+	var x := PackedFloat32Array()
+	x.resize(_n(0.45))
+	for k in 4:
+		var m := _n(0.02)
+		x = _mix(x, _mul(_square(m, 900.0 - k * 60.0, 700.0, 0.3), _env(m, 0.001, 5.0)), 0.35, _n(k * 0.045))
+	var tn := _n(0.25)
+	var clunk := _mix(_mul(_sine(tn, 140.0, 60.0), _env(tn, 0.002, 3.0)),
+			_mul(_lowpass(_noise(tn), 900.0), _env(tn, 0.001, 5.0)), 0.9)
+	return _mix(x, clunk, 1.0, _n(0.19))
+
+
+## A stone plate settling: a dull tock.
+func _plate_click() -> PackedFloat32Array:
+	var n := _n(0.14)
+	return _mix(_mul(_sine(n, 260.0, 150.0), _env(n, 0.001, 5.0)),
+			_mul(_lowpass(_noise(n), 1400.0), _env(n, 0.001, 6.0)), 0.8)
+
+
+## A portcullis winding up: chain links clattering over a grinding drone, ending in a clank.
+func _gate_rise() -> PackedFloat32Array:
+	var n := _n(0.95)
+	var e := PackedFloat32Array()
+	e.resize(n)
+	for i in n:
+		var t := float(i) / n
+		e[i] = minf(1.0, t * 10.0) * (1.0 - t * 0.6)
+	var drone := _mul(_lowpass(_square(n, 70.0, 85.0, 0.4), 400.0), e)
+	var x := _mix(drone, _mul(_lowpass(_noise(n), 600.0), e), 0.6)
+	for k in 14:
+		var m := _n(0.025)
+		x = _mix(x, _mul(_square(m, 1300.0 + (k % 3) * 170.0, 1000.0, 0.25), _env(m, 0.001, 5.0)), 0.18, _n(0.03 + k * 0.058))
+	var tn := _n(0.2)
+	var clank := _mix(_mul(_sine(tn, 220.0, 120.0), _env(tn, 0.001, 4.0)), _mul(_square(tn, 600.0, 500.0, 0.3), _env(tn, 0.001, 6.0)), 0.3)
+	return _mix(x, clank, 0.9, _n(0.86))
+
+
+## Stone grinding on stone: low rough noise, wavering, fading.
+func _stone_slide() -> PackedFloat32Array:
+	var n := _n(1.1)
+	var e := PackedFloat32Array()
+	e.resize(n)
+	for i in n:
+		var t := float(i) / n
+		e[i] = minf(1.0, t * 6.0) * pow(1.0 - t, 1.2) * (0.75 + 0.25 * sin(t * 47.0))
+	var grind := _mul(_lowpass(_noise(n), 500.0, 250.0), e)
+	return _mix(grind, _mul(_lowpass(_square(n, 55.0, 48.0, 0.3), 300.0), e), 0.35)
+
+
+## A block shoved one square: a short scrape and a bump.
+func _stone_push() -> PackedFloat32Array:
+	var n := _n(0.35)
+	var e := PackedFloat32Array()
+	e.resize(n)
+	for i in n:
+		var t := float(i) / n
+		e[i] = sin(PI * minf(1.0, t * 1.2)) * (0.8 + 0.2 * sin(t * 90.0))
+	var scrape := _mul(_lowpass(_noise(n), 1100.0, 600.0), e)
+	var tn := _n(0.14)
+	return _mix(scrape, _mul(_sine(tn, 120.0, 60.0), _env(tn, 0.002, 3.0)), 0.8, _n(0.26))
+
+
+## Solved: a bright rising arpeggio (C E G C) with a soft echo.
+func _puzzle_solved() -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(_n(1.2))
+	var notes := [523.25, 659.25, 783.99, 1046.5]
+	for k in notes.size():
+		var n := _n(0.6)
+		var t := _mix(_square(n, notes[k], notes[k], 0.25), _sine(n, notes[k] * 2.0, notes[k] * 2.0), 0.3)
+		t = _mul(t, _env(n, 0.004, 2.5))
+		out = _mix(out, t, 0.22, _n(0.09 * k))
+		out = _mix(out, t, 0.07, _n(0.09 * k + 0.22))
+	return out
+
+
+## Wrong: a low falling buzz and a clunk.
+func _puzzle_fail() -> PackedFloat32Array:
+	var n := _n(0.4)
+	var buzz := _mul(_lowpass(_square(n, 180.0, 90.0, 0.4), 1200.0), _env(n, 0.003, 2.0))
+	var tn := _n(0.2)
+	return _mix(buzz, _mul(_sine(tn, 110.0, 55.0), _env(tn, 0.001, 3.0)), 0.9, _n(0.05))
+
+
+## Something noticed: two quick high notes (a "ping!").
+func _discover() -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(_n(0.4))
+	var notes := [1318.51, 1975.53]
+	for k in 2:
+		var n := _n(0.22)
+		var f: float = notes[k]
+		out = _mix(out, _mul(_mix(_sine(n, f, f), _square(n, f, f, 0.25), 0.15), _env(n, 0.002, 3.0)), 0.5, _n(k * 0.08))
+	return out
+
+
+## Searching and finding nothing: a soft shuffle of hands over stone.
+func _search() -> PackedFloat32Array:
+	var x := PackedFloat32Array()
+	x.resize(_n(0.5))
+	for k in 3:
+		var m := _n(0.12)
+		var e := PackedFloat32Array()
+		e.resize(m)
+		for i in m:
+			e[i] = sin(PI * float(i) / m)
+		x = _mix(x, _mul(_lowpass(_highpass(_noise(m), 800.0), 3000.0), e), 0.4, _n(k * 0.14))
+	return x
+
+
+## A brazier catching (or snuffed): a breathy whoosh of flame.
+func _flame_whoosh() -> PackedFloat32Array:
+	var n := _n(0.5)
+	var e := PackedFloat32Array()
+	e.resize(n)
+	for i in n:
+		var t := float(i) / n
+		e[i] = minf(1.0, t * 12.0) * pow(1.0 - t, 2.0)
+	return _mix(_mul(_lowpass(_noise(n), 1600.0, 500.0), e), _mul(_highpass(_noise(n), 2500.0), e), 0.3)

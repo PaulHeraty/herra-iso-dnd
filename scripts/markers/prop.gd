@@ -5,7 +5,7 @@ extends MapMarker
 ## cocoon, urn. Blocks movement (not sight) unless `blocks` is off. Art from
 ## tools/godot/gen_dungeon_art.gd. Drop it under Entities; pick the kind in the inspector.
 
-enum Kind { BARREL, CRATE, SARCOPHAGUS, RUBBLE, COCOON, URN, TREE_OAK, TREE_PINE, BUSH, BOULDER, STUMP, LOG, TENT, GRAVE, STALL }
+enum Kind { BARREL, CRATE, SARCOPHAGUS, RUBBLE, COCOON, URN, TREE_OAK, TREE_PINE, BUSH, BOULDER, STUMP, LOG, TENT, GRAVE, STALL, BLOCK }
 
 ## texture, feet offset (top-left of the image relative to the cell centre), shadow radius
 const KINDS := {
@@ -26,6 +26,8 @@ const KINDS := {
 	Kind.GRAVE: ["grave", Vector2(-7, -16), 4.0],
 	# Brannoc's market stall (tools/godot/gen_trader_art.gd)
 	Kind.STALL: ["stall", Vector2(-24, -48), 0.0],
+	# a carved stone block that can be pushed (tools/godot/gen_puzzle_art.gd)
+	Kind.BLOCK: ["block", Vector2(-14, -27), 0.0],
 }
 
 @export var kind := Kind.BARREL:
@@ -39,6 +41,13 @@ const KINDS := {
 		along_y = v
 		queue_redraw()
 @export var blocks := true
+## A block the party can push (Phase 6, Mechanisms.push): one cell, away from the leader, onto any
+## free floor (pressure plates included). `link` = the puzzle it belongs to (a reset lever puts it back).
+@export var pushable := false
+@export var link := ""
+
+## Where a pushable block started (set at runtime; the reset lever puts it back here).
+var start_cell := Vector2i.ZERO
 
 ## Kinds you can't see through (trees, boulders, tents): they block line of sight and fog sight.
 const SIGHT_BLOCKERS := [Kind.TREE_OAK, Kind.TREE_PINE, Kind.BOULDER, Kind.TENT]
@@ -91,3 +100,23 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO)
 	if Engine.is_editor_hint():
 		_draw_gizmo()
+
+
+func lock_cell() -> void:
+	super()
+	start_cell = get_cell()
+
+
+func hint() -> String:
+	return "A heavy stone block: click to push it (away from the leader)."
+
+
+func save_state() -> Variant:
+	if pushable and get_cell() != start_cell:
+		return {c = get_cell()}
+	return null
+
+
+func load_state(s: Variant) -> void:
+	if s is Dictionary and s.has("c"):
+		position = move_to_cell(s.c)

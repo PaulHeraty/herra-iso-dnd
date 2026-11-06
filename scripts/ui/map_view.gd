@@ -15,6 +15,7 @@ const COL_CHEST := Color8(255, 210, 80)
 const COL_STAIRS := Color8(120, 230, 240)
 const COL_NPC := Color8(150, 255, 150)
 const COL_PORTAL := Color8(200, 130, 255)
+const COL_TRAP := Color8(255, 90, 60)
 
 var map: DungeonMap
 var centre := Vector2.ZERO
@@ -90,6 +91,8 @@ func _draw() -> void:
 			_dot(IsoGrid.cell_to_world(c), COL_NPC, r)
 		elif n is Portal and n.is_shown():
 			_diamond(IsoGrid.cell_to_world(c), COL_PORTAL, r + 1.0)
+		elif n is Trap and n.blocks_party():
+			_dot(IsoGrid.cell_to_world(c), COL_TRAP, maxf(0.0, r - 1.0))
 	for m in map.monsters:
 		if m.visible and m.is_alive():
 			_dot(m.position, COL_MONSTER, r)

@@ -145,6 +145,11 @@ func _unhandled_input(event: InputEvent) -> void:
 				get_viewport().set_input_as_handled()
 				_hero_attack(foe, opt)
 			return
+		var thing := map.mech.thing_under(map.get_local_mouse_position())
+		if thing and not foe and (thing is Trap or thing is Lever):
+			get_viewport().set_input_as_handled()
+			_use_thing(thing)
+			return
 		var door := map.closed_door_under(map.get_local_mouse_position())
 		if door and not foe:
 			get_viewport().set_input_as_handled()
@@ -705,8 +710,13 @@ func move_along(who: Actor, path: Array[Vector2i]) -> void:
 		_emit_status()
 		await tw.finished
 		map.apply_pending_rotation()
+		if map.mech.after_combat_step(who) or not who.is_alive():
+			break                         # a hidden trap went off
 	map.overlay.clear("destination")
 	moving = false
+	if in_combat and not game_over and who == current and who is Hero and not who.is_alive():
+		end_turn()                        # knocked down by a trap on its own turn
+		return
 	if in_combat and who == current and who is Hero:
 		_show_range()
 
@@ -714,6 +724,8 @@ func move_along(who: Actor, path: Array[Vector2i]) -> void:
 
 ## Why the current hero can't open `door` right now, or "".
 func _door_problem(door: Door) -> String:
+	if not door.by_hand():
+		return door.hint(map)
 	if not current.cell in door.sides():
 		return "Move next to the door to open it"
 	var key := map.key_for(door)
@@ -773,6 +785,14 @@ func _show_preview() -> void:
 	map.overlay.clear("path")
 	map.overlay.clear("cursor")
 	_emit_status()
+	var thing := map.mech.thing_under(map.get_local_mouse_position())
+	if thing and not _enemy_under_mouse():
+		var why := _thing_problem(thing)
+		map.overlay.set_cells("cursor", [thing.get_cell()], COL_BLOCKED if why != "" else COL_ACTIVE, 0.15, 0.7, why == "")
+		if why == "":
+			why = "Click: disarm the %s (uses your action, DC %d)" % [thing.trap_name(), thing.disarm_dc] if thing is Trap else "Click: pull the lever (free, once a turn)"
+		status_changed.emit(why)
+		return
 	var door := map.closed_door_under(map.get_local_mouse_position())
 	if door and not _enemy_under_mouse():
 		var msg := _door_problem(door)
@@ -2421,3 +2441,41 @@ func _burning_hands_fx(caster: Actor, cells: Array[Vector2i]) -> void:
 		SpellFx.burst(map, IsoGrid.cell_to_world(c), 0.45, 0.7)
 		await get_tree().create_timer(0.03).timeout
 	await get_tree().create_timer(0.3).timeout
+
+
+# --- traps and levers in a fight (Mechanisms) -------------------------------------------------
+
+## Why the current hero can't use `thing` now, or "". Disarming a trap takes the action; pulling a
+## lever is the free object interaction; nothing else can be used mid-fight.
+func _thing_problem(thing: MapMarker) -> String:
+	if not (thing is Trap or thing is Lever):
+		return "No time for that in the middle of a fight!"
+	if DungeonMap.grid_distance(current.cell, thing.get_cell()) > 1:
+		return "Move next to it first"
+	if thing is Trap:
+		if action_used or attacks_left < current.stats.attacks_per_action():
+			return "Disarming a trap takes your action (already used)"
+	elif interact_used:
+		return "You have already used an object this turn"
+	return ""
+
+
+func _use_thing(thing: MapMarker) -> void:
+	var why := _thing_problem(thing)
+	if why != "":
+		status_changed.emit(why)
+		Sfx.play("fail_sting", -12.0)
+		return
+	current.facing = (thing.get_cell() - current.cell).clampi(-1, 1)
+	if thing is Trap:
+		action_used = true
+		attacks_left = 0
+		var who: Array[Hero] = [current]
+		map.mech.try_disarm(thing, who)
+	else:
+		interact_used = true
+		map.mech.pull(thing, current)
+	map.refresh_navigation()
+	if in_combat and not _check_end():
+		_check_join()
+		_show_range()

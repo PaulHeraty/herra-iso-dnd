@@ -56,6 +56,8 @@ var wall_fader: WallFader
 var scorch: ScorchLayer
 var dice: DiceScene
 var combat: CombatManager
+## Traps, levers, plates, puzzles, secret doors, blocks, room notes (Phase 6).
+var mech: Mechanisms
 var hud: CombatHud
 ## Save / load slots (F5 / F9).
 var save_screen: SaveScreen
@@ -104,6 +106,10 @@ func _ready() -> void:
 		if n is Door:
 			n.opened.connect(_on_door_opened)
 	MapState.restore(self)
+	mech = Mechanisms.new()
+	mech.name = "Mechanisms"
+	add_child(mech)
+	mech.setup(self)
 	for s in decor.get_children():
 		if s is Node2D:
 			_place_by_cell(s, s.position)
@@ -123,6 +129,7 @@ func _ready() -> void:
 	invalidate_static()
 	refresh_navigation()
 	_spawn_party()
+	mech.update_plates(true)          # heroes may arrive standing on a plate
 	party_xp = PartyState.party_xp
 	inventory = Inventory.from_dict(PartyState.bag) if not PartyState.bag.is_empty() else Inventory.starting()
 	_compute_fog()
@@ -171,6 +178,8 @@ func _ready() -> void:
 	if PartyState.has_state() or map_title != "":
 		_arrival_fade(PartyState.has_state() or fade_from_black)
 	fade_from_black = false
+	# the room the party arrives in describes itself once the title has gone
+	get_tree().create_timer(2.8).timeout.connect(_arrival_notes)
 
 
 func _process(delta: float) -> void:
@@ -190,6 +199,14 @@ func _process(delta: float) -> void:
 		reveal.append(WallFader.figure_rect(mo.position))
 	for c in overlay.revealed_cells():
 		reveal.append(WallFader.floor_rect(c))
+	# known traps in sight: the walls in front of them fade, so the danger shows (corridors)
+	if mech:
+		for t in mech.traps:
+			if t.blocks_party() and is_seen(t.get_cell()):
+				reveal.append(WallFader.floor_rect(t.get_cell()))
+		for p in mech.pieces:
+			if is_seen(p.get_cell()):
+				reveal.append(WallFader.floor_rect(p.get_cell()) if p is PressurePlate else WallFader.figure_rect(IsoGrid.cell_to_world(p.get_cell())))
 	wall_fader.update(reveal, delta)
 	_fade_tall_props(delta)
 
@@ -256,7 +273,7 @@ func _static_cells() -> Dictionary:
 			elif n is Npc:
 				if n.present:
 					move[n.get_cell()] = true
-			elif n is Chest or n is Brazier:
+			elif n is Chest or n is Brazier or n is Lever or n is StoneFace:
 				move[n.get_cell()] = true
 			elif n is Prop:
 				if n.blocks:
@@ -300,6 +317,8 @@ func combat_reach(from: Vector2i, budget: int, mover: Actor) -> Dictionary:
 					continue
 				if occupant(n, mover) != null:
 					continue
+				if mover is Hero and mech and mech.trap_blocks(n):
+					continue          # a known trap: heroes go round it
 				reach[n] = {cost = cost, prev = c, stop = true}
 				next.append(n)
 		frontier = next
@@ -347,7 +366,7 @@ func is_seen(cell: Vector2i) -> bool:
 
 
 func _party_can_walk(cell: Vector2i) -> bool:
-	return is_walkable(cell) and is_explored(cell)
+	return is_walkable(cell) and is_explored(cell) and not (mech and mech.trap_blocks(cell))
 
 
 ## Rebuild the walk grid from the tiles and doors. Call after opening/closing doors or editing tiles.
@@ -369,7 +388,13 @@ func find_path(from: Vector2i, to: Vector2i) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
 	if not _astar.is_in_boundsv(from) or not _astar.is_in_boundsv(to) or _astar.is_point_solid(to):
 		return out
+	# The cell the walker stands on may count as blocked (a trap it just set off): path from it anyway.
+	var from_solid := _astar.is_point_solid(from)
+	if from_solid:
+		_astar.set_point_solid(from, false)
 	out.assign(_astar.get_id_path(from, to))
+	if from_solid:
+		_astar.set_point_solid(from, true)
 	return out
 
 
@@ -392,7 +417,7 @@ static func grid_distance(a: Vector2i, b: Vector2i) -> int:
 	return maxi(absi(a.x - b.x), absi(a.y - b.y))
 
 
-## True if a cell blocks sight: a wall, or a closed door.
+## True if a cell blocks sight: a wall, or a closed door (not a portcullis: bars).
 func blocks_sight(cell: Vector2i) -> bool:
 	if walls_layer.get_cell_source_id(cell) != -1:
 		return true
@@ -400,7 +425,7 @@ func blocks_sight(cell: Vector2i) -> bool:
 	if st.sight.has(cell):
 		return true
 	for d: Door in st.doors:
-		if d.get_cell() == cell and d.blocks_move():
+		if d.get_cell() == cell and d.blocks_sight():
 			return true
 	return false
 
@@ -460,10 +485,10 @@ func door_at(cell: Vector2i) -> Door:
 ## A closed door under a world point: on the cell under it, or whose panel the point is on.
 func closed_door_under(pos: Vector2) -> Door:
 	var d := door_at(IsoGrid.world_to_cell(pos))
-	if d and not d.is_open:
+	if d and not d.is_open and not d.is_hidden():
 		return d
 	for n in entities.get_children():
-		if n is Door and not n.is_open and n.panel_rect().has_point(pos):
+		if n is Door and not n.is_open and not n.is_hidden() and n.panel_rect().has_point(pos):
 			return n
 	return null
 
@@ -473,6 +498,10 @@ func closed_door_under(pos: Vector2) -> Door:
 func try_open_door(door: Door, by: Array[Hero]) -> bool:
 	if door.is_open:
 		return true
+	if not door.by_hand():
+		combat._say(door.hint(self))
+		Sfx.play("door_locked")
+		return false
 	if door.locked and not _try_lock(door, "door", by):
 		return false
 	door.open()
@@ -781,6 +810,14 @@ func _apply_view() -> void:
 	for v: Vector2i in _view_walls:
 		if is_explored(_view_walls[v][2]):
 			walls_view.set_cell(v, _view_walls[v][0], _view_walls[v][1])
+	# Secret doors draw the wall block their place would show in this view.
+	for n in entities.get_children():
+		if n is Door and n.style == Door.Style.SECRET:
+			var sv := IsoGrid.to_view(n.get_cell())
+			var sl := not view_walls.has(sv + Vector2i(0, 1))
+			var sr := not view_walls.has(sv + Vector2i(1, 0))
+			var srow := WALL_ROW_BOTH if sl and sr else (WALL_ROW_LEFT if sl else (WALL_ROW_RIGHT if sr else WALL_ROW_CAP))
+			n.wall_tile = Vector2i(absi(n.get_cell().x * 7 + n.get_cell().y * 3) % 4, srow)
 	for n in entities.get_children():
 		if n is MapMarker:
 			n.apply_view()
@@ -807,6 +844,8 @@ func update_fog() -> void:
 		if _astar.is_in_boundsv(c):
 			_astar.set_point_solid(c, not _party_can_walk(c))
 	_refresh_fog_look()
+	if mech:
+		mech.spot_check()
 
 
 ## Update the fog when a hero has changed cell or a door has opened; keep monster visibility
@@ -834,7 +873,7 @@ func _compute_fog() -> Array[Vector2i]:
 			_wall_set[c] = true
 	var opaque := _wall_set.duplicate()
 	for n in entities.get_children():
-		if n is Door and n.blocks_move():
+		if n is Door and n.blocks_sight():
 			opaque[n.get_cell()] = true
 	var eyes: Array[Vector2i] = []
 	for h in party:
@@ -1046,6 +1085,8 @@ func award_xp(xp: int) -> Array[Dictionary]:
 ## Trees and tents in front of a hero or a monster fade (like the walls, WallFader), so nobody
 ## gets lost behind the woods.
 var _tall_props: Array[Prop] = []
+## Secret doors (closed) draw a wall block of their own: they fade like the walls (WallFader).
+var _secret_doors: Array[Door] = []
 var _tall_scanned := false
 
 
@@ -1055,13 +1096,23 @@ func _fade_tall_props(delta: float) -> void:
 		for n in entities.get_children():
 			if n is Prop and n.is_tall():
 				_tall_props.append(n)
-	if _tall_props.is_empty():
+			elif n is Door and n.style == Door.Style.SECRET:
+				_secret_doors.append(n)
+	if _tall_props.is_empty() and _secret_doors.is_empty():
 		return
 	var figures: Array[Node2D] = []
 	figures.append_array(party)
 	for m in monsters:
 		if m.visible and m.is_alive():
 			figures.append(m)
+	for d in _secret_doors:
+		var dr := d.panel_rect()
+		var behind := false
+		for f in figures:
+			if f.position.y < d.position.y and dr.intersects(WallFader.figure_rect(f.position)):
+				behind = true
+				break
+		d.modulate.a = move_toward(d.modulate.a, 0.55 if behind and not d.is_open else 1.0, delta * 3.0)
 	for p in _tall_props:
 		var r := p.sprite_rect()
 		var hide := false
@@ -1286,3 +1337,9 @@ func take_portal(p: Portal) -> void:
 		MapState.next_entry = RunePortal.HOME_ENTRY
 	PartyState.save(self)
 	get_tree().change_scene_to_file(target)
+
+
+## A moment after arriving: the description of the room the party stands in (Mechanisms).
+func _arrival_notes() -> void:
+	if mech and combat and not combat.in_combat and not _leaving:
+		mech.check_notes()

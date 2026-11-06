@@ -814,6 +814,9 @@ func _inventory_input(event: InputEvent) -> bool:
 			else:
 				open_sheet()
 			return true
+		if event.keycode == KEY_F and not combat.in_combat and not ui_busy():
+			do_search()
+			return true
 		if event.keycode == KEY_ESCAPE and (shop.visible or quest_screen.visible or sheet.visible):
 			shop.close()
 			quest_screen.close()
@@ -913,6 +916,8 @@ var _gold: Label
 
 func _build_rest_buttons() -> void:
 	var first: Button = _buttons.attack
+	var half := floorf((first.size.x - 2) / 2.0)
+	# Short and Long rest share the first row.
 	var specs := [["Short rest", false], ["Long rest", true]]
 	for i in specs.size():
 		var b := Button.new()
@@ -920,15 +925,26 @@ func _build_rest_buttons() -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.clip_text = true
-		b.position = Vector2(first.position.x, 3 + i * 14)
+		b.position = Vector2(first.position.x + i * (half + 2), 3)
 		_panel.add_child(b)
-		b.set_deferred("size", Vector2(first.size.x, 13))
+		b.set_deferred("size", Vector2(half if i == 0 else first.size.x - half - 2, 13))
 		b.pressed.connect(_rest.bind(specs[i][1]))
 		b.mouse_entered.connect(func():
 			_hint.text = "Long rest: full HP, spell slots and abilities." if specs[i][1] else "Short rest: spend hit dice to heal; Second Wind comes back.")
 		_rest_buttons.append(b)
+	# Search (F): the second row.
+	var search := Button.new()
+	search.text = "Search (F)"
+	search.focus_mode = Control.FOCUS_NONE
+	search.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	search.clip_text = true
+	search.position = Vector2(first.position.x, 17)
+	_panel.add_child(search)
+	search.set_deferred("size", Vector2(first.size.x, 13))
+	search.pressed.connect(do_search)
+	search.mouse_entered.connect(func(): _hint.text = "Search: look around for hidden traps and secret doors nearby.")
+	_rest_buttons.append(search)
 	# Bag and Quest share the third row.
-	var half := floorf((first.size.x - 2) / 2.0)
 	var bag := Button.new()
 	bag.text = "Bag (I)"
 	bag.focus_mode = Control.FOCUS_NONE
@@ -1240,3 +1256,58 @@ func frame_speaker(who: Node2D) -> void:
 		cc.target = combat.map.party[0] if not combat.map.party.is_empty() else null
 		cc.ui_bottom = PANEL_H
 	cc.following = true
+
+
+# --- Phase 6: search, room captions -----------------------------------------------------------
+
+## Search (F / the Search button, exploring): Mechanisms.search.
+func do_search() -> void:
+	var why := combat.map.mech.search()
+	if why != "":
+		_hint.text = why
+		Sfx.play("fail_sting", -10.0)
+
+
+const CAPTION_W := 236
+const CAPTION_TIME := 8.0
+
+var _caption: Panel
+var _caption_title: Label
+var _caption_text: Label
+var _caption_tw: Tween
+
+
+## A room description: a box near the top of the screen for a few seconds (+ the log).
+func caption(title: String, text: String) -> void:
+	if title != "":
+		combat._say("%s: %s" % [title, text.replace("\n", " ")])
+	else:
+		combat._say(text)
+	if _caption == null:
+		_caption = Panel.new()
+		_caption.add_theme_stylebox_override("panel", _box(COL_BG, COL_GOLD.darkened(0.45)))
+		_caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_banner.get_parent().add_child(_caption)
+		_caption_title = _label(_caption, Vector2(6, 3), COL_BANNER)
+		_caption_text = _label(_caption, Vector2(6, 15), COL_TEXT)
+		_caption_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_caption_text.size = Vector2(CAPTION_W - 12, 0)
+	_caption_title.text = title
+	_caption_title.visible = title != ""
+	_caption_text.position.y = 15 if title != "" else 4
+	_caption_text.text = text
+	_caption_text.reset_size()
+	_caption_text.size.x = CAPTION_W - 12
+	await get_tree().process_frame
+	var lines := maxi(1, _caption_text.get_line_count())
+	_caption.size = Vector2(CAPTION_W, _caption_text.position.y + lines * 11 + 6)
+	_caption.position = Vector2(TEXT_X, 54)
+	_caption.modulate.a = 0.0
+	_caption.visible = true
+	if _caption_tw:
+		_caption_tw.kill()
+	_caption_tw = create_tween()
+	_caption_tw.tween_property(_caption, "modulate:a", 1.0, 0.4)
+	_caption_tw.tween_interval(CAPTION_TIME)
+	_caption_tw.tween_property(_caption, "modulate:a", 0.0, 0.8)
+	_caption_tw.tween_callback(func(): _caption.visible = false)

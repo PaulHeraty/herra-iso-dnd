@@ -33,7 +33,7 @@ doesn't supply.
 | Story | Placeholder. One pitch exists (below), not chosen. |
 | Party level | The party starts at **level 1** in the woods and reaches **5** by the last floor (Phase 5). Data files hold level-1 stat blocks; `Progression` grows them. Each map has `start_level` for playing it on its own. |
 | XP | SRD thresholds (300 / 900 / 2700 / 6500 per hero); a fight's XP is split between the heroes who aren't dead; level-ups happen right after the fight (fixed average HP, "LEVEL UP!" box + fanfare). |
-| Campaign | `surface.tscn` "The Harrow Woods" (first map, after the intro; L1→2) → mine entrance → 5 floors: Upper Halls (L2→3), Webbed Deep (L3, Eye Tyrant), Goblin Warrens (L3→4), Sunken Crypts (L4), Sealed Vault (L4→5, the **Wraith**). All built by `build_dungeon.gd`; it prints each map's XP (planned total ~29,000). |
+| Campaign | `surface.tscn` "The Harrow Woods" (first map, after the intro; L1→2) → mine entrance → 5 floors: Upper Halls (L2→3), Webbed Deep (L3, Eye Tyrant), Goblin Warrens (L3→4), Sunken Crypts (L4), Sealed Vault (L4→5, the **Wraith**). All built by `build_dungeon.gd`; it prints each map's XP (total ~30,600 incl. disarmed traps + solved puzzles). |
 | Combat start | A monster with **line of sight** to a hero within its sight range (~8 cells) starts combat; its whole `group_id` joins. Walls block sight. |
 | UI font | **Our own** generated bitmap pixel font (no third-party font). |
 | Monsters | Eye Tyrant + **Giant Spider** (SRD), Phase 2; **Skeleton** (SRD: shortsword/shortbow, vulnerable to bludgeoning) added with the first dungeon. |
@@ -50,6 +50,10 @@ doesn't supply.
 | Trader + quest | **Brannoc** (`Npc`) at his stall in the mine clearing hides until the goblins within `guard_radius` are dead, then calls the party over: quest **"The Wraith Below"** (`Quest`: stages = maps reached, keys found, Eye Tyrant + Wraith killed; a later stage ticks off the earlier ones), reward 3000 gold + Ring of Protection, and the **Rune of Return**. Shop: buys at `value_gp`, sells at half (not keys/rune). Quest log = Quest button / J. |
 | Rune of Return | Endless. Used from the Bag anywhere but the woods (not in combat): a portal opens next to the party; through it = the stall (`PartyStart` `portal`); the stall's portal leads back to that exact cell, then closes. One portal at a time (`RunePortal`). |
 | Intro / win | Main scene `scenes/intro.tscn` (`scripts/ui/intro.gd`): **Herrasoft** splash -> **HerraDnD** title ("The Wraith Below", two torches) -> 3 typed story pages over the four heroes -> fade to black -> the woods fade in (`DungeonMap.fade_from_black`). Click/Space = skip ahead, Esc = straight in. Win: Brannoc's reward line -> "Farewell" -> `VictoryScreen` (pauses; heroes in the cast pose, time played (`PartyState.play_seconds`, saved), monsters slain, gold, party XP; Keep exploring / Quit). Sounds `logo_chime`, `victory_fanfare`. |
+| Traps (Phase 6) | `Trap` marker: spikes, darts (attack roll), fire vent (3×3, save half), pit (one-shot), alarm tripwire (the nearest monster group comes running). Hidden until spotted: each conscious hero's **passive Perception** vs `detect_dc` when in sight within 4 cells, or **Search (F / button)**: everyone rolls Perception or Investigation (best), checked against hidden traps + secret doors in sight within 5 cells; unlimited. Walking onto an armed **unspotted** trap sets it off (walk stops). A **known armed trap blocks the party's paths** (A* + combat reach; monsters walk over their own traps); click it = walk up and disarm (the Rogue: thieves' tools vs `disarm_dc`; else best DEX; fail by 5+ = it goes off; retry allowed; in combat = the action). Disarming gives `xp`. Exploring, trap damage can't kill (knocked out → 1 HP after 2 s, like after a won fight). |
+| Secret doors / portcullis | `Door.style`: SECRET draws the wall block its place would show (until found by passive Perception / Search vs `secret_dc`, then a glinting seam; opened by hand or its `link`); PORTCULLIS = bars (blocks moving, **not sight**), raised only by its mechanism. |
+| Puzzles (Phase 6) | Wiring by `link` strings (`Mechanisms`): Lever / PressurePlate / linked Brazier / pushable block belong to the `Puzzle` with that link; a solved puzzle opens the doors whose link is its `opens` and stays solved. Kinds: SEQUENCE (levers by symbol, wrong = all spring back + dart penalty), ALL_ON (plates pressed by heroes/monsters/blocks, levers down, braziers lit), RING (Lights-Out on a ring of braziers: one flips its 2 neighbours). Without a Puzzle, a lever / plate drives its doors directly (plate = held open while pressed). `StoneFace` = riddle in the dialogue box (wrong = lightning). Blocks: click = push one cell away from the leader (who steps after it); a reset lever puts them back. Every puzzle guards **optional** treasure, never the way on. Solving gives XP. |
+| Room descriptions | `RoomNote` over each room (builder `name` + `desc`): caption box + log the first time a hero walks in (and on arrival); `clue` = modal (dialogue box) for inscriptions / puzzle rules. Seen notes are remembered. |
 | Maps (minimap / M) | Minimap top-left (`MiniMap`, - / + buttons or wheel zoom, click = full map; follows the leader); full map on **M** (`MapScreen`: fitted to the explored area, wheel / - + zoom, drag pan, Space = party, M / Esc closes; also in combat). Both honour the fog (unexplored hidden, out of sight dimmed, monsters only while seen) and the view rotation. The combat banner/hint sit right of the minimap (`CombatHud.TEXT_X`). |
 
 ## Licensing (important)
@@ -75,7 +79,7 @@ doesn't supply.
 assets/
   tiles/      floor_atlas.png, wall_atlas.png, dungeon_tileset.tres; outdoor_floor_atlas.png, cliff_atlas.png,
               forest_atlas.png, outdoor_tileset.tres (same layout: 0 ground, 1 cliffs, 2 forest)   (generated)
-  sprites/    heroes/ (walk sheets 16×24, action sheets 32×32), monsters/ (Eye Tyrant), npcs/ (trader_sheet 16x24: idle, idle, talk), props/ (chest, chest_open, bones, torch_sheet, web, stairs_up/down, barrel, crate, sarcophagus, rubble, cocoon, urn, brazier, stall, portal_sheet 8x24x40)
+  sprites/    heroes/ (walk sheets 16×24, action sheets 32×32), monsters/ (Eye Tyrant), npcs/ (trader_sheet 16x24: idle, idle, talk), props/ (chest, chest_open, bones, torch_sheet, web, stairs_up/down, barrel, crate, sarcophagus, rubble, cocoon, urn, brazier, stall, portal_sheet 8x24x40; Phase 6: trap_* (armed + sprung, flat 34x18 at (-17,-9)), plate(_down), lever_up/down (24x34 at (-12,-27)), block (28x34 at (-14,-27)), stone_face (28x44 at (-14,-36)))
   effects/    fireball_sheet.png (6×16px), explosion_sheet.png (7×32px)
   fonts/      herra_pixel.fnt/.png: our pixel font (use size 10; scale the Control 2x/3x for big text)
   sfx/        13 WAVs from the concept session (torch_ambience imports as a forward loop) + generated ones (gen_sfx.gd)
@@ -95,6 +99,11 @@ scripts/
   party/party_state.gd  PartyState: hero HP/slots/uses/hit dice carried between maps (static)
   maps/map_state.gd     MapState: per-map memory (open doors, dead spawns, opened chests) + the entry to use (static)
   maps/fog_of_war.gd    FogOfWar: explored + visible cells (shadowcasting); DungeonMap draws/dims/hides by it
+  maps/mechanisms.gd    Mechanisms (map.mech, Phase 6): traps (spot / spring / disarm), Search, secret doors, levers,
+                        plates, puzzles (fire(link) opens doors), pushable blocks, the riddle face, room notes; thing_under /
+                        approach_cells / interact for PartyController + CombatManager; after_party_step / after_combat_step
+  markers/              ... + trap, lever, pressure_plate, puzzle (invisible rules), stone_face (riddle), room_note (area text);
+                        MapMarker.save_state() / load_state() = per-marker state kept by MapState (`marks`) and save games
   maps/map_picture.gd  MapPicture: the map as an Image, 1 px per cell (tile average colour, fog: transparent / dimmed / lit),
                         redrawn only where the fog changed; DungeonMap.map_picture, marked dirty by _refresh_fog_look
   markers/              MapMarker base + one script per marker
@@ -146,11 +155,14 @@ tools/
               build_items.gd (items -> data/items/; hero kits in build_data.gd refer to these ids)
               build_data.gd (stat blocks -> data/), test_rules.gd (headless rules tests: PASS/FAIL)
               gen_spider.gd (procedural Giant Spider sheet: 3D-ish model projected to iso)
-              gen_sfx.gd (SFX: hits, miss, bow, hurt, hiss, ray, crit, mm_zip, radiant, heal_chime, fire_impact, chest_open, coins, potion_drink, scroll_read, lightning_crack, logo_chime, victory_fanfare)
+              gen_sfx.gd (SFX: hits, miss, bow, hurt, hiss, ray, crit, mm_zip, radiant, heal_chime, fire_impact, chest_open, coins, potion_drink, scroll_read, lightning_crack, logo_chime, victory_fanfare; Phase 6: trap_spikes/darts/fire/pit/alarm, lever, plate_click, gate_rise, stone_slide, stone_push, puzzle_solved, puzzle_fail, discover, search, flame_whoosh)
               gen_font.gd (our HerraPixel bitmap font -> assets/fonts/herra_pixel.fnt + .png)
               gen_icons.gd (9x9 condition icons -> assets/ui/condition_icons.png; order = Condition.ICON_INDEX)
               gen_item_art.gd (open chest + item icons; weapons drawn along the diagonal from code)
               gen_trader_art.gd (Brannoc, his stall, the portal sheet), test_story.gd (trader, quest, shop, rune portal: PASS/FAIL; run without --headless), test_save.gd (save / load + the slot screen; writes user://test_saves only)
+              gen_puzzle_art.gd (traps armed/sprung, pressure plate up/down, lever up/down, pushable block, stone face),
+              test_puzzles.gd (Phase 6: traps, Search, secret doors, levers, blocks, ring, riddle, notes, MapState: PASS/FAIL;
+              run without --headless, HERRA_AUTO_REACT=1, -t 150),
               gen_dungeon_art.gd (stairs + props), gen_skeleton.gd (Skeleton sheet), build_dungeon.gd (all six
               maps; OVERWRITES them; `-- <map ids>` for some), gen_monsters.gd (the Phase 5 monsters: sheets + scenes;
               `-- <ids>`), gen_outdoor_art.gd + build_outdoor_tileset.gd (the woods), gen_sfx.gd `-- <names>` = only those, test_dungeon.gd (doors, locks, stairs,
@@ -179,6 +191,13 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
   every tile of every source, so the floor's dimmed variant is alternative 200.
 - Props (`Prop` marker: barrel, crate, sarcophagus, rubble, cocoon, urn) and `Brazier` (free-standing
   Torch) block movement, not sight. Bones/webs are Decor sprites (walkable).
+- **Front walls hide the last two rows/columns of a room** (the +x / +y sides in the unturned view):
+  a 40 px block covers anything on the cells just behind it. Put things the player must see (chests,
+  puzzle pieces) at least 3 cells from the +x / +y walls. As a backstop, walls fade (WallFader) in
+  front of known traps and puzzle pieces in sight (`Mechanisms.pieces`), and a known trap shows a red
+  warning sign drawn above the walls.
+- Flat floor markers (Trap, PressurePlate) sit 9 px up from their cell centre (`SORT_UP`) so they
+  y-sort under anyone on their own or neighbouring cells; they draw at -SORT_UP.
 - Map scene layout (`DungeonMap`):
   `Ambient` (CanvasModulate, 0.34/0.36/0.50) · `Floor` (TileMapLayer) · `World` (y-sort) →
   `Walls` (TileMapLayer, y-sort), `Entities` (y-sort, markers/actors), `Decor` (y-sort, decoration sprites) · `Camera`.
@@ -349,8 +368,21 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
   7. Character sheet (C). DONE.
   8. Intro (Herrasoft splash, HerraDnD title, story pages) + the win screen after the reward. DONE.
   Phase 5 complete (playtested start to finish by the user).
-- [ ] **Phase 6 — Dungeon features:** doors/locks/keys (doors, locks and stairs/level transitions done early for the first dungeon; keys wait for Phase 4), traps (Rogue detect/disarm), secret walls,
-  levers, room descriptions, triggers, level transitions, more monsters.
+- [ ] **Phase 6 — Dungeon features + puzzles:** doors/locks/keys and level transitions were done early.
+  Steps:
+  1. Traps: `Trap` (5 kinds), passive Perception spotting, Search (F / button), springing on hidden
+     traps (walk stops; exploring can't kill), known traps block paths + red edge + warning sign,
+     disarming (Rogue, XP), combat (heroes stop on hidden traps; disarm = action). DONE.
+  2. Mechanisms: Lever, PressurePlate, portcullis + secret door (`Door.style`), pushable blocks + reset
+     lever, room descriptions / clues (`RoomNote`), per-marker state in MapState + saves. DONE.
+  3. Puzzles (user request): lever SEQUENCE (Upper Halls: the Hall of Hours), blocks onto plates
+     (Webbed Deep: the Weighing Room), ring of five fires (Sunken Crypts: the Chapel of Five Fires),
+     riddle stone face (Sealed Vault: opens a secret door to the Kings' Hoard); secret rooms on floors
+     1, 2, 3; a lever + portcullis in the Warrens; traps on every floor and two in the woods; a name +
+     description for every room and clearing. All built by build_dungeon.gd (maps rebuilt: older
+     saves' monster/chest names no longer match). DONE, waiting for the user's playtest.
+  4. Next: more monsters (e.g. SRD Mimic, Animated Armor, Gargoyle), triggers (ambushes: a gate slams
+     shut, monsters wake), lore notes (Phase 7 overlap).
 - [ ] **Phase 7 — Story:** quests, NPCs, dialogue, lore notes.
 - [ ] **Phase 8 — Wrapper:** title screen, save/load (DONE early: F5/F9, 3 slots), settings, music, mixing, game over/victory.
 - [ ] **Phase 9 — Polish & release:** balance, bugs, juice, export builds (Windows/Mac/Linux, itch.io).

@@ -97,7 +97,10 @@ func colour_of(cell: Vector2i) -> Color:
 	var col: Color = _base[cell]
 	var d: Door = _doors.get(cell)
 	if d:
-		col = COL_DOOR_OPEN if d.is_open else COL_DOOR
+		if d.is_hidden():
+			col = _hidden_wall_colour(cell)
+		else:
+			col = COL_DOOR_OPEN if d.is_open else COL_DOOR
 	if not map.is_seen(cell):
 		col = Color(col.r * DIM, col.g * DIM, col.b * DIM * 1.1)
 	return col
@@ -144,3 +147,11 @@ static func _tile_colour(layer: TileMapLayer, c: Vector2i) -> Color:
 ## Brighter by `k` (HSV value), keeping the hue: grey stone stays grey, forest stays green.
 static func _brighter(c: Color, k: float) -> Color:
 	return Color.from_hsv(c.h, c.s, minf(1.0, c.v * k))
+
+
+## An unfound secret door looks like the wall beside it.
+func _hidden_wall_colour(cell: Vector2i) -> Color:
+	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		if map.walls_layer.get_cell_source_id(cell + d) != -1 and _base.has(cell + d):
+			return _base[cell + d]
+	return _base.get(cell, Color.GRAY)

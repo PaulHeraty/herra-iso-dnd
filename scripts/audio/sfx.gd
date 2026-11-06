@@ -20,6 +20,15 @@ const TRIM := {
 	"radiant": -2.0,
 	"heal_chime": -3.0,
 	"fireball_boom": 3.0,
+	"search": -8.0,
+	"plate_click": -5.0,
+	"discover": -4.0,
+	"trap_alarm": -4.0,
+	"stone_slide": -2.0,
+	"gate_rise": -2.0,
+	"puzzle_solved": -3.0,
+	"flame_whoosh": -4.0,
+	"lever": -2.0,
 }
 
 static var _inst: Sfx

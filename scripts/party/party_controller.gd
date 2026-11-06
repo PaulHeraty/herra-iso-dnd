@@ -27,6 +27,8 @@ var _door_goal: Door
 var _chest_goal: Chest
 ## NPC to talk to when the leader gets there (clicked him).
 var _npc_goal: Npc
+## Lever, trap, brazier, block or stone face to use when the leader gets there (Mechanisms).
+var _thing_goal: MapMarker
 var _walking := false
 var _hover := Vector2i(-99999, -99999)
 ## False while combat runs (CombatManager takes over input).
@@ -67,11 +69,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		var mouse := map.get_local_mouse_position()
 		var npc := map.npc_under(mouse)
-		var chest: Chest = null if npc else map.closed_chest_under(mouse)
-		var door: Door = null if chest or npc else map.closed_door_under(mouse)
+		var thing: MapMarker = null if npc else map.mech.thing_under(mouse)
+		var chest: Chest = null if npc or thing else map.closed_chest_under(mouse)
+		var door: Door = null if chest or npc or thing else map.closed_door_under(mouse)
 		var target := IsoGrid.world_to_cell(mouse)
 		_door_goal = null
 		_chest_goal = null
+		_thing_goal = null
 		_npc_goal = null
 		if npc:
 			var np := approach_path(npc.sides())
@@ -80,6 +84,19 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 			_npc_goal = npc
 			target = np[-1]
+			if target == party[0].cell:
+				get_viewport().set_input_as_handled()
+				_arrived()
+				return
+		elif thing:
+			var tp := approach_path(map.mech.approach_cells(thing))
+			if tp.is_empty():
+				get_viewport().set_input_as_handled()
+				if thing is Prop and map.hud:
+					map.hud.flash_hint("The block can't be pushed from anywhere the party can reach.")
+				return
+			_thing_goal = thing
+			target = tp[-1]
 			if target == party[0].cell:
 				get_viewport().set_input_as_handled()
 				_arrived()
@@ -149,6 +166,12 @@ func _walk() -> void:
 		_refresh_overlay()
 		await tw.finished
 		map.apply_pending_rotation()
+		if map.mech.after_party_step():
+			_path.clear()                   # a trap went off, or a note to read
+			_door_goal = null
+			_chest_goal = null
+			_npc_goal = null
+			_thing_goal = null
 	_walking = false
 	_refresh_overlay()
 	_arrived()
@@ -159,6 +182,7 @@ func _walk() -> void:
 func _arrived() -> void:
 	if not enabled:            # combat started on the way
 		_door_goal = null
+		_thing_goal = null
 		_chest_goal = null
 		_npc_goal = null
 		return
@@ -167,6 +191,12 @@ func _arrived() -> void:
 	if npc and npc.present and party[0].cell in npc.sides():
 		party[0].facing = npc.get_cell() - party[0].cell
 		map.talk_to(npc)
+		_refresh_overlay()
+		return
+	var thing := _thing_goal
+	_thing_goal = null
+	if thing and is_instance_valid(thing) and party[0].cell in map.mech.approach_cells(thing) + _here(thing):
+		map.mech.interact(thing)
 		_refresh_overlay()
 		return
 	var chest := _chest_goal
@@ -227,6 +257,24 @@ func _refresh_overlay() -> void:
 		if map.hud:
 			map.hud.flash_hint("%s: click to talk." % npc.display_name)
 		return
+	var thing: MapMarker = null if _walking else map.mech.thing_under(map.get_local_mouse_position())
+	if thing and not (map.hud and map.hud.mouse_over_ui()):
+		preview = approach_path(map.mech.approach_cells(thing))
+		if not preview.is_empty():
+			preview.remove_at(0)
+		overlay.set_cells("path", preview, COL_PATH, 0.12, 0.35, true)
+		var col := COL_LOCKED if thing is Trap else COL_CURSOR
+		overlay.set_cells("cursor", [thing.get_cell()], col, 0.15, 0.7, true)
+		overlay.clear("destination")
+		if thing is Prop:
+			# where the block would slide from where the leader will stand
+			var from: Vector2i = preview[-1] if not preview.is_empty() else party[0].cell
+			var dest := map.mech.push_target(thing, from)
+			if dest != Mechanisms.NO_CELL:
+				overlay.set_cells("destination", [dest], COL_LOCKED, 0.2, 0.6, true)
+		if map.hud:
+			map.hud.flash_hint(map.mech.hint(thing))
+		return
 	var pt: Portal = null if _walking else map.portal_under(map.get_local_mouse_position())
 	if pt and not (map.hud and map.hud.mouse_over_ui()):
 		preview = map.find_path(party[0].cell, pt.get_cell())
@@ -257,8 +305,8 @@ func _refresh_overlay() -> void:
 		overlay.set_cells("path", preview, COL_PATH, 0.12, 0.35, true)
 		overlay.clear("destination")
 		overlay.set_cells("cursor", [door.get_cell()], COL_CURSOR if not door.locked else COL_LOCKED, 0.15, 0.7, true)
-		if map.hud and door.locked:
-			map.hud.flash_hint(map.lock_hint(door, "Door"))
+		if map.hud and door.hint(map) != "":
+			map.hud.flash_hint(door.hint(map))
 		return
 	var st: Stairs = null if _walking or door else map.stairs_under(map.get_local_mouse_position())
 	if st and not (map.hud and map.hud.mouse_over_ui()):
@@ -292,3 +340,23 @@ func _refresh_overlay() -> void:
 		overlay.set_cells("cursor", [_hover], COL_CURSOR, 0.15, 0.7, true)
 	else:
 		overlay.set_cells("cursor", [_hover], COL_BLOCKED, 0.08, 0.5)
+
+
+## Thing goals reached on a cell approach_cells no longer lists (a block whose far side just got
+## blocked) still count if the leader is next to it: the block then says it won't budge.
+func _here(thing: MapMarker) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	if DungeonMap.grid_distance(party[0].cell, thing.get_cell()) == 1:
+		out.append(party[0].cell)
+	return out
+
+
+## Walk the party one or more cells to `cell` (after pushing a block: into its old place).
+func walk_to(cell: Vector2i) -> void:
+	var p := map.find_path(party[0].cell, cell)
+	if p.size() < 2:
+		return
+	p.remove_at(0)
+	_path = p
+	if not _walking:
+		_walk()

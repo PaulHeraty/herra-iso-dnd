@@ -61,7 +61,26 @@ func lock_cell() -> void:
 ## placed in the editor). Subclasses that hang on a wall face or face a direction (Torch, Door)
 ## extend this.
 func apply_view() -> void:
-	position = _home_position if IsoGrid.rotation == 0 else IsoGrid.cell_to_world(get_cell())
+	position = _home_position if IsoGrid.rotation == 0 else IsoGrid.cell_to_world(get_cell()) + _snap_offset()
+
+
+## Runtime: the marker now stands on another (map) cell (a pushed block). Returns where it goes
+## in the current view (tween `position` there, or set it).
+func move_to_cell(c: Vector2i) -> Vector2:
+	_locked_cell = c
+	_cell_locked = true
+	_home_position = IsoGrid.view_cell_to_world(c) + _snap_offset()
+	return _home_position if IsoGrid.rotation == 0 else IsoGrid.cell_to_world(c) + _snap_offset()
+
+
+## Runtime state kept by MapState (and save games) for markers that change while the party plays
+## (traps, levers, puzzles...): plain data, or null for nothing to keep. Override both.
+func save_state() -> Variant:
+	return null
+
+
+func load_state(_s: Variant) -> void:
+	pass
 
 
 func _draw() -> void:

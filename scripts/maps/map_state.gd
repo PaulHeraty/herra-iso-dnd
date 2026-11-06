@@ -8,7 +8,7 @@ class_name MapState
 const AT_SAVE := "@save"
 
 ## scene path -> {doors = {name: true}, dead = {spawn name: true}, chests = {name: true},
-##                explored = {cell: true} (fog of war)}
+##                explored = {cell: true} (fog of war), marks = {name: MapMarker.save_state()}}
 static var _maps := {}
 ## The PartyStart entry_id the map should use ("" = the map's own entry_id). Set by the stairs;
 ## kept, so a restart (R) after a wipe puts the party back where it arrived.
@@ -36,6 +36,12 @@ static func snapshot(map: DungeonMap) -> Dictionary:
 			s.dead[String(n.name)] = true
 		elif n is Chest and n.opened:
 			s.chests[String(n.name)] = true
+		if n is MapMarker:
+			var st: Variant = n.save_state()
+			if st != null:
+				if not s.has("marks"):
+					s.marks = {}
+				s.marks[String(n.name)] = st
 	return s
 
 
@@ -55,6 +61,8 @@ static func restore(map: DungeonMap) -> void:
 			n.cleared = true
 		elif n is Chest and s.chests.has(key):
 			n.opened = true
+		if n is MapMarker and s.get("marks", {}).has(key):
+			n.load_state(s.marks[key])
 
 
 ## Every map's kept state as plain data (for SaveGame); `map` (the one the party is on) is
