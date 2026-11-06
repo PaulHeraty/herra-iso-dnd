@@ -2,7 +2,7 @@ class_name PartyState
 ## The heroes' state carried from one map to the next (HP, spell slots, uses, hit dice,
 ## death saves, equipment) and the party bag (gold + items). Saved when the party takes the
 ## stairs and applied to the freshly spawned heroes of the next map. Conditions are not carried (stairs are only taken outside combat). A restart after a party wipe (R) reloads the map, so the party
-## comes back as it was when it arrived on that floor.
+## comes back as it was when it arrived on that floor. SaveGame writes the same snapshot to disk.
 
 ## hero class -> Dictionary of runtime values. Empty = fresh party (full resources).
 static var _heroes := {}
@@ -18,18 +18,35 @@ static func has_state() -> bool:
 
 
 static func save(map: DungeonMap) -> void:
-	_heroes.clear()
-	party_xp = map.party_xp
-	bag = map.inventory.to_dict()
-	story = {quest = Quest.to_dict(), portal = RunePortal.to_dict()}
+	from_dict(snapshot(map))
+
+
+## The party on `map` as plain data (what save() keeps), without changing the kept state.
+static func snapshot(map: DungeonMap) -> Dictionary:
+	var heroes := {}
 	for h in map.party:
-		_heroes[h.hero_class] = {
+		heroes[h.hero_class] = {
 			hp = h.hp, slots_left = h.slots_left.duplicate(), uses_left = h.uses_left.duplicate(),
 			hit_dice_left = h.hit_dice_left,
 			death_successes = h.death_successes, death_failures = h.death_failures,
 			stable = h.stable, dead = h.dead, equipment = h.equipment.duplicate(),
 			level = h.level, xp = h.xp,
 		}
+	return {heroes = heroes, party_xp = map.party_xp, bag = map.inventory.to_dict(),
+			story = {quest = Quest.to_dict(), portal = RunePortal.to_dict()}}
+
+
+## The kept state as plain data (for SaveGame).
+static func to_dict() -> Dictionary:
+	return {heroes = _heroes.duplicate(true), party_xp = party_xp, bag = bag.duplicate(true),
+			story = story.duplicate(true)}
+
+
+static func from_dict(d: Dictionary) -> void:
+	_heroes = d.get("heroes", {}).duplicate(true)
+	party_xp = d.get("party_xp", 0)
+	bag = d.get("bag", {}).duplicate(true)
+	story = d.get("story", {}).duplicate(true)
 
 
 ## Apply the saved values to a hero that has just been spawned (and _ready'd).
@@ -42,7 +59,7 @@ static func apply(h: Hero) -> void:
 	h.xp = s.get("xp", 0)
 	h.refresh_stats()
 	h.hp = s.hp
-	h.slots_left = s.slots_left.duplicate()
+	h.slots_left.assign(s.slots_left)
 	h.uses_left = s.uses_left.duplicate()
 	h.hit_dice_left = s.hit_dice_left
 	h.death_successes = s.death_successes

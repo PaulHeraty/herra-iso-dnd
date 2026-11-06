@@ -38,6 +38,7 @@ static func play(sound: String, db := 0.0, pitch := 1.0) -> void:
 			return
 		_inst = Sfx.new()
 		_inst.name = "Sfx"
+		_inst.process_mode = Node.PROCESS_MODE_ALWAYS     # menus that pause the game still click
 		tree.root.add_child(_inst)
 	_inst._play(sound, db, pitch)
 

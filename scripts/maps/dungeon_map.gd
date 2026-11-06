@@ -57,6 +57,8 @@ var scorch: ScorchLayer
 var dice: DiceScene
 var combat: CombatManager
 var hud: CombatHud
+## Save / load slots (F5 / F9).
+var save_screen: SaveScreen
 ## Visible, rotated copies of the Floor / Walls layers.
 var floor_view: TileMapLayer
 var walls_view: TileMapLayer
@@ -143,11 +145,21 @@ func _ready() -> void:
 	hud.name = "CombatHud"
 	hud.combat = combat
 	add_child(hud)
+	save_screen = SaveScreen.new()
+	save_screen.name = "SaveScreen"
+	save_screen.map = self
+	add_child(save_screen)
 	Quest.note_map(scene_file_path)
 	_place_portals(false)
 	inventory.changed.connect(quest_check)
 	combat.combat_ended.connect(_on_combat_ended)
+	if MapState.next_entry == MapState.AT_SAVE:
+		IsoGrid.rotation = posmod(MapState.arrive_rotation, 4)     # the view as it was saved
 	_apply_view()
+	if IsoGrid.rotation != 0:
+		camera_controller.bounds = get_world_bounds()
+		if not party.is_empty():
+			camera_controller.jump_to(party[0].position)
 	quest_check.call_deferred()
 	if PartyState.has_state() or map_title != "":
 		_arrival_fade(PartyState.has_state())
@@ -619,6 +631,34 @@ func take_stairs(st: Stairs) -> void:
 	get_tree().change_scene_to_file(st.target_map)
 
 
+## True while the party is on its way to another map (or a loaded game).
+func is_leaving() -> bool:
+	return _leaving
+
+
+## Load the game saved in `slot` (any time, even mid-fight or after a wipe): fade out, set up
+## the saved state, load its map. Returns "" or why it can't be loaded.
+func load_game(slot: int) -> String:
+	if _leaving:
+		return "Already on the way."
+	var err := []
+	var target := SaveGame.prepare_load(slot, err)
+	if target == "":
+		return err[0] if not err.is_empty() else "That save can't be loaded."
+	_leaving = true
+	controller.enabled = false
+	_fade_to(target)
+	return ""
+
+
+func _fade_to(target: String) -> void:
+	var fade := _fade_rect()
+	var tw := create_tween()
+	tw.tween_property(fade, "color:a", 1.0, 0.4)
+	await tw.finished
+	get_tree().change_scene_to_file(target)
+
+
 ## A full-screen black rect above everything (for fades).
 func _fade_rect() -> ColorRect:
 	var layer := CanvasLayer.new()
@@ -871,22 +911,45 @@ func _spawn_party() -> void:
 	var start := _find_party_start()
 	# Back through the rune's portal: arrive where the rune was used (no marker there).
 	var via_portal := MapState.next_entry == RunePortal.ARRIVE
-	if start == null and not via_portal:
+	# A loaded game: everyone back on the cells they stood on when it was saved.
+	var from_save := MapState.next_entry == MapState.AT_SAVE and not MapState.arrive_cells.is_empty()
+	if start == null and not via_portal and not from_save:
 		push_warning("%s: no PartyStart marker, party not spawned" % name)
 		return
-	var origin := MapState.arrive_cell if via_portal else start.get_cell()
+	var origin := MapState.arrive_cell if via_portal else (MapState.arrive_cells[0] if from_save else start.get_cell())
 	var cells := _formation_cells(origin, PARTY_ORDER.size())
+	if from_save:
+		cells = _saved_cells(cells)
 	for i in cells.size():
 		var hero: Hero = HERO_SCENE.instantiate()
 		hero.hero_class = PARTY_ORDER[i]
 		entities.add_child(hero)
 		hero.facing = PartyStart.FACING_DIR[start.facing] if start else Vector2i(1, 0)
+		if from_save and i < MapState.arrive_facings.size():
+			hero.facing = MapState.arrive_facings[i]
 		hero.place_at(cells[i])
 		if PartyState.has_state():
 			PartyState.apply(hero)
 		elif start_level > 1:
 			hero.set_level(start_level)
 		party.append(hero)
+
+
+## The cells saved with the game (MapState.arrive_cells), each one kept if it is still free and
+## walkable; any that aren't fall back to the free formation cells around the leader.
+func _saved_cells(fallback: Array[Vector2i]) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for i in PARTY_ORDER.size():
+		var c: Vector2i = MapState.arrive_cells[i] if i < MapState.arrive_cells.size() else NO_CELL
+		if not is_walkable(c) or c in out:
+			c = NO_CELL
+			for f in fallback:
+				if f not in out and f not in MapState.arrive_cells:
+					c = f
+					break
+		if c != NO_CELL:
+			out.append(c)
+	return out
 
 
 ## n free walkable cells for the party: the FORMATION offsets where possible, else the nearest

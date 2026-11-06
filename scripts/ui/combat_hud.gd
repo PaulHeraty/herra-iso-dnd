@@ -513,7 +513,7 @@ func _on_defeat() -> void:
 	_end_dim.visible = true
 	_end_big.add_theme_color_override("font_color", COL_LOG_BAD)
 	_centre(_end_big, "THE PARTY HAS FALLEN", 130, 2)
-	_centre(_end_small, "Press R to try again", 164, 1)
+	_centre(_end_small, "Press R to try again, or F9 to load a game", 164, 1)
 	_end_layer.visible = true
 
 
