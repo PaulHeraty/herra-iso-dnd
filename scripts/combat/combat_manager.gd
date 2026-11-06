@@ -979,6 +979,14 @@ func plan_monster_turn(m: Monster) -> Dictionary:
 				goal_cost = far[n].cost
 				goal = n
 	if goal_cost == 1 << 30:
+		# Every way to the heroes is blocked (allies in a corridor, heroes in a doorway): at least
+		# get as close as this turn allows, so the queue moves up behind the front.
+		var here := _nearest_hero_distance(m.cell, heroes)
+		for c: Vector2i in reach:
+			var dist := _nearest_hero_distance(c, heroes)
+			if dist < here:
+				here = dist
+				plan.path = DungeonMap.reach_path(reach, c)
 		return plan
 	var full := DungeonMap.reach_path(far, goal)
 	# Walk as far as movement allows, ending on a cell we may stop on.
@@ -987,6 +995,14 @@ func plan_monster_turn(m: Monster) -> Dictionary:
 		steps -= 1
 	plan.path = full.slice(0, steps)
 	return plan
+
+
+## Squares (grid distance, walls ignored) from `cell` to the nearest of `heroes`.
+static func _nearest_hero_distance(cell: Vector2i, heroes: Array) -> int:
+	var best := 1 << 30
+	for h: Hero in heroes:
+		best = mini(best, DungeonMap.grid_distance(cell, h.cell))
+	return best
 
 
 ## Monsters outside the fight that now see a hero join it (with their whole group).
@@ -1669,8 +1685,7 @@ func _contest(caster: Actor, p: SpellData, target: Actor) -> void:
 		shove_push = false
 		var dir := (target.cell - caster.cell).clampi(-1, 1)
 		var dest := target.cell + dir
-		var occupant := map.actor_at(dest)
-		if map.terrain_walkable(dest) and (occupant == null or not occupant.is_alive()):
+		if map.terrain_walkable(dest) and map.occupant(dest, target) == null:
 			await target.step_to(dest, 0.16).finished
 			Sfx.play("hit_blunt", -4.0, 0.8)
 			_say("%s pushes %s back 5 ft!" % [caster.display_name(), target.display_name()])

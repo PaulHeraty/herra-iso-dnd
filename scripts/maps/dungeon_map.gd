@@ -272,8 +272,10 @@ const DIRS8 := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)
 
 
 ## Combat movement: every cell `mover` can reach from `from` within `budget` squares (5e: each
-## square costs 1, diagonals too; no cutting wall corners). Allies can be passed through but not
-## stopped on; enemies block. Returns cell -> {cost, prev, stop} where stop = can end the move there.
+## square costs 1, diagonals too; no cutting wall corners). One creature per square: nobody can
+## move through or onto a square someone else stands on (allies included; a downed hero still
+## takes up a square, the dead don't). Returns cell -> {cost, prev, stop} (stop is always true now:
+## every reachable cell is free to end on).
 func combat_reach(from: Vector2i, budget: int, mover: Actor) -> Dictionary:
 	var reach := {from: {cost = 0, prev = from, stop = true}}
 	var frontier: Array[Vector2i] = [from]
@@ -289,13 +291,21 @@ func combat_reach(from: Vector2i, budget: int, mover: Actor) -> Dictionary:
 					continue
 				if d.x != 0 and d.y != 0 and not (terrain_walkable(c + Vector2i(d.x, 0)) and terrain_walkable(c + Vector2i(0, d.y))):
 					continue
-				var occ := actor_at(n)
-				if occ and occ != mover and occ.is_alive() and not _same_side(occ, mover):
+				if occupant(n, mover) != null:
 					continue
-				reach[n] = {cost = cost, prev = c, stop = occ == null or occ == mover or not occ.is_alive()}
+				reach[n] = {cost = cost, prev = c, stop = true}
 				next.append(n)
 		frontier = next
 	return reach
+
+
+## The creature taking up `cell` (not `except`): anyone standing, and downed heroes (still
+## alive, making death saves). Dead creatures and remains don't take up a square.
+func occupant(cell: Vector2i, except: Actor = null) -> Actor:
+	for n in entities.get_children():
+		if n is Actor and n != except and n.cell == cell and (n.is_alive() or (n is Hero and not n.dead)):
+			return n
+	return null
 
 
 ## Path (excluding the start) to `to` through a combat_reach result, or [] if unreachable.

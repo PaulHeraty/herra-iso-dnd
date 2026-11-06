@@ -108,6 +108,48 @@ func _run() -> void:
 	_check(m.is_explored(nf[1]) and m.is_seen(nf[1]), "fog: opening the door reveals the far side")
 	_check(not m.find_path(nf[0], nf[1]).is_empty(), "open door lets the party through")
 
+	# --- one creature per square: nobody moves through or onto anyone (combat movement) ---
+	var o_fighter := m.party[0]
+	var o_rogue := m.party[1]
+	var o_cleric := m.party[2]
+	var home_cells: Array[Vector2i] = []
+	for h in m.party:
+		home_cells.append(h.cell)
+	o_fighter.place_at(nf[0])
+	o_rogue.place_at(door_cell)                 # standing in the doorway (a 1-wide gap)
+	o_cleric.place_at(nf[1] + (nf[1] - door_cell))
+	var o_reach := m.combat_reach(nf[0], 3, o_fighter)
+	_check(o_reach.has(nf[1]) == false, "an ally in the doorway blocks the way through (can't pass allies)")
+	_check(not o_reach.has(door_cell), "can't end a move on an ally's square")
+	o_rogue.place_at(Vector2i(-500, -500))     # well out of the way
+	o_reach = m.combat_reach(nf[0], 3, o_fighter)
+	_check(o_reach.has(door_cell) and o_reach.has(nf[1]), "with the doorway clear the fighter gets through")
+	_check(not o_reach.has(o_cleric.cell), "... but not onto the cleric's square beyond it")
+	o_cleric.hp = 0                             # downed, making death saves: still takes up the square
+	o_reach = m.combat_reach(nf[0], 3, o_fighter)
+	_check(not o_reach.has(o_cleric.cell), "a downed hero still takes up the square")
+	o_cleric.dead = true
+	o_reach = m.combat_reach(nf[0], 3, o_fighter)
+	_check(o_reach.has(o_cleric.cell), "the dead don't take up a square")
+	o_cleric.dead = false
+	o_cleric.hp = o_cleric.stats.max_hp
+	var o_mon: Monster = null
+	for mo in m.monsters:
+		if mo.is_alive():
+			o_mon = mo
+			break
+	if o_mon:
+		var mon_home := o_mon.cell
+		o_mon.place_at(door_cell)
+		o_reach = m.combat_reach(nf[0], 3, o_fighter)
+		_check(not o_reach.has(door_cell) and not o_reach.has(nf[1]), "a monster in the doorway blocks the hero")
+		var mreach := m.combat_reach(door_cell, 3, o_mon)
+		_check(not mreach.has(nf[0]) and not mreach.has(o_cleric.cell), "the monster can't move onto a hero's square")
+		o_mon.place_at(mon_home)
+	for i in m.party.size():
+		m.party[i].place_at(home_cells[i])
+	m.update_fog()
+
 	# --- the locked crypt: the Rogue picks it (may take a few tries) ---
 	var crypt := _door_with_key(m, "crypt")
 	_check(crypt != null and crypt.locked and crypt.lock_dc == 13, "crypt door is locked (DC 13, or the Iron Key)")

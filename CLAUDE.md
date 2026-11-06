@@ -103,7 +103,7 @@ scripts/
                         SpellData (spell/ability/monster power), Condition (blessed, prone, restrained, hidden,
                         frightened, shielded: durations + their effects on attacks/saves/AC)
   combat/combat_manager.gd  CombatManager: LOS detection -> combat, initiative, turns, movement, attacks (d20 vs AC, crits, riders, resist), apply_damage (concentration saves, death saves,
-                        massive damage), Shield reaction prompt, monster AI (expected-damage plan; groups that see the party join mid-fight) (DungeonMap.combat_reach: 1 sq per step incl. diagonals, pass allies, enemies block)
+                        massive damage), Shield reaction prompt, monster AI (expected-damage plan; groups that see the party join mid-fight) (DungeonMap.combat_reach: 1 sq per step incl. diagonals; one creature per square: nobody passes through or stops on anyone, downed heroes included, the dead not; `DungeonMap.occupant()`)
   ui/combat_hud.gd      CombatHud: mock-up combat UI (turn banner, hint, next turns, colour log; hero cards + action menu,
                         Spell/Ability + weapon popups; exploration: rest buttons, Bag (I), gold)
   ui/inventory_screen.gd  InventoryScreen (I / Bag button): bag grid, the shown hero's 6 slots + stats, description box
