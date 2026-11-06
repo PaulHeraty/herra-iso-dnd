@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_4j4k2"]
+[ext_resource type="Resource" path="res://data/spells/hold_person.tres" id="2_padja"]
+
+[resource]
+resource_name = "Scroll of Hold Person"
+script = ExtResource("1_4j4k2")
+id = "scroll_hold_person"
+display_name = "Scroll of Hold Person"
+kind = 4
+description = "Lines of binding script, cold to touch.
+Hold Person (2nd level): A humanoid must make a WIS save or be paralyzed (it saves again at the end of each of its turns). Hits from within 5 ft crit. Concentration, up to 1 minute.
+Cleric or Mage only. Crumbles once read. DC 13, attack +5."
+value_gp = 150
+stackable = true
+spell = ExtResource("2_padja")

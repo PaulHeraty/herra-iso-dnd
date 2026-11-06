@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/actors/monster.gd" id="1_m"]
+[ext_resource type="Texture2D" path="res://assets/sprites/monsters/bugbear_sheet.png" id="2_t"]
+
+[node name="Bugbear" type="Node2D"]
+script = ExtResource("1_m")
+monster_id = "bugbear"
+anims = {
+"attack": [0, 6, 3, 9.0, false],
+"death": [0, 11, 6, 10.0, false],
+"hurt": [0, 9, 2, 10.0, false],
+"idle": [0, 0, 2, 1.5, true],
+"walk": [0, 2, 4, 10.0, true]
+}
+back_row_offset = 1
+death_fade_delay = 1.5
+hp_bar_y = -26.0
+hp_bar_w = 16
+
+[node name="Sprite" type="Sprite2D" parent="."]
+texture = ExtResource("2_t")
+centered = false
+offset = Vector2(-16, -30)
+hframes = 17
+vframes = 2

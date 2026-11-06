@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_5xx2t"]
+
+[resource]
+resource_name = "Burning Hands"
+script = ExtResource("1_5xx2t")
+id = "burning_hands"
+display_name = "Burning Hands"
+description = "A fan of flame from your fingertips: a 15-ft cone, 3d6 fire, DEX save for half. +1d6 per slot above 1st."
+level = 1
+classes = Array[String](["wizard"])
+target = 6
+range_ft = 15
+resolve = 1
+save_ability = "DEX"
+half_on_save = true
+damage = "3d6"
+damage_type = "fire"
+upcast_dice = "1d6"
+sfx = "cast_whoosh"
+vfx = "burning_hands"

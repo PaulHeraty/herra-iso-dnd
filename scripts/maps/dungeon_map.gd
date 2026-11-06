@@ -24,6 +24,9 @@ extends Node2D
 ## Fog of war: only explored cells are drawn; explored ones out of sight are dimmed and their
 ## monsters hidden (see FogOfWar).
 @export var fog_of_war := true
+## The party's level when this map is the first one played (a fresh party, no PartyState):
+## lets each floor be played on its own at the level it is meant for.
+@export_range(1, 5) var start_level := 1
 
 const HERO_SCENE := preload("res://scenes/actors/hero.tscn")
 const PARTY_ORDER := [Hero.HeroClass.FIGHTER, Hero.HeroClass.ROGUE, Hero.HeroClass.CLERIC, Hero.HeroClass.MAGE]
@@ -42,7 +45,7 @@ const LIGHT_CHUNK := 4
 var party: Array[Hero] = []
 ## Monsters spawned from MonsterSpawn markers.
 var monsters: Array[Monster] = []
-## XP the party has earned (levelling comes in Phase 5).
+## XP the party has earned in total (each hero keeps its own share: Hero.xp).
 var party_xp := 0
 ## The party's shared bag: gold + items (carried between floors by PartyState).
 var inventory: Inventory
@@ -99,6 +102,7 @@ func _ready() -> void:
 	add_child(overlay)
 	move_child(overlay, scorch.get_index() + 1)          # above the floor, below World
 	_spawn_monsters()
+	invalidate_static()
 	refresh_navigation()
 	_spawn_party()
 	party_xp = PartyState.party_xp
@@ -149,6 +153,7 @@ func _process(delta: float) -> void:
 	for c in overlay.revealed_cells():
 		reveal.append(WallFader.floor_rect(c))
 	wall_fader.update(reveal, delta)
+	_fade_tall_props(delta)
 
 
 ## Turn the view by quarter turns (+1 = clockwise). Applied as soon as nobody is mid-step.
@@ -173,31 +178,59 @@ func apply_pending_rotation() -> void:
 func is_walkable(cell: Vector2i) -> bool:
 	if not terrain_walkable(cell):
 		return false
-	for n in entities.get_children():
-		if n is Monster and n.cell == cell and n.is_alive():
+	for m in monsters:
+		if m.cell == cell and m.is_alive():
 			return false
-		if n is MonsterSpawn and n.monster == null and n.get_cell() == cell:
-			return false
-	return true
+	return not _static_cells().spawns.has(cell)
 
 
-## Floor without a wall, closed door or chest (ignores creatures).
+## Floor without a wall, closed door, chest, prop or brazier (ignores creatures).
 func terrain_walkable(cell: Vector2i) -> bool:
 	if floor_layer.get_cell_source_id(cell) == -1:
 		return false
 	var wall := walls_layer.get_cell_tile_data(cell)
 	if wall and wall.get_custom_data("blocks_move"):
 		return false
-	for n in entities.get_children():
-		if n is Door and n.get_cell() == cell and n.blocks_move():
-			return false
-		if n is Chest and n.get_cell() == cell:
-			return false
-		if n is Prop and n.blocks and n.get_cell() == cell:
-			return false
-		if n is Brazier and n.get_cell() == cell:
+	var st := _static_cells()
+	if st.move.has(cell):
+		return false
+	for d: Door in st.doors:
+		if d.get_cell() == cell and d.blocks_move():
 			return false
 	return true
+
+
+## Cells blocked by things that never move (chests, props, braziers; trees also block sight),
+## spawns still waiting for their monster, and the doors - worked out once (big outdoor maps
+## have hundreds of trees, and these are asked for every cell).
+var _static := {}
+
+
+func _static_cells() -> Dictionary:
+	if _static.is_empty():
+		var move := {}
+		var sight := {}
+		var spawns := {}
+		var doors: Array[Door] = []
+		for n in entities.get_children():
+			if n is Door:
+				doors.append(n)
+			elif n is Chest or n is Brazier:
+				move[n.get_cell()] = true
+			elif n is Prop:
+				if n.blocks:
+					move[n.get_cell()] = true
+				if n.blocks_sight():
+					sight[n.get_cell()] = true
+			elif n is MonsterSpawn and n.monster == null and not n.cleared:
+				spawns[n.get_cell()] = true
+		_static = {move = move, sight = sight, spawns = spawns, doors = doors}
+	return _static
+
+
+## Forget the cached blockers (after spawning monsters, adding or removing props).
+func invalidate_static() -> void:
+	_static = {}
 
 
 const DIRS8 := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1),
@@ -312,8 +345,11 @@ static func grid_distance(a: Vector2i, b: Vector2i) -> int:
 func blocks_sight(cell: Vector2i) -> bool:
 	if walls_layer.get_cell_source_id(cell) != -1:
 		return true
-	for n in entities.get_children():
-		if n is Door and n.get_cell() == cell and n.blocks_move():
+	var st := _static_cells()
+	if st.sight.has(cell):
+		return true
+	for d: Door in st.doors:
+		if d.get_cell() == cell and d.blocks_move():
 			return true
 	return false
 
@@ -824,7 +860,10 @@ func _spawn_party() -> void:
 		entities.add_child(hero)
 		hero.facing = PartyStart.FACING_DIR[start.facing]
 		hero.place_at(cells[i])
-		PartyState.apply(hero)
+		if PartyState.has_state():
+			PartyState.apply(hero)
+		elif start_level > 1:
+			hero.set_level(start_level)
 		party.append(hero)
 
 
@@ -879,3 +918,49 @@ func _spawn_preview_sprite(n: MonsterSpawn) -> void:
 	entities.add_child(s)
 	_placed[s] = [n.get_cell(), Vector2.ZERO]
 	s.position = IsoGrid.cell_to_world(n.get_cell())
+
+
+## Share `xp` between the heroes who aren't dead (5e: split evenly). Returns the level-ups:
+## [{hero, level, gains}] (also written to the combat log by the caller).
+func award_xp(xp: int) -> Array[Dictionary]:
+	party_xp += xp
+	var ups: Array[Dictionary] = []
+	var share_with := party.filter(func(h): return not h.dead)
+	if share_with.is_empty() or xp <= 0:
+		return ups
+	var share := xp / share_with.size()
+	for h: Hero in share_with:
+		for u in h.add_xp(share):
+			u.hero = h
+			ups.append(u)
+	return ups
+
+
+## Trees and tents in front of a hero or a monster fade (like the walls, WallFader), so nobody
+## gets lost behind the woods.
+var _tall_props: Array[Prop] = []
+var _tall_scanned := false
+
+
+func _fade_tall_props(delta: float) -> void:
+	if not _tall_scanned:
+		_tall_scanned = true
+		for n in entities.get_children():
+			if n is Prop and n.is_tall():
+				_tall_props.append(n)
+	if _tall_props.is_empty():
+		return
+	var figures: Array[Node2D] = []
+	figures.append_array(party)
+	for m in monsters:
+		if m.visible and m.is_alive():
+			figures.append(m)
+	for p in _tall_props:
+		var r := p.sprite_rect()
+		var hide := false
+		for f in figures:
+			if f.position.y < p.position.y and r.intersects(WallFader.figure_rect(f.position)):
+				hide = true
+				break
+		var target := 0.45 if hide else 1.0
+		p.modulate.a = move_toward(p.modulate.a, target, delta * 3.0)

@@ -1,0 +1,51 @@
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_kb2kk"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_olpbm"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="3_ig4w8"]
+
+[sub_resource type="Resource" id="Resource_x4twk"]
+resource_name = "Greatclub"
+script = ExtResource("1_kb2kk")
+name = "Greatclub"
+ability = 1
+damage = "2d8+4"
+damage_type = "bludgeoning"
+to_hit_override = 6
+
+[sub_resource type="Resource" id="Resource_aqcup"]
+resource_name = "Javelin"
+script = ExtResource("1_kb2kk")
+name = "Javelin"
+kind = 1
+ability = 1
+range_ft = 30
+long_range_ft = 120
+damage = "2d6+4"
+damage_type = "piercing"
+to_hit_override = 6
+sfx = "bow_shot"
+
+[resource]
+resource_name = "Ogre"
+script = ExtResource("3_ig4w8")
+id = "ogre"
+display_name = "Ogre"
+challenge = 2.0
+xp = 450
+size = 3
+creature_type = "giant"
+str_score = 19
+dex_score = 8
+con_score = 16
+int_score = 5
+wis_score = 7
+cha_score = 7
+max_hp = 59
+hit_dice = "7d10+21"
+armor_class = 11
+speed_ft = 40
+attacks = Array[ExtResource("1_kb2kk")]([SubResource("Resource_x4twk"), SubResource("Resource_aqcup")])
+skill_overrides = {
+"perception": -2
+}

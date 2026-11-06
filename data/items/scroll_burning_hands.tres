@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_da57u"]
+[ext_resource type="Resource" path="res://data/spells/burning_hands.tres" id="2_6sfvv"]
+
+[resource]
+resource_name = "Scroll of Burning Hands"
+script = ExtResource("1_da57u")
+id = "scroll_burning_hands"
+display_name = "Scroll of Burning Hands"
+kind = 4
+description = "Smells of smoke.
+Burning Hands (1st level): A fan of flame from your fingertips: a 15-ft cone, 3d6 fire, DEX save for half.
+Mage only. Crumbles once read. DC 13, attack +5."
+value_gp = 75
+stackable = true
+spell = ExtResource("2_6sfvv")

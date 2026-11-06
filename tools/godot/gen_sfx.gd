@@ -11,31 +11,39 @@ var _seed := 1
 
 
 func _init() -> void:
-	_save("hit_slash", _hit_slash())
-	_save("hit_blunt", _hit_blunt())
-	_save("hit_pierce", _hit_pierce())
-	_save("miss_swish", _miss_swish())
-	_save("bow_shot", _bow_shot())
-	_save("hero_hurt", _hero_hurt())
-	_save("spider_hiss", _spider_hiss())
-	_save("ray_zap", _ray_zap())
-	_save("crit_hit", _crit_hit())
-	_save("mm_zip", _mm_zip())
-	_save("radiant", _radiant())
-	_save("heal_chime", _heal_chime())
-	_save("fire_impact", _fire_impact())
-	_save("fireball_boom", _fireball_boom())
-	_save("door_open", _door_open())
-	_save("door_locked", _door_locked())
-	_save("lock_click", _lock_click())
-	_save("stairs", _stairs())
-	_save("bone_rattle", _bone_rattle())
-	_save("bone_collapse", _bone_collapse())
-	_save("chest_open", _chest_open())
-	_save("coins", _coins())
-	_save("potion_drink", _potion_drink())
-	_save("scroll_read", _scroll_read())
-	_save("lightning_crack", _lightning_crack())
+	# Pass sound names after -- to make only those (e.g. -- level_up): the rest stay as they are.
+	var all := {
+		"hit_slash": _hit_slash,
+		"hit_blunt": _hit_blunt,
+		"hit_pierce": _hit_pierce,
+		"miss_swish": _miss_swish,
+		"bow_shot": _bow_shot,
+		"hero_hurt": _hero_hurt,
+		"spider_hiss": _spider_hiss,
+		"ray_zap": _ray_zap,
+		"crit_hit": _crit_hit,
+		"mm_zip": _mm_zip,
+		"radiant": _radiant,
+		"heal_chime": _heal_chime,
+		"fire_impact": _fire_impact,
+		"fireball_boom": _fireball_boom,
+		"door_open": _door_open,
+		"door_locked": _door_locked,
+		"lock_click": _lock_click,
+		"stairs": _stairs,
+		"bone_rattle": _bone_rattle,
+		"bone_collapse": _bone_collapse,
+		"chest_open": _chest_open,
+		"coins": _coins,
+		"potion_drink": _potion_drink,
+		"scroll_read": _scroll_read,
+		"lightning_crack": _lightning_crack,
+		"level_up": _level_up,
+	}
+	var only := OS.get_cmdline_user_args()
+	for nm: String in all:
+		if only.is_empty() or nm in only:
+			_save(nm, (all[nm] as Callable).call())
 	quit()
 
 
@@ -534,4 +542,25 @@ func _lightning_crack() -> PackedFloat32Array:
 		var t := float(i) / rn
 		re[i] = minf(1.0, t * 12.0) * pow(1.0 - t, 1.8) * (0.7 + 0.3 * sin(TAU * 3.5 * t))
 	out = _mix(out, _mul(rumble, re), 5.0, _n(0.06))
+	return out
+
+
+## Level up: a quick rising square-wave arpeggio (C E G C) then a held bright chord with a little
+## vibrato and a sparkle on top. Chiptune fanfare, ~1.3 s.
+func _level_up() -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(_n(1.35))
+	var arp := [523.25, 659.25, 783.99, 1046.5]
+	for k in arp.size():
+		var n := _n(0.11)
+		var t := _mul(_square(n, arp[k], arp[k], 0.25), _env(n, 0.003, 1.5))
+		out = _mix(out, t, 0.32, _n(0.075 * k))
+	var start := _n(0.3)
+	for f in [523.25, 659.25, 783.99, 1046.5]:
+		var n := _n(1.0)
+		var t := _mul(_square(n, f, f, 0.5, 5.5, 0.006), _env(n, 0.01, 2.2))
+		out = _mix(out, t, 0.12, start)
+	var sp := _n(0.6)
+	var spark := _mul(_sine(sp, 2093.0, 2637.0), _env(sp, 0.002, 4.0))
+	out = _mix(out, spark, 0.18, start + _n(0.05))
 	return out

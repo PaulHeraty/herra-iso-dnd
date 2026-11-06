@@ -1,0 +1,47 @@
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_03unl"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_v4vb1"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="3_matgl"]
+
+[sub_resource type="Resource" id="Resource_8oxl7"]
+resource_name = "Scimitar"
+script = ExtResource("1_03unl")
+name = "Scimitar"
+ability = 1
+damage = "1d6+2"
+to_hit_override = 4
+
+[sub_resource type="Resource" id="Resource_ltyc5"]
+resource_name = "Shortbow"
+script = ExtResource("1_03unl")
+name = "Shortbow"
+kind = 1
+ability = 1
+range_ft = 80
+long_range_ft = 320
+damage = "1d6+2"
+damage_type = "piercing"
+to_hit_override = 4
+sfx = "bow_shot"
+
+[resource]
+resource_name = "Goblin"
+script = ExtResource("3_matgl")
+id = "goblin"
+display_name = "Goblin"
+challenge = 0.25
+xp = 50
+size = 1
+str_score = 8
+dex_score = 14
+wis_score = 8
+cha_score = 8
+max_hp = 7
+hit_dice = "2d6"
+armor_class = 15
+attacks = Array[ExtResource("1_03unl")]([SubResource("Resource_8oxl7"), SubResource("Resource_ltyc5")])
+skill_overrides = {
+"perception": -1,
+"stealth": 6
+}

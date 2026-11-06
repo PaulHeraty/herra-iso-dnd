@@ -52,6 +52,9 @@ var hero_name := ""
 var base_stats: CreatureStats
 ## slot -> item id (Equipment.SLOTS). Empty at spawn = the class's starting equipment.
 var equipment := {}
+## Character level (1-5) and XP earned (Progression). `stats` is built for this level.
+var level := 1
+var xp := 0
 var _walk_tex: Texture2D
 var _action_tex: Texture2D
 var _action := ""
@@ -274,7 +277,7 @@ func walk_texture() -> Texture2D:
 
 ## Work `stats` out again from the base stat block + equipment (after equipping something).
 func refresh_stats() -> void:
-	stats = Equipment.build_stats(base_stats, equipment)
+	stats = Equipment.build_stats(base_stats, equipment, level)
 
 
 ## Put item `item_id` in `slot`. Returns the item ids taken off to make room (they go back in the
@@ -323,3 +326,52 @@ func unequip_to(bag: Inventory, slot: String) -> String:
 	if iid != "":
 		bag.add(iid)
 	return iid
+
+
+# --- levels (Progression) ----------------------------------------------------------------------
+
+## Go up one level: new stat block, the extra hit points (also on top of the current HP), the new
+## spell slots / uses / hit die ready to use. Returns what the level brought (log / level-up box).
+func gain_level() -> Array[String]:
+	var out: Array[String] = []
+	if level >= Progression.MAX_LEVEL:
+		return out
+	var old_max := stats.max_hp
+	var old_slots := stats.spell_slots.duplicate()
+	var old_powers := stats.powers.map(func(p): return p.id)
+	level += 1
+	refresh_stats()
+	var more := stats.max_hp - old_max
+	if not dead and hp > 0:
+		hp += more
+	out.append("+%d max HP (%d)" % [more, stats.max_hp])
+	for i in stats.spell_slots.size():
+		var was: int = old_slots[i] if i < old_slots.size() else 0
+		while slots_left.size() <= i:
+			slots_left.append(0)
+		slots_left[i] += maxi(0, stats.spell_slots[i] - was)
+	hit_dice_left += 1
+	for p: SpellData in stats.powers:
+		if not p.id in old_powers and p.uses > 0:
+			uses_left[p.id] = p.uses
+	out.append_array(Progression.gains(base_stats.class_id, level))
+	return out
+
+
+## Add XP; returns one entry per level gained: {level, gains}.
+func add_xp(amount: int) -> Array[Dictionary]:
+	var ups: Array[Dictionary] = []
+	xp += amount
+	while level < Progression.MAX_LEVEL and xp >= Progression.XP_FOR_LEVEL[level]:
+		var g := gain_level()
+		ups.append({level = level, gains = g})
+	return ups
+
+
+## Set the level directly (map tests / a party arriving at a set level): no XP needed, full resources.
+func set_level(lvl: int) -> void:
+	level = clampi(lvl, 1, Progression.MAX_LEVEL)
+	xp = maxi(xp, Progression.XP_FOR_LEVEL[level - 1])
+	refresh_stats()
+	hp = stats.max_hp
+	reset_resources()

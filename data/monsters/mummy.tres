@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_lb5xq"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_6mfby"]
+[ext_resource type="Resource" path="res://data/spells/dreadful_glare.tres" id="3_p7dq6"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="4_b66vg"]
+
+[sub_resource type="Resource" id="Resource_vso73"]
+resource_name = "Rotting Fist"
+script = ExtResource("1_lb5xq")
+name = "Rotting Fist"
+ability = 1
+damage = "2d6+3"
+damage_type = "bludgeoning"
+to_hit_override = 5
+rider_damage = "3d6"
+rider_damage_type = "necrotic"
+
+[resource]
+resource_name = "Mummy"
+script = ExtResource("4_b66vg")
+id = "mummy"
+display_name = "Mummy"
+challenge = 3.0
+xp = 700
+creature_type = "undead"
+str_score = 16
+dex_score = 8
+con_score = 15
+int_score = 6
+cha_score = 12
+save_proficiencies = Array[String](["WIS"])
+max_hp = 58
+hit_dice = "9d8+18"
+armor_class = 11
+vulnerabilities = Array[String](["fire"])
+immunities = Array[String](["necrotic", "poison"])
+traits = Array[String](["resist_nonmagical"])
+speed_ft = 20
+attacks = Array[ExtResource("1_lb5xq")]([SubResource("Resource_vso73")])
+powers = Array[ExtResource("2_6mfby")]([ExtResource("3_p7dq6")])

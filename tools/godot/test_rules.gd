@@ -14,6 +14,7 @@ func _init() -> void:
 	_test_conditions()
 	_test_items()
 	_test_scrolls()
+	_test_progression()
 	print("%d checks, %d failed" % [_checks, _fails])
 	print("PASS" if _fails == 0 else "FAIL")
 	quit(1 if _fails > 0 else 0)
@@ -95,17 +96,17 @@ func _test_stats() -> void:
 	if not (f and r and c and w and sp and et):
 		return
 	# Heroes fight with their equipment: base stat block + starting kit.
-	f = Equipment.build_stats(f, Equipment.starting(f))
-	r = Equipment.build_stats(r, Equipment.starting(r))
-	c = Equipment.build_stats(c, Equipment.starting(c))
-	w = Equipment.build_stats(w, Equipment.starting(w))
-	check(f.armor_class == 18 and r.armor_class == 15 and c.armor_class == 18 and w.armor_class == 12,
-			"hero AC from kit 18/15/18/12 (%d/%d/%d/%d)" % [f.armor_class, r.armor_class, c.armor_class, w.armor_class])
+	f = _bs(f, Equipment.starting(f))
+	r = _bs(r, Equipment.starting(r))
+	c = _bs(c, Equipment.starting(c))
+	w = _bs(w, Equipment.starting(w))
+	check(f.armor_class == 19 and r.armor_class == 15 and c.armor_class == 18 and w.armor_class == 12,
+			"hero AC from kit 19 (Defense)/15/18/12 (%d/%d/%d/%d)" % [f.armor_class, r.armor_class, c.armor_class, w.armor_class])
 	check(f.attacks.size() == 2 and f.attacks[1].name == "Handaxe" and f.attacks[1].range_cells() == 4, "Fighter longsword + handaxe")
 	check(c.attacks.size() == 1 and c.attacks[0].damage_type == "bludgeoning", "Cleric mace only")
 	check(w.attacks[1].name == "Light Crossbow" and w.damage_expr(w.attacks[1]) == "1d8+2", "Mage light crossbow 1d8+2")
-	check(f.attack_bonus(f.attacks[0]) == 6, "Fighter longsword +6 (%d)" % f.attack_bonus(f.attacks[0]))
-	check(f.damage_expr(f.attacks[0]) == "1d8+3", "Fighter longsword 1d8+3 (%s)" % f.damage_expr(f.attacks[0]))
+	check(f.attack_bonus(f.attacks[0]) == 7, "Fighter longsword +7 (STR 18 at 5th) (%d)" % f.attack_bonus(f.attacks[0]))
+	check(f.damage_expr(f.attacks[0]) == "1d8+4", "Fighter longsword 1d8+4 (%s)" % f.damage_expr(f.attacks[0]))
 	check(f.attacks_per_action() == 2, "Fighter Extra Attack")
 	check(r.attack_bonus(r.attacks[0]) == 7, "Rogue shortsword (finesse) +7")
 	check(r.damage_expr(r.attacks[1]) == "1d6+4", "Rogue shortbow 1d6+4")
@@ -148,24 +149,38 @@ func _test_spells() -> void:
 	check(bl.targets_for(1) == 3 and bl.targets_for(2) == 4, "Bless targets 3 / 4")
 	check(cw.heal_for(5, 2) == "1d8+1d8", "Cure Wounds upcast (%s)" % cw.heal_for(5, 2))
 	check(fb.is_cantrip() and not fb.uses_slot() and fi.uses_slot(), "cantrip / slot")
-	var w: CreatureStats = load("res://data/heroes/wizard.tres")
-	var r: CreatureStats = load("res://data/heroes/rogue.tres")
-	var f: CreatureStats = load("res://data/heroes/fighter.tres")
+	var w: CreatureStats = _l5(load("res://data/heroes/wizard.tres"))
+	var r: CreatureStats = _l5(load("res://data/heroes/rogue.tres"))
+	var f: CreatureStats = _l5(load("res://data/heroes/fighter.tres"))
 	var sp: CreatureStats = load("res://data/monsters/giant_spider.tres")
 	var et: CreatureStats = load("res://data/monsters/eye_tyrant.tres")
 	var ids := w.powers.map(func(p): return p.id)
-	check(ids == ["fire_bolt", "magic_missile", "shield", "fireball"], "Wizard powers %s" % str(ids))
+	check(ids == ["fire_bolt", "magic_missile", "burning_hands", "shield", "scorching_ray", "fireball"], "Wizard powers at 5th %s" % str(ids))
 	check(fi.attack_bonus_for(w) == 7 and fi.dc_for(w) == 15, "Wizard spell attack +7, DC 15")
 	check(r.skill_bonus("stealth") == 10, "Rogue Stealth +10 (expertise) (%d)" % r.skill_bonus("stealth"))
-	check(f.skill_bonus("athletics") == 6, "Fighter Athletics +6")
+	check(f.skill_bonus("athletics") == 7, "Fighter Athletics +7")
 	check(sp.skill_bonus("stealth") == 7 and sp.passive_perception() == 10, "Spider Stealth +7, passive 10")
 	check(et.passive_perception() == 14, "Eye Tyrant passive Perception 14")
 	check(sp.powers.size() == 1 and sp.powers[0].id == "spider_web" and sp.powers[0].attack_bonus_for(sp) == 5, "Spider Web +5")
 
 
+## The rules tests check the party at level 5 (the data files hold level 1).
+func _bs(base: CreatureStats, eq: Dictionary) -> CreatureStats:
+	return Equipment.build_stats(base, eq, 5)
+
+
+## A bare level-5 stat block (no equipment applied).
+func _l5(s: CreatureStats) -> CreatureStats:
+	var c: CreatureStats = s.duplicate()
+	Progression.apply(c, 5)
+	return c
+
+
 func _hero(cls: int) -> Hero:
 	var h: Hero = (load("res://scenes/actors/hero.tscn") as PackedScene).instantiate()
-	h.stats = load(Hero.STATS[cls])
+	h.base_stats = load(Hero.STATS[cls])
+	h.level = 5
+	h.stats = Equipment.build_stats(h.base_stats, Equipment.starting(h.base_stats), 5)
 	h.hp = h.stats.max_hp
 	h.reset_resources()
 	return h
@@ -232,25 +247,25 @@ func _test_magic_items(fb: CreatureStats, rb: CreatureStats, wb: CreatureStats, 
 	check(not I.call("longsword").is_magic() and I.call("longsword").icon_texture().region.position.y == 0, "plain longsword: plain icon")
 	check(I.call("longsword_plus1").display_name == "Longsword +1" and I.call("longsword").magic_bonus == 0, "+1 name; plain one untouched")
 	# +1 weapon: +1 to hit and damage. Fighter longsword +6 / 1d8+3 -> +7 / 1d8+4.
-	var plain := Equipment.build_stats(fb, {main = "longsword"})
-	var magic := Equipment.build_stats(fb, {main = "longsword_plus1"})
+	var plain := _bs(fb, {main = "longsword"})
+	var magic := _bs(fb, {main = "longsword_plus1"})
 	check(magic.attack_bonus(magic.attacks[0]) == plain.attack_bonus(plain.attacks[0]) + 1
 			and is_equal_approx(Dice.average(magic.damage_expr(magic.attacks[0])), Dice.average(plain.damage_expr(plain.attacks[0])) + 1.0) and magic.attacks[0].name == "Longsword +1",
 			"Longsword +1: +1 to hit and damage (%s)" % magic.damage_expr(magic.attacks[0]))
 	check(Equipment.is_trained(rb, I.call("rapier_plus1")) and Equipment.is_trained(wb, I.call("dagger_plus1")),
 			"single-weapon training covers the +1 version")
-	check(Equipment.build_stats(rb, {ranged = "shortbow_plus1"}).attacks[1].magic_bonus == 1, "Shortbow +1 in the ranged slot")
+	check(_bs(rb, {ranged = "shortbow_plus1"}).attacks[1].magic_bonus == 1, "Shortbow +1 in the ranged slot")
 	# +1 armour / shield: +1 AC.
-	check(Equipment.build_stats(cb, {armor = "chain_mail_plus1", off = "shield_plus1"}).armor_class == 20, "Chain Mail +1 + Shield +1: 17 + 3")
-	check(Equipment.build_stats(rb, {armor = "studded_leather_plus1"}).armor_class == 17, "Studded Leather +1: 12 + 1 + DEX 4")
+	check(_bs(cb, {armor = "chain_mail_plus1", off = "shield_plus1"}).armor_class == 20, "Chain Mail +1 + Shield +1: 17 + 3")
+	check(_bs(rb, {armor = "studded_leather_plus1"}).armor_class == 17, "Studded Leather +1: 12 + 1 + DEX 4")
 	check(I.call("chain_mail_plus1").summary().begins_with("AC 17"), "armour summary shows the +1")
 	# Rings: resistance and condition immunity on the hero's copy only.
-	var rr := Equipment.build_stats(rb, {ring1 = "ring_resistance"})
+	var rr := _bs(rb, {ring1 = "ring_resistance"})
 	check("poison" in rr.resistances and rb.resistances.is_empty(), "Ring of Resistance: poison; base block untouched")
-	var rf := Equipment.build_stats(rb, {ring1 = "ring_free_action", ring2 = "ring_resistance"})
+	var rf := _bs(rb, {ring1 = "ring_free_action", ring2 = "ring_resistance"})
 	check("restrained" in rf.condition_immunities and "poison" in rf.resistances and rb.condition_immunities.is_empty(),
 			"Free Action + Resistance together")
-	check(Equipment.build_stats(rb, {}).condition_immunities.is_empty(), "no ring, no immunity")
+	check(_bs(rb, {}).condition_immunities.is_empty(), "no ring, no immunity")
 	check(I.call("ring_free_action").summary().contains("restrained") and I.call("ring_resistance").summary().contains("poison"),
 			"ring summaries name their effect")
 	# Loot: every chest item on both floors exists.
@@ -290,22 +305,22 @@ func _test_items() -> void:
 	check(Equipment.cannot_equip(fb, I.call("shield"), "main") != "", "shield not in the main hand")
 	check(Equipment.cannot_equip(fb, I.call("potion_healing"), "main") != "", "potion isn't equipment")
 	check(Equipment.cannot_equip(wb, I.call("longsword"), "main") == "", "Wizard can hold a longsword")
-	var wl := Equipment.build_stats(wb, {main = "longsword"})
+	var wl := _bs(wb, {main = "longsword"})
 	check(not wl.attacks[0].proficient and wl.attack_bonus(wl.attacks[0]) == -1, "untrained weapon: no proficiency (-1)")
-	check(Equipment.build_stats(rb, {main = "rapier"}).attack_bonus(Equipment.build_stats(rb, {main = "rapier"}).attacks[0]) == 7,
+	check(_bs(rb, {main = "rapier"}).attack_bonus(_bs(rb, {main = "rapier"}).attacks[0]) == 7,
 			"Rogue rapier: finesse + proficient +7")
 	# AC maths: DEX cap, shield, ring; no armour = 10 + DEX; heavy armour without the STR = slower.
-	check(Equipment.build_stats(rb, {}).armor_class == 14, "Rogue unarmoured 10 + 4")
-	check(Equipment.build_stats(rb, {armor = "chain_shirt"}).armor_class == 15, "chain shirt caps DEX at +2")
-	check(Equipment.build_stats(fb, {armor = "plate_armor", off = "shield"}).armor_class == 20, "plate + shield 20")
-	var ringed := Equipment.build_stats(wb, {ring1 = "ring_protection"})
+	check(_bs(rb, {}).armor_class == 14, "Rogue unarmoured 10 + 4")
+	check(_bs(rb, {armor = "chain_shirt"}).armor_class == 15, "chain shirt caps DEX at +2")
+	check(_bs(fb, {armor = "plate_armor", off = "shield"}).armor_class == 21, "plate + shield + Defense 21")
+	var ringed := _bs(wb, {ring1 = "ring_protection"})
 	check(ringed.armor_class == 13 and ringed.save_bonus("INT") == 8 and ringed.save_bonus("STR") == 0,
 			"Ring of Protection +1 AC / +1 saves")
-	check(wb.save_bonus("INT") == 7, "the base stat block is never changed")
-	check(Equipment.build_stats(wb, {armor = "plate_armor"}).speed_ft == 20, "plate without STR 15: -10 ft")
-	check(Equipment.build_stats(fb, {armor = "chain_mail"}).stealth_disadvantage, "chain mail: stealth disadvantage")
-	var un := Equipment.build_stats(fb, {})
-	check(un.attacks.size() == 1 and un.damage_expr(un.attacks[0]) == "1+3" and is_equal_approx(Dice.average("1+3"), 4.0),
+	check(wb.save_bonus("INT") == 5 and wb.level == 1, "the base stat block is never changed (level 1: +5)")
+	check(_bs(wb, {armor = "plate_armor"}).speed_ft == 20, "plate without STR 15: -10 ft")
+	check(_bs(fb, {armor = "chain_mail"}).stealth_disadvantage, "chain mail: stealth disadvantage")
+	var un := _bs(fb, {})
+	check(un.attacks.size() == 1 and un.damage_expr(un.attacks[0]) == "1+4" and is_equal_approx(Dice.average("1+4"), 5.0),
 			"no weapon: unarmed strike 1 + STR")
 	# Two-handed weapon and shield push each other out.
 	var eq := Equipment.starting(fb)
@@ -329,17 +344,19 @@ func _test_items() -> void:
 	# Equip from / take off to the bag.
 	var hf := _hero(Hero.HeroClass.FIGHTER)
 	hf.base_stats = fb
+	hf.level = 5
 	hf.equipment = Equipment.starting(fb)
 	hf.refresh_stats()
 	var bag := Inventory.new()
 	bag.add("greatsword")
 	check(hf.equip_from(bag, "greatsword") == "" and hf.equipment.main == "greatsword" and not hf.equipment.has("off"), "fighter takes the greatsword")
 	check(bag.has("longsword") and bag.has("shield") and not bag.has("greatsword"), "longsword + shield back in the bag")
-	check(hf.stats.armor_class == 16, "AC 16 without the shield (%d)" % hf.stats.armor_class)
+	check(hf.stats.armor_class == 17, "AC 17 without the shield (chain + Defense) (%d)" % hf.stats.armor_class)
 	check(hf.equip_from(bag, "plate_armor") != "", "can't equip what isn't in the bag")
 	check(hf.unequip_to(bag, "armor") == "chain_mail" and bag.has("chain_mail") and hf.stats.armor_class == 11, "chain mail off: AC 10 + DEX 1")
 	var hw := _hero(Hero.HeroClass.MAGE)
 	hw.base_stats = wb
+	hw.level = 5
 	hw.equipment = {}
 	hw.refresh_stats()
 	check(hw.equip_from(bag, "chain_mail") != "" and bag.has("chain_mail"), "mage refuses chain mail; it stays in the bag")
@@ -416,3 +433,94 @@ func _test_scrolls() -> void:
 	mage.free()
 	fighter.free()
 	cleric.free()
+
+
+## Phase 5: levels 1-5 (Progression), XP, level-ups, class features, new monsters and spells.
+func _test_progression() -> void:
+	check(Progression.level_for_xp(0) == 1 and Progression.level_for_xp(299) == 1 and Progression.level_for_xp(300) == 2
+			and Progression.level_for_xp(2700) == 4 and Progression.level_for_xp(99999) == 5, "XP thresholds")
+	check(Progression.xp_for_next(1) == 300 and Progression.xp_for_next(5) == 0, "XP for next level")
+	var fb: CreatureStats = load("res://data/heroes/fighter.tres")
+	var rb: CreatureStats = load("res://data/heroes/rogue.tres")
+	var cb: CreatureStats = load("res://data/heroes/cleric.tres")
+	var wb: CreatureStats = load("res://data/heroes/wizard.tres")
+	check(fb.level == 1 and fb.max_hp == 12 and rb.max_hp == 9 and cb.max_hp == 10 and wb.max_hp == 7, "level-1 data: HP 12/9/10/7")
+	# HP per level: max die + CON at 1st, then die/2 + 1 + CON; the level-5 numbers of the old party.
+	var hp5 := [44, 33, 38, 27]
+	var hp_ok := true
+	for i in 4:
+		var s := _l5([fb, rb, cb, wb][i])
+		hp_ok = hp_ok and s.max_hp == hp5[i]
+	check(hp_ok, "level 5 HP 44/33/38/27")
+	var f1 := Equipment.build_stats(fb, Equipment.starting(fb), 1)
+	var f3 := Equipment.build_stats(fb, Equipment.starting(fb), 3)
+	check(f1.proficiency_bonus == 2 and f1.attacks_per_action() == 1 and f1.crit_range == 20 and f1.powers.size() == 2,
+			"Fighter 1: prof 2, one attack, no Action Surge yet")
+	check(f3.crit_range == 19 and f3.powers.any(func(p): return p.id == "action_surge") and f3.attack_bonus(f3.attacks[0]) == 5,
+			"Fighter 3: Improved Critical, Action Surge, longsword +5")
+	check(f1.armor_class == 19, "Fighter 1: chain + shield + Defense 19")
+	var r1 := Equipment.build_stats(rb, Equipment.starting(rb), 1)
+	var r3 := Equipment.build_stats(rb, Equipment.starting(rb), 3)
+	check(r1.sneak_dice == 1 and r3.sneak_dice == 2 and _l5(rb).sneak_dice == 3, "Sneak Attack 1d6 / 2d6 / 3d6")
+	check(not r1.powers.any(func(p): return p.id == "hide") and r3.powers.any(func(p): return p.id == "hide"), "Cunning Action (Hide) from 2nd")
+	check(_l5(rb).powers.any(func(p): return p.id == "uncanny_dodge") and _l5(rb).dex_score == 18 and rb.dex_score == 16, "Rogue 5: Uncanny Dodge, DEX 18 (ASI)")
+	var c1 := Equipment.build_stats(cb, Equipment.starting(cb), 1)
+	check(Array(c1.spell_slots) == [2] and c1.spell_save_dc() == 13, "Cleric 1: two 1st-level slots, DC 13")
+	check(c1.powers.map(func(p): return p.id) == ["sacred_flame", "cure_wounds", "healing_word", "bless"], "Cleric 1 spells")
+	var c5 := _l5(cb)
+	check(c5.destroy_undead_cr == 0.5 and c5.powers.any(func(p): return p.id == "mass_healing_word"), "Cleric 5: Destroy Undead, Mass Healing Word")
+	var w3 := Equipment.build_stats(wb, {}, 3)
+	check(Array(w3.spell_slots) == [4, 2] and w3.powers.any(func(p): return p.id == "scorching_ray")
+			and not w3.powers.any(func(p): return p.id == "fireball"), "Mage 3: slots 4/2, Scorching Ray, no Fireball")
+	# Level up a hero: HP and slots grow on top of what's left.
+	var h: Hero = (load("res://scenes/actors/hero.tscn") as PackedScene).instantiate()
+	h.base_stats = wb
+	h.equipment = Equipment.starting(wb)
+	h.refresh_stats()
+	h.hp = h.stats.max_hp
+	h.reset_resources()
+	check(h.level == 1 and h.hp == 7 and Array(h.slots_left) == [2], "fresh mage: level 1, 7 HP, 2 slots")
+	h.spend_slot(1)
+	h.hp = 3
+	var ups := h.add_xp(300)
+	check(ups.size() == 1 and h.level == 2 and h.stats.max_hp == 12 and h.hp == 8 and Array(h.slots_left) == [2] and h.hit_dice_left == 2,
+			"level 2: +5 max HP on top (3 -> 8), a 3rd slot (1 left -> 2), a hit die (%d HP, %s)" % [h.hp, str(h.slots_left)])
+	ups = h.add_xp(2400)
+	check(ups.size() == 2 and h.level == 4 and h.stats.int_score == 18 and Array(h.stats.spell_slots) == [4, 3], "two levels at once -> 4, INT 18")
+	check(h.add_xp(99999).size() == 1 and h.level == 5 and h.add_xp(10000).is_empty(), "top level is 5")
+	h.free()
+	# XP is split between the heroes who aren't dead (DungeonMap.award_xp), level-ups returned.
+	# Arcane Recovery: a short rest gives back ceil(level/2) slot levels once a day.
+	var m := _hero(Hero.HeroClass.MAGE)
+	m.reset_resources()
+	m.slots_left = [0, 0, 0]
+	var msg := Rest.arcane_recovery(m)
+	check(Array(m.slots_left) == [0, 0, 1] and msg.contains("3rd"), "Arcane Recovery at 5th: one 3rd-level slot (%s)" % str(m.slots_left))
+	check(Rest.arcane_recovery(m) == "", "Arcane Recovery once per long rest")
+	m.free()
+	# Conditions: paralyzed.
+	var a := _hero(Hero.HeroClass.FIGHTER)
+	var b := _hero(Hero.HeroClass.ROGUE)
+	b.add_condition("paralyzed", 10)
+	check(Condition.attack_advantage(a, b, true, 1) == 1 and Condition.auto_fails_save(b, "DEX") and not Condition.auto_fails_save(b, "WIS"),
+			"paralyzed: attacked with advantage, fails DEX saves")
+	a.free()
+	b.free()
+	# New monsters and spells load with their SRD numbers.
+	var M := func(id): return load("res://data/monsters/%s.tres" % id) as CreatureStats
+	for id in ["giant_rat", "wolf", "goblin", "goblin_boss", "bandit", "zombie", "ghoul", "ghast", "hobgoblin",
+			"bugbear", "ogre", "wight", "mummy", "specter", "wraith"]:
+		var s: CreatureStats = M.call(id)
+		check(s != null and s.xp > 0 and not s.attacks.is_empty(), "monster %s loads" % id)
+	check("pack_tactics" in M.call("wolf").traits and M.call("wolf").attacks[0].rider_condition == "prone", "wolf: pack tactics, knocks prone")
+	check(M.call("ghoul").attacks[0].rider_condition == "paralyzed" and M.call("ghoul").attacks[0].rider_dc == 10, "ghoul claws paralyze (DC 10)")
+	check("undead_fortitude" in M.call("zombie").traits and M.call("zombie").armor_class == 8, "zombie")
+	check(M.call("goblin_boss").extra_attacks == 1 and M.call("wight").extra_attacks == 1, "multiattack")
+	check("resist_nonmagical" in M.call("wight").traits and M.call("wraith").xp == 1800, "wight / wraith")
+	check(M.call("ogre").attack_bonus(M.call("ogre").attacks[0]) == 6 and M.call("ogre").damage_expr(M.call("ogre").attacks[0]) == "2d8+4", "ogre greatclub +6 2d8+4")
+	var hp: SpellData = load("res://data/spells/hold_person.tres")
+	check(hp.level == 2 and Array(hp.creature_types) == ["humanoid"] and hp.save_each_turn and hp.condition == "paralyzed", "Hold Person")
+	var bh: SpellData = load("res://data/spells/burning_hands.tres")
+	check(bh.target == SpellData.Target.CONE and bh.damage_for(1, 2) == "3d6+1d6", "Burning Hands cone, upcast")
+	var sr: SpellData = load("res://data/spells/scorching_ray.tres")
+	check(sr.darts_for(2) == 3 and sr.darts_for(3) == 4 and sr.resolve == SpellData.Resolve.ATTACK, "Scorching Ray 3 rays (+1 per slot)")

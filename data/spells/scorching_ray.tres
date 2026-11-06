@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_js1gg"]
+
+[resource]
+resource_name = "Scorching Ray"
+script = ExtResource("1_js1gg")
+id = "scorching_ray"
+display_name = "Scorching Ray"
+description = "Three rays of fire, each a ranged spell attack for 2d6 fire. Split them between targets. +1 ray per slot above 2nd."
+level = 2
+classes = Array[String](["wizard"])
+range_ft = 120
+max_targets = 3
+resolve = 0
+damage = "2d6"
+damage_type = "fire"
+darts = 3
+upcast_darts = 1
+sfx = "cast_whoosh"
+vfx = "scorching_ray"

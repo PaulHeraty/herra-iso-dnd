@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_nv2ua"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_wur4q"]
+
+[sub_resource type="Resource" id="Resource_frv50"]
+script = ExtResource("1_nv2ua")
+name = "Rapier +2"
+ability = 2
+damage = "1d8"
+damage_type = "piercing"
+
+[resource]
+resource_name = "Rapier +2"
+script = ExtResource("2_wur4q")
+id = "rapier_plus2"
+display_name = "Rapier +2"
+kind = 0
+description = "Light as a reed. It seems to know where to go.
+Magic: +2 to hit and damage."
+value_gp = 2025
+magic_bonus = 2
+attack = SubResource("Resource_frv50")
+category = "martial"

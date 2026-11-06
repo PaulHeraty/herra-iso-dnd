@@ -1,32 +1,32 @@
 [gd_resource type="Resource" script_class="CreatureStats" format=3]
 
-[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_k6p42"]
-[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_j4fgp"]
-[ext_resource type="Resource" path="res://data/spells/fire_bolt.tres" id="3_8h5gq"]
-[ext_resource type="Resource" path="res://data/spells/magic_missile.tres" id="4_w4a7k"]
-[ext_resource type="Resource" path="res://data/spells/shield.tres" id="5_llyg4"]
-[ext_resource type="Resource" path="res://data/spells/fireball.tres" id="6_85bi8"]
-[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="7_tayr7"]
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_8h5gq"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_w4a7k"]
+[ext_resource type="Resource" path="res://data/spells/fire_bolt.tres" id="3_llyg4"]
+[ext_resource type="Resource" path="res://data/spells/magic_missile.tres" id="4_85bi8"]
+[ext_resource type="Resource" path="res://data/spells/burning_hands.tres" id="5_tayr7"]
+[ext_resource type="Resource" path="res://data/spells/shield.tres" id="6_px5s8"]
+[ext_resource type="Resource" path="res://data/spells/scorching_ray.tres" id="7_1vyib"]
+[ext_resource type="Resource" path="res://data/spells/fireball.tres" id="8_pghcy"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="9_ihj4l"]
 
 [resource]
 resource_name = "Mage"
-script = ExtResource("7_tayr7")
+script = ExtResource("9_ihj4l")
 id = "wizard"
 display_name = "Mage"
 class_id = "wizard"
-level = 5
+level = 1
 str_score = 8
 dex_score = 14
 con_score = 12
-int_score = 18
+int_score = 16
 wis_score = 12
 save_proficiencies = Array[String](["INT", "WIS"])
-max_hp = 27
-hit_dice = "5d6"
-proficiency_bonus = 3
-powers = Array[ExtResource("2_j4fgp")]([ExtResource("3_8h5gq"), ExtResource("4_w4a7k"), ExtResource("5_llyg4"), ExtResource("6_85bi8")])
+max_hp = 7
+hit_dice = "1d6"
+powers = Array[ExtResource("2_w4a7k")]([ExtResource("3_llyg4"), ExtResource("4_85bi8"), ExtResource("5_tayr7"), ExtResource("6_px5s8"), ExtResource("7_1vyib"), ExtResource("8_pghcy")])
 skill_proficiencies = Array[String](["arcana", "investigation"])
 spell_ability = "INT"
-spell_slots = Array[int]([4, 3, 2])
 weapon_training = Array[String](["dagger", "dart", "sling", "quarterstaff", "light_crossbow"])
 starting_equipment = Array[String](["quarterstaff", "light_crossbow"])

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_8ybmn"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_gw4wj"]
+
+[sub_resource type="Resource" id="Resource_paymx"]
+script = ExtResource("1_8ybmn")
+name = "Greataxe"
+damage = "1d12"
+
+[resource]
+resource_name = "Greataxe"
+script = ExtResource("2_gw4wj")
+id = "greataxe"
+display_name = "Greataxe"
+kind = 0
+description = "A huge double-bitted axe. Two-handed."
+value_gp = 30
+attack = SubResource("Resource_paymx")
+category = "martial"
+two_handed = true

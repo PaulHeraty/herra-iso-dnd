@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_tfy0b"]
+
+[resource]
+resource_name = "Studded Leather +2"
+script = ExtResource("1_tfy0b")
+id = "studded_leather_plus2"
+display_name = "Studded Leather +2"
+kind = 1
+description = "Shadow-dark leather with mithral studs.
+Magic: +2 AC."
+value_gp = 4045
+magic_bonus = 2
+armor_type = "light"
+base_ac = 12

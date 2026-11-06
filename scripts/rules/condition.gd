@@ -10,11 +10,17 @@ extends RefCounted
 ##   hidden      next attack has advantage (then the condition ends)
 ##   frightened  own attacks: disadvantage (while the source can be seen)
 ##   shielded    +5 AC (Shield, until the start of the caster's next turn)
+##   paralyzed   loses its turns, auto-fails STR and DEX saves; attacks against have advantage and
+##               hits from within 5 ft are critical (Hold Person, ghoul claws). Save at the end of each turn.
+##   turned      (undead, Turn Undead) won't attack, moves away from the cleric; ends on damage.
 
 var id := ""
 var rounds := 0          ## turns of the bearer left; ticks at the start of its turn. -1 = until removed
 var source: Actor        ## who applied it (concentration, frightened source)
 var spell: SpellData
+## A save that ends it at the end of each of the bearer's turns ("" = none): Hold Person WIS, ghoul CON.
+var save_ability := ""
+var save_dc := 0
 
 
 func _init(cid := "", r := 0, src: Actor = null, sp: SpellData = null) -> void:
@@ -28,6 +34,7 @@ const NAMES := {
 	"blessed": "Blessed", "prone": "Prone", "restrained": "Restrained",
 	"hidden": "Hidden", "frightened": "Frightened", "shielded": "Shielded",
 	"concentrating": "Concentrating", "dying": "Dying", "stable": "Stable",
+	"paralyzed": "Paralyzed", "turned": "Turned",
 }
 
 
@@ -46,7 +53,7 @@ static func attack_advantage(attacker: Actor, target: Actor, melee: bool, dist: 
 		dis = true
 	if attacker.has_condition("frightened"):
 		dis = true
-	if target.has_condition("restrained"):
+	if target.has_condition("restrained") or target.has_condition("paralyzed"):
 		adv = true
 	if target.has_condition("prone"):
 		if melee and dist <= 1:
@@ -65,6 +72,11 @@ static func save_advantage(who: Actor, ability: String) -> int:
 	if ability.to_upper() == "DEX" and who.has_condition("restrained"):
 		return -1
 	return 0
+
+
+## Paralyzed creatures fail STR and DEX saves outright.
+static func auto_fails_save(who: Actor, ability: String) -> bool:
+	return ability.to_upper() in ["STR", "DEX"] and who.has_condition("paralyzed")
 
 
 ## Flat AC bonus from conditions.
@@ -86,7 +98,7 @@ const ICONS := preload("res://assets/ui/condition_icons.png")
 const ICON_SIZE := 9
 const ICON_INDEX := {
 	"blessed": 0, "prone": 1, "restrained": 2, "hidden": 3, "frightened": 4, "shielded": 5,
-	"concentrating": 6, "dying": 7, "stable": 8,
+	"concentrating": 6, "dying": 7, "stable": 8, "paralyzed": 9, "turned": 10,
 }
 const EFFECTS := {
 	"blessed": "+1d4 to attack rolls and saving throws.",
@@ -98,6 +110,8 @@ const EFFECTS := {
 	"concentrating": "Taking damage forces a CON save (DC 10 or half the damage) or the spell ends.",
 	"dying": "At 0 HP: a death save each turn. 3 successes = stable, 3 failures = death. Healing brings you back.",
 	"stable": "Unconscious but no longer dying. Healing brings you back.",
+	"paralyzed": "Can't move or act. Fails STR and DEX saves. Attacks against have advantage; hits from within 5 ft are critical. Saves again at the end of each turn.",
+	"turned": "Must move away from the cleric and can't attack. Ends if it takes damage.",
 }
 
 

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_tdnsq"]
+
+[resource]
+resource_name = "Healing Word"
+script = ExtResource("1_tdnsq")
+id = "healing_word"
+display_name = "Healing Word"
+description = "Bonus action, 60 ft: heal 1d4 + your spellcasting modifier. Brings a dying ally back. +1d4 per slot above 1st."
+level = 1
+classes = Array[String](["cleric"])
+cast_time = 1
+target = 1
+range_ft = 60
+resolve = 3
+add_ability_mod = true
+heal = "1d4"
+upcast_dice = "1d4"
+vfx = "heal"

@@ -6,6 +6,14 @@ extends Torch
 
 const BOWL := preload("res://assets/sprites/props/brazier.png")
 const BOWL_OFFSET := Vector2(-10, -14)
+const CAMPFIRE := preload("res://assets/sprites/props/campfire.png")
+const CAMPFIRE_OFFSET := Vector2(-10, -7)
+
+## A campfire on the ground (outdoors) instead of the iron bowl: the flame sits low, in a stone ring.
+@export var campfire := false:
+	set(v):
+		campfire = v
+		queue_redraw()
 
 
 func _init() -> void:
@@ -16,7 +24,12 @@ func _init() -> void:
 func _ready() -> void:
 	super()
 	if _glow:
-		_glow.position = Vector2(0, -15)
+		_glow.position = Vector2(0, -6 if campfire else -15)
+	if campfire:
+		flame.position.y += 10
+		var l := get_node_or_null("Light")
+		if l:
+			l.position.y += 9
 
 
 func _snap_offset() -> Vector2:
@@ -35,8 +48,11 @@ func _apply_editor_look() -> void:
 
 func _draw() -> void:
 	draw_set_transform(Vector2.ZERO, 0, Vector2(1, 0.45))
-	draw_circle(Vector2.ZERO, 7.0, Color(0, 0, 0, 0.45))
+	draw_circle(Vector2.ZERO, 7.0, Color(0, 0, 0, 0.45 if not campfire else 0.3))
 	draw_set_transform(Vector2.ZERO)
-	draw_texture(BOWL, BOWL_OFFSET)
+	if campfire:
+		draw_texture(CAMPFIRE, CAMPFIRE_OFFSET)
+	else:
+		draw_texture(BOWL, BOWL_OFFSET)
 	if Engine.is_editor_hint():
 		_draw_gizmo()

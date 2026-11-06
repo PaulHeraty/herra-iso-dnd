@@ -95,6 +95,73 @@ func _init() -> void:
 	_plus1("chain_mail", "Rings of bright mithral-silvered steel. Never rusts.")
 	_plus1("studded_leather", "Dark leather set with silver studs. Moves like a second skin.")
 	_plus1("shield", "A steel shield with a sunburst boss. Blows glance off it.")
+
+	# --- Phase 5: more SRD weapons and armour ---
+	_weapon("scimitar", "Scimitar", "martial", "1d6", "slashing", FIN, 25, "A curved blade, quick in the hand. Finesse.")
+	_weapon("battleaxe", "Battleaxe", "martial", "1d8", "slashing", STR, 10, "A broad-bladed war axe.")
+	var ga := _weapon("greataxe", "Greataxe", "martial", "1d12", "slashing", STR, 30, "A huge double-bitted axe. Two-handed.")
+	ga.two_handed = true
+	_save(ga)
+	_weapon("morningstar", "Morningstar", "martial", "1d8", "piercing", STR, 15, "A spiked iron ball on a haft.")
+	_ranged("heavy_crossbow", "Heavy Crossbow", "martial", "1d10", "piercing", DEX, 100, 400, 50, true, "A heavy crossbow with a steel prod.")
+	_armor("breastplate", "Breastplate", "medium", 14, 2, 0, false, 400, "A fitted steel cuirass. AC 14 + DEX (max 2). Quiet.")
+	_armor("half_plate", "Half Plate", "medium", 15, 2, 0, true, 750, "Plates over most of the body. AC 15 + DEX (max 2). Noisy.")
+	var ps := _item("potion_superior_healing", "Potion of Superior Healing", ItemData.Kind.POTION, 450,
+			"A ruby-dark potion that glows from within. Drink it to regain 8d4 + 8 hit points.")
+	ps.heal = "8d4+8"
+	ps.stackable = true
+	_save(ps)
+	for sid in [["burning_hands", 75, "Smells of smoke."], ["healing_word", 75, "A single word of power, gilded."],
+			["hold_person", 150, "Lines of binding script, cold to touch."], ["scorching_ray", 150, "The ink still smoulders."],
+			["mass_healing_word", 300, "Six names, and a prayer for each."]]:
+		_scroll(sid[0], sid[1], sid[2])
+	_key("warren_key", "Chief's Key", "warren", "A crude iron key on a thong of goblin hide.")
+	_key("vault_key", "Sun Key", "vault", "A gold key shaped like a sunburst. It is warm in the dark.")
+
+	# --- magic: +1 / +2 and named items ---
+	_plus1("warhammer", "Dwarf-made. The head rings like a bell on every blow.")
+	_plus1("scimitar", "A desert blade with a moon etched near the hilt.")
+	_plus1("breastplate", "Burnished steel. Arrows skid off it.")
+	_plus1("half_plate", "Enamelled plates in faded royal blue.")
+	_plus1("plate_armor", "Black-lacquered plate. It fits whoever wears it.")
+	_plus1("longbow", "Elm and horn. It never warps.")
+	_plus("longsword", 2, "An heirloom blade. Its edge has never been honed and never needed it.")
+	_plus("rapier", 2, "Light as a reed. It seems to know where to go.")
+	_plus("shortbow", 2, "Wrapped in silver wire. Its arrows hardly make a sound.")
+	_plus("shield", 2, "An ancient kite shield with a hawk painted on it. Nothing gets past it.")
+	_plus("studded_leather", 2, "Shadow-dark leather with mithral studs.")
+	_plus("mace", 2, "A temple's holy mace, its head shaped like a crown.")
+	var ft: ItemData = ResourceLoader.load(DIR + "longsword.tres", "", ResourceLoader.CACHE_MODE_IGNORE).duplicate(true)
+	ft.id = "flame_tongue"
+	ft.display_name = "Flame Tongue"
+	ft.resource_name = ft.display_name
+	ft.base_item = "longsword"
+	ft.wondrous = true
+	ft.icon = ItemData.ICON_ORDER.find("flame_tongue")
+	ft.value_gp = 5000
+	ft.description = "A longsword whose blade bursts into flame when drawn.\nMagic: +2d6 fire damage on every hit."
+	ft.attack.name = ft.display_name
+	ft.attack.rider_damage = "2d6"
+	ft.attack.rider_damage_type = "fire"
+	_save(ft)
+	var md: ItemData = ResourceLoader.load(DIR + "mace.tres", "", ResourceLoader.CACHE_MODE_IGNORE).duplicate(true)
+	md.id = "mace_of_disruption"
+	md.display_name = "Mace of Disruption"
+	md.resource_name = md.display_name
+	md.base_item = "mace"
+	md.wondrous = true
+	md.icon = ItemData.ICON_ORDER.find("mace_of_disruption")
+	md.value_gp = 4000
+	md.description = "Sunlight seems to cling to its golden head.\nMagic: +2d6 radiant damage against undead and fiends."
+	md.attack.name = md.display_name
+	md.attack.rider_damage = "2d6"
+	md.attack.rider_damage_type = "radiant"
+	md.attack.rider_vs.assign(["undead", "fiend"])
+	_save(md)
+	var rn := _item("ring_resistance_necrotic", "Ring of Resistance (necrotic)", ItemData.Kind.RING, 500,
+			"A black iron ring set with a violet stone. The touch of the grave does half damage to its wearer.")
+	rn.resistances.assign(["necrotic"])
+	_save(rn)
 	print("%d items written" % _written.size())
 	quit()
 
@@ -192,4 +259,20 @@ func _plus1(base_id: String, flavour: String) -> void:
 func _key(id: String, name: String, key_id: String, desc: String) -> void:
 	var it := _item(id, name, ItemData.Kind.KEY, 0, desc + " It opens a lock somewhere in the dungeon.")
 	it.key_id = key_id
+	_save(it)
+
+
+## "<id>_plus<n>": like _plus1 with a bigger bonus (2nd tier: rarer, worth more).
+func _plus(base_id: String, n: int, flavour: String) -> void:
+	var base: ItemData = ResourceLoader.load(DIR + base_id + ".tres", "", ResourceLoader.CACHE_MODE_IGNORE)
+	var it: ItemData = base.duplicate(true)
+	it.id = "%s_plus%d" % [base_id, n]
+	it.display_name = "%s +%d" % [base.display_name, n]
+	it.resource_name = it.display_name
+	it.magic_bonus = n
+	it.value_gp = base.value_gp + (2000 if base.kind == ItemData.Kind.WEAPON else 4000)
+	var bonus := ("Magic: +%d to hit and damage." if base.kind == ItemData.Kind.WEAPON else "Magic: +%d AC.") % n
+	it.description = "%s\n%s" % [flavour, bonus]
+	if it.attack:
+		it.attack.name = it.display_name
 	_save(it)

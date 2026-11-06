@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_dvfdf"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_scdsc"]
+
+[sub_resource type="Resource" id="Resource_11lat"]
+script = ExtResource("1_dvfdf")
+name = "Battleaxe"
+damage = "1d8"
+
+[resource]
+resource_name = "Battleaxe"
+script = ExtResource("2_scdsc")
+id = "battleaxe"
+display_name = "Battleaxe"
+kind = 0
+description = "A broad-bladed war axe."
+value_gp = 10
+attack = SubResource("Resource_11lat")
+category = "martial"

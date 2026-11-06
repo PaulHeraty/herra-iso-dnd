@@ -1,0 +1,49 @@
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_d33mw"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_tu25v"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="3_2ks0l"]
+
+[sub_resource type="Resource" id="Resource_7cgyo"]
+resource_name = "Morningstar"
+script = ExtResource("1_d33mw")
+name = "Morningstar"
+ability = 1
+damage = "2d8+2"
+damage_type = "piercing"
+to_hit_override = 4
+
+[sub_resource type="Resource" id="Resource_020kk"]
+resource_name = "Javelin"
+script = ExtResource("1_d33mw")
+name = "Javelin"
+kind = 1
+ability = 1
+range_ft = 30
+long_range_ft = 120
+damage = "1d6+2"
+damage_type = "piercing"
+to_hit_override = 4
+sfx = "bow_shot"
+
+[resource]
+resource_name = "Bugbear"
+script = ExtResource("3_2ks0l")
+id = "bugbear"
+display_name = "Bugbear"
+challenge = 1.0
+xp = 200
+str_score = 15
+dex_score = 14
+con_score = 13
+int_score = 8
+wis_score = 11
+cha_score = 9
+max_hp = 27
+hit_dice = "5d8+5"
+armor_class = 16
+attacks = Array[ExtResource("1_d33mw")]([SubResource("Resource_7cgyo"), SubResource("Resource_020kk")])
+skill_overrides = {
+"perception": 0,
+"stealth": 6
+}

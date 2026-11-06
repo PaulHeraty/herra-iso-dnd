@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_0n77v"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_5hutm"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="3_78w7w"]
+
+[sub_resource type="Resource" id="Resource_ajosv"]
+resource_name = "Scimitar"
+script = ExtResource("1_0n77v")
+name = "Scimitar"
+ability = 1
+damage = "1d6+1"
+to_hit_override = 3
+
+[sub_resource type="Resource" id="Resource_5dlma"]
+resource_name = "Light Crossbow"
+script = ExtResource("1_0n77v")
+name = "Light Crossbow"
+kind = 1
+ability = 1
+range_ft = 80
+long_range_ft = 320
+damage = "1d8+1"
+damage_type = "piercing"
+to_hit_override = 3
+sfx = "bow_shot"
+
+[resource]
+resource_name = "Bandit"
+script = ExtResource("3_78w7w")
+id = "bandit"
+display_name = "Bandit"
+challenge = 0.125
+xp = 25
+str_score = 11
+dex_score = 12
+con_score = 12
+max_hp = 11
+hit_dice = "2d8+2"
+armor_class = 12
+attacks = Array[ExtResource("1_0n77v")]([SubResource("Resource_ajosv"), SubResource("Resource_5dlma")])

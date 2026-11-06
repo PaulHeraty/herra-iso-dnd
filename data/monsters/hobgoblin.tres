@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_k2i2m"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_su7tw"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="3_atwcd"]
+
+[sub_resource type="Resource" id="Resource_if25u"]
+resource_name = "Longsword"
+script = ExtResource("1_k2i2m")
+name = "Longsword"
+ability = 1
+damage = "1d8+1"
+to_hit_override = 3
+
+[sub_resource type="Resource" id="Resource_oqxfy"]
+resource_name = "Longbow"
+script = ExtResource("1_k2i2m")
+name = "Longbow"
+kind = 1
+ability = 1
+range_ft = 150
+long_range_ft = 600
+damage = "1d8+1"
+damage_type = "piercing"
+to_hit_override = 3
+sfx = "bow_shot"
+
+[resource]
+resource_name = "Hobgoblin"
+script = ExtResource("3_atwcd")
+id = "hobgoblin"
+display_name = "Hobgoblin"
+challenge = 0.5
+xp = 100
+str_score = 13
+dex_score = 12
+con_score = 12
+cha_score = 9
+max_hp = 11
+hit_dice = "2d8+2"
+armor_class = 18
+traits = Array[String](["martial_advantage"])
+attacks = Array[ExtResource("1_k2i2m")]([SubResource("Resource_if25u"), SubResource("Resource_oqxfy")])

@@ -24,6 +24,12 @@ signal status_changed(text: String)
 signal announce(text: String)
 signal reaction_prompt(text: String)
 signal reaction_answered(yes: bool)
+## Heroes went up a level after a fight: [{hero, level, gains}].
+signal level_ups(ups: Array)
+
+var pending_level_ups: Array[Dictionary] = []
+## Conditions put on by the attack being resolved (announced after its damage line).
+var _rider_conditions: Array = []
 
 const DETECT_INTERVAL := 0.2
 const MONSTER_TURN_PAUSE := 0.8     ## step 3 placeholder: monsters "wait" this long
@@ -172,8 +178,14 @@ func expected_damage(attacker: Actor, target: Actor, o: Dictionary) -> float:
 	var a: AttackData = o.attack
 	var p := hit_chance(attacker.stats.attack_bonus(a), target.stats.armor_class, o.adv)
 	var avg := maxf(1.0, Dice.average(attacker.stats.damage_expr(a)))
-	if a.rider_damage != "":
-		avg += Dice.average(a.rider_damage) * 0.75       # save for half, roughly
+	if a.rider_damage != "" and (a.rider_vs.is_empty() or target.stats.creature_type in a.rider_vs):
+		avg += Dice.average(a.rider_damage) * (0.75 if a.rider_save != "" else 1.0)   # save for half, roughly
+	if a.rider_condition != "" and not target.has_condition(a.rider_condition) \
+			and not a.rider_condition in target.stats.condition_immunities:
+		avg += CONDITION_VALUE.get(a.rider_condition, 3.0) * 0.5
+	if "resist_nonmagical" in target.stats.traits and not a.magical and a.magic_bonus == 0 and a.to_hit_override == -99 \
+			and a.damage_type in ["bludgeoning", "piercing", "slashing"]:
+		avg *= 0.5
 	return p * avg
 
 
@@ -255,15 +267,20 @@ func perform_attack(attacker: Actor, target: Actor, opt: Dictionary) -> void:
 	var melee := a.kind == AttackData.Kind.MELEE
 	var cond_adv := Condition.attack_advantage(attacker, target, melee, DungeonMap.grid_distance(attacker.cell, target.cell))
 	var adv := combine_advantage(opt.adv, cond_adv)
+	if "pack_tactics" in st.traits and _ally_next_to(attacker, target):
+		adv = combine_advantage(adv, 1)
 	var roll := Dice.d20(st.attack_bonus(a), adv)
 	var bless_txt := _add_bonus_dice(roll, attacker)
 	attacker.remove_condition("hidden")          # attacking gives you away
 	var ac := target.stats.armor_class + Condition.ac_bonus(target)
-	var crit := roll.is_crit()
+	var crit := roll.natural >= st.crit_range
 	var hit := crit or (not roll.is_fumble() and roll.total >= ac)
 	if hit and not crit and await _offer_shield(target, attacker, a.name, roll.total, ac):
 		ac += 5
 		hit = false
+	# Paralyzed: any hit from within 5 ft is a critical hit.
+	if hit and target.has_condition("paralyzed") and DungeonMap.grid_distance(attacker.cell, target.cell) <= 1:
+		crit = true
 	var adv_txt := "" if adv == 0 else (" (disadvantage%s)" % (": " + opt.note if opt.note != "" else "") if adv < 0 else " (advantage)")
 	adv_txt += bless_txt
 	_detail("%s attacks %s with %s: %s vs AC %d%s - %s" % [attacker.display_name(), target.display_name(),
@@ -281,8 +298,8 @@ func perform_attack(attacker: Actor, target: Actor, opt: Dictionary) -> void:
 		var parts := "%d %s (%s)" % [dmg, a.damage_type, dr.describe()]
 		var short := ""
 		if _sneak_applies(attacker, target, a, adv):
-			var sp: SpellData = attacker.power("sneak_attack")
-			var sr := Dice.roll(Dice.crit(sp.damage) if crit else sp.damage)
+			var sdice := "%dd6" % st.sneak_dice if st.sneak_dice > 0 else attacker.power("sneak_attack").damage
+			var sr := Dice.roll(Dice.crit(sdice) if crit else sdice)
 			sneak_roll = sr
 			var sd := _adjust(sr.total, a.damage_type, target)
 			dmg += sd
@@ -290,24 +307,64 @@ func perform_attack(attacker: Actor, target: Actor, opt: Dictionary) -> void:
 			parts += " + %d sneak attack (%s)" % [sd, sr.describe()]
 			short += " (+sneak attack)"
 			FloatText.spawn(map, target.body_position() + Vector2(0, -22), "SNEAK", COL_MAGIC, 10)
+		# Martial Advantage (hobgoblin): +2d6 once a turn when an ally is next to the target.
+		if "martial_advantage" in st.traits and not sneak_used and _ally_next_to(attacker, target):
+			var mr := Dice.roll("4d6" if crit else "2d6")
+			var md := _adjust(mr.total, a.damage_type, target)
+			dmg += md
+			sneak_used = true
+			parts += " + %d martial advantage (%s)" % [md, mr.describe()]
+			short += " (+martial advantage)"
+		# Wights, wraiths...: resistant to bludgeoning, piercing and slashing from nonmagical weapons.
+		if "resist_nonmagical" in target.stats.traits and not a.magical and a.magic_bonus == 0 and a.to_hit_override == -99 \
+				and a.damage_type in ["bludgeoning", "piercing", "slashing"]:
+			dmg = dmg / 2
+			parts += ", halved (needs a magic weapon)"
+			short += " (resisted: not magic)"
 		if crit and show_dice(true):
 			await _dice_crit(attacker, target, a.name, roll, ac, dr, a.damage_type, sneak_roll)
-		if a.rider_damage != "":
+		if a.rider_condition != "" and target.is_alive():
+			var resisted := false
+			if a.rider_save != "":
+				var cs := roll_save(target, a.rider_save)
+				resisted = cs.total >= a.rider_dc
+				_detail("  %s %s save vs %s: %s - %s" % [target.display_name(), a.rider_save, a.rider_condition,
+						cs.describe(), "resisted" if resisted else "FAILED"])
+			if not resisted and not _shrugs_off(target, a.rider_condition) \
+					and not (a.rider_condition == "prone" and target.stats.fly):
+				var c := target.add_condition(a.rider_condition, a.rider_condition_rounds, attacker)
+				if a.rider_condition == "paralyzed":
+					c.save_ability = a.rider_save
+					c.save_dc = a.rider_dc
+				_rider_conditions.append([target, a.rider_condition])
+		if a.rider_damage != "" and (a.rider_vs.is_empty() or target.stats.creature_type in a.rider_vs):
 			var rexpr := Dice.crit(a.rider_damage) if crit else a.rider_damage
 			var rr := Dice.roll(rexpr)
-			var save := roll_save(target, a.rider_save)
 			var rd := rr.total
-			var saved := save.total >= a.rider_dc
-			if saved:
-				rd = rd / 2
+			if a.rider_save != "" and a.rider_condition == "":
+				var save := roll_save(target, a.rider_save)
+				var saved := save.total >= a.rider_dc
+				if saved:
+					rd = rd / 2
+				parts += " + %d %s (%s; %s save %s vs DC %d: %s)" % [_adjust(rd, a.rider_damage_type, target), a.rider_damage_type, rr.describe(),
+						a.rider_save, save.describe(), a.rider_dc, "half" if saved else "failed"]
+			else:
+				parts += " + %d %s (%s)" % [_adjust(rd, a.rider_damage_type, target), a.rider_damage_type, rr.describe()]
 			rd = _adjust(rd, a.rider_damage_type, target)
 			dmg += rd
-			parts += " + %d %s (%s; %s save %s vs DC %d: %s)" % [rd, a.rider_damage_type, rr.describe(),
-					a.rider_save, save.describe(), a.rider_dc, "half" if saved else "failed"]
 			short = " (+%s)" % a.rider_damage_type
-		apply_damage(target, dmg)
+		if await _offer_uncanny_dodge(target, attacker, a.name, dmg):
+			dmg = dmg / 2
+			parts += ", halved (Uncanny Dodge)"
+			short += " (halved)"
+		apply_damage(target, dmg, a.damage_type, crit)
 		_detail("  %s takes %s." % [target.display_name(), parts])
 		_say("%s %s %s: %d%s" % [attacker.display_name(), "CRITS" if crit else "hits", target.display_name(), dmg, short])
+		for rc in _rider_conditions:
+			if rc[0].is_alive() and rc[0].has_condition(rc[1]):
+				_say("  %s is %s!" % [rc[0].display_name(), Condition.display(rc[1]).to_lower()])
+				FloatText.spawn(map, rc[0].body_position() + Vector2(0, -22), Condition.display(rc[1]).to_upper(), COL_MAGIC, 10)
+		_rider_conditions.clear()
 		Sfx.play("crit_hit" if crit else _hit_sound(a.damage_type))
 		FloatText.spawn(map, target.body_position() + Vector2(0, -10),
 				("CRIT %d" if crit else "%d") % dmg, Color8(255, 220, 90) if crit else Color8(255, 120, 100), 20 if crit else 10)
@@ -357,6 +414,8 @@ func _add_bonus_dice(r: DiceRoll, who: Actor) -> String:
 func roll_save(who: Actor, ability: String) -> DiceRoll:
 	var r := Dice.d20(who.stats.save_bonus(ability), Condition.save_advantage(who, ability))
 	_add_bonus_dice(r, who)
+	if Condition.auto_fails_save(who, ability):
+		r.total = 0              # paralyzed: STR and DEX saves fail
 	return r
 
 
@@ -447,6 +506,9 @@ func _victory_pause() -> void:
 			h.revive(1)
 			_say("%s comes to (1 HP)." % h.display_name())
 	end_combat()
+	if not pending_level_ups.is_empty():
+		level_ups.emit(pending_level_ups.duplicate())
+		pending_level_ups.clear()
 
 
 ## Hit chance for the hint line (nat 1 misses, nat 20 hits).
@@ -470,8 +532,11 @@ func _check_end() -> bool:
 		for x in order:
 			if x is Monster:
 				xp += x.stats.xp
-		map.party_xp += xp
-		_say("Victory! +%d XP" % xp)
+		var ups := map.award_xp(xp)
+		_say("Victory! +%d XP (%d each)" % [xp, xp / maxi(1, map.party.filter(func(h): return not h.dead).size())])
+		for u in ups:
+			_say("%s reaches level %d!" % [u.hero.display_name(), u.level])
+		pending_level_ups.append_array(ups)
 		current = null
 		_clear_move_overlay()
 		status_changed.emit("")
@@ -562,7 +627,22 @@ func start_combat(spotter: Monster, target: Hero) -> void:
 func end_turn() -> void:
 	if not in_combat:
 		return
+	if current:
+		_end_of_turn_saves(current)
 	_next_turn()
+
+
+## Conditions that end on a save at the end of the bearer's turn (Hold Person, ghoul paralysis).
+func _end_of_turn_saves(a: Actor) -> void:
+	for c: Condition in a.conditions.duplicate():
+		if c.save_ability == "" or not a.is_alive():
+			continue
+		var s := roll_save(a, c.save_ability)
+		_detail("  %s %s save to end %s: %s vs DC %d" % [a.display_name(), c.save_ability, c.id, s.describe(), c.save_dc])
+		if s.total >= c.save_dc:
+			a.remove_condition(c.id)
+			_say("%s shakes off being %s." % [a.display_name(), Condition.display(c.id).to_lower()])
+			FloatText.spawn(map, a.body_position() + Vector2(0, -10), "FREE", COL_ALLY, 10)
 
 
 func _next_turn() -> void:
@@ -596,7 +676,9 @@ func _next_turn() -> void:
 	if current is Hero:
 		Sfx.play("turn_chime")
 	turn_started.emit(current)
-	if current is Monster:
+	if current.has_condition("paralyzed") and current.is_alive():
+		_paralyzed_turn(current)
+	elif current is Monster:
 		_emit_status()
 		_monster_turn(current)
 	elif _is_dying(current):
@@ -720,7 +802,7 @@ func _show_preview() -> void:
 			var bonus := current.stats.attack_bonus(a)
 			var p := hit_chance(bonus, foe.stats.armor_class, opt.adv)
 			map.overlay.set_cells("cursor", [_hover], COL_TARGET, 0.3, 0.9, true)
-			var extra := " +3d6 sneak" if sneak_preview(current, foe, opt) else ""
+			var extra := " +%dd6 sneak" % maxi(1, current.stats.sneak_dice) if sneak_preview(current, foe, opt) else ""
 			var advt := " advantage" if opt.adv > 0 else ""
 			status_changed.emit("Attack %s: %s %+d, %s%s  (%d%% to hit%s%s)" % [foe.display_name(), a.name, bonus,
 					current.stats.damage_expr(a), extra, roundi(p * 100), advt, ", " + opt.note if opt.note != "" else ""])
@@ -751,6 +833,9 @@ func _monster_turn(m: Monster) -> void:
 	await get_tree().create_timer(MONSTER_TURN_PAUSE * 0.5).timeout
 	if not in_combat or current != m or game_over:
 		return
+	if m.has_condition("turned"):
+		await _flee_turn(m)
+		return
 	var plan := plan_monster_turn(m)
 	var path: Array[Vector2i] = []
 	path.assign(plan.path)
@@ -775,8 +860,59 @@ func _monster_turn(m: Monster) -> void:
 			await perform_attack(m, plan.target, opt)
 			if _check_end():
 				return
+			# Multiattack: the rest of the attacks, at the same target or whoever is still in reach.
+			for i in m.stats.extra_attacks:
+				if not in_combat or current != m or not m.is_alive() or m.has_condition("paralyzed"):
+					break
+				var next := _multiattack_option(m, plan.target, opt.attack)
+				if next.is_empty():
+					break
+				await perform_attack(m, next.target, next.opt)
+				if _check_end():
+					return
 	elif plan.path.is_empty():
 		_say("%s waits." % m.display_name())
+	await get_tree().create_timer(0.25).timeout
+	if in_combat and current == m:
+		end_turn()
+
+
+## The next multiattack swing: the same attack at `first` if it is still up, else the best
+## option against any hero in reach. {} if nobody can be hit.
+func _multiattack_option(m: Monster, first: Actor, a: AttackData) -> Dictionary:
+	var best := {}
+	var best_ev := -1.0
+	for h in map.party:
+		if not h.is_alive():
+			continue
+		for o in attack_options_from(m, h, m.cell):
+			var ev := expected_damage(m, h, o) + (5.0 if h == first and o.attack == a else 0.0)
+			if ev > best_ev:
+				best_ev = ev
+				best = {target = h, opt = o}
+	return best
+
+
+## A turned undead: moves as far from the heroes as it can and does nothing else.
+func _flee_turn(m: Monster) -> void:
+	var reach := map.combat_reach(m.cell, move_left, m)
+	var best := m.cell
+	var best_d := -1
+	for c: Vector2i in reach:
+		if not reach[c].stop:
+			continue
+		var d := 1 << 30
+		for h in map.party:
+			if h.is_alive():
+				d = mini(d, DungeonMap.grid_distance(c, h.cell))
+		if d > best_d:
+			best_d = d
+			best = c
+	_say("%s flees in terror of the holy light." % m.display_name())
+	if best != m.cell:
+		var path: Array[Vector2i] = []
+		path.assign(DungeonMap.reach_path(reach, best))
+		await move_along(m, path)
 	await get_tree().create_timer(0.25).timeout
 	if in_combat and current == m:
 		end_turn()
@@ -964,8 +1100,10 @@ func menu_powers(h: Actor) -> Array[Dictionary]:
 		var busy := action_used or attacks_left < h.stats.attacks_per_action()
 		out.append({power = ESCAPE, ok = not busy, why = "action used" if busy else "", tag = "action"})
 	for p: SpellData in h.stats.powers:
-		if p.kind == SpellData.Kind.MONSTER or p.cast_time in [SpellData.CastTime.REACTION, SpellData.CastTime.FREE]:
+		if p.kind == SpellData.Kind.MONSTER or p.cast_time == SpellData.CastTime.REACTION:
 			continue
+		if p.cast_time == SpellData.CastTime.FREE and p.uses == 0:
+			continue                     # always-on (Sneak Attack)
 		var why := ""
 		match p.cast_time:
 			SpellData.CastTime.ACTION:
@@ -977,6 +1115,10 @@ func menu_powers(h: Actor) -> Array[Dictionary]:
 			SpellData.CastTime.ATTACK:
 				if attacks_left <= 0:
 					why = "no attacks left"
+		if why == "" and p.id == "action_surge" and not action_used:
+			why = "use your action first"
+		if why == "" and p.id == "turn_undead" and _undead_in_range(h, p).is_empty():
+			why = "no undead in sight"
 		if why == "" and p.id == "hide" and _enemy_adjacent(h):
 			why = "an enemy is right next to you"
 		if why == "" and not h.can_use(p):
@@ -1055,6 +1197,8 @@ func valid_targets(caster: Actor, p: SpellData) -> Array[Actor]:
 				pass
 			_:
 				continue
+		if not p.creature_types.is_empty() and not a.stats.creature_type in p.creature_types:
+			continue
 		if DungeonMap.grid_distance(caster.cell, a.cell) > rng:
 			continue
 		if is_item_power(p) and p.resolve == SpellData.Resolve.HEAL and a.is_alive() and a.hp >= a.stats.max_hp:
@@ -1301,6 +1445,18 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 			_say("%s gives %s a %s" % [caster.display_name(), who.display_name(), p.display_name])
 	else:
 		_say("%s %s %s%s" % [caster.display_name(), verb, p.display_name, lvl_txt])
+	if p.id == "action_surge":
+		action_used = false
+		attacks_left = caster.stats.attacks_per_action()
+		_say("  %s surges into action: another action this turn!" % caster.display_name())
+		Sfx.play("charge", -2.0, 1.2)
+		SpellFx.sparkles(map, caster.body_position(), Color8(255, 200, 110))
+		FloatText.spawn(map, caster.body_position() + Vector2(0, -14), "ACTION SURGE", COL_ACTIVE, 10)
+		await get_tree().create_timer(0.4).timeout
+		return
+	if p.id == "turn_undead":
+		await _turn_undead(caster, p)
+		return
 	if p.concentration:
 		_start_concentration(caster, p)
 	if aim != caster.cell:
@@ -1334,6 +1490,9 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 		if p.vfx == "fireball":
 			_preroll(caster, p, slot, char_level, affected)
 			await _fireball_show(caster, aim, cells, p, affected)
+		elif p.vfx == "burning_hands":
+			_preroll(caster, p, slot, char_level, affected)
+			await _burning_hands_fx(caster, cells)
 		elif p.vfx == "lightning":
 			_preroll(caster, p, slot, char_level, affected)
 			var end := IsoGrid.cell_to_world(cells[-1]) + Vector2(0, -8) if not cells.is_empty() else IsoGrid.cell_to_world(aim)
@@ -1351,6 +1510,8 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 					await SpellFx.bolt(map, caster.body_position(), a.body_position())
 				"sacred_flame":
 					await SpellFx.column(map, a.position)
+				"scorching_ray":
+					pass                # one bolt per ray, with its attack roll
 				_:
 					var beam := Projectile.fire(map, caster.body_position(), a.body_position(), Projectile.Style.BEAM, _spell_colour(p))
 					await beam.done
@@ -1359,6 +1520,8 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 	match p.resolve:
 		SpellData.Resolve.ATTACK:
 			for a in affected:
+				if p.vfx == "scorching_ray" and a.is_alive():
+					await SpellFx.bolt(map, _cast_from(caster), a.body_position())
 				await _spell_attack(caster, p, slot, a, char_level)
 		SpellData.Resolve.SAVE:
 			if _pre_dmg:
@@ -1391,6 +1554,9 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 					amount += caster.stats.mod(caster.stats.spell_ability)
 				if p.add_level:
 					amount += caster.stats.level
+				# Disciple of Life (Life Cleric): healing spells heal 2 + the slot level more.
+				if caster.stats.class_id == "cleric" and p.uses_slot() and slot >= 1:
+					amount += 2 + slot
 				SpellFx.sparkles(map, a.body_position(), Color8(150, 235, 140))
 				Sfx.play("heal_chime")
 				var was_down := not a.is_alive()
@@ -1430,7 +1596,7 @@ func _spell_attack(caster: Actor, p: SpellData, slot: int, target: Actor, char_l
 		return
 	if p.damage != "":
 		var expr := p.damage_for(char_level, slot)
-		if p.vfx == "fire_bolt":
+		if p.vfx in ["fire_bolt", "scorching_ray"]:
 			SpellFx.burst(map, target.body_position() + Vector2(0, 10), 0.6, 1.0)
 			Sfx.play("fire_impact")
 		var d := Dice.roll(Dice.crit(expr) if crit else expr)
@@ -1465,7 +1631,11 @@ func _spell_save(caster: Actor, p: SpellData, target: Actor, dmg_roll: DiceRoll,
 		_say("%s resists the %s" % [target.display_name(), p.display_name])
 		FloatText.spawn(map, target.body_position() + Vector2(0, -10), "RESISTED", Color8(200, 196, 210), 10)
 	if not saved and p.condition != "" and target.is_alive() and not _shrugs_off(target, p.condition):
-		target.add_condition(p.condition, p.condition_rounds, caster, p)
+		var c := target.add_condition(p.condition, p.condition_rounds, caster, p)
+		if p.save_each_turn:
+			c.save_ability = p.save_ability
+			c.save_dc = dc
+		FloatText.spawn(map, target.body_position() + Vector2(0, -22), Condition.display(p.condition).to_upper(), COL_MAGIC, 10)
 		_say("  %s is %s!" % [target.display_name(), Condition.display(p.condition).to_lower()])
 
 
@@ -1522,7 +1692,7 @@ func _contest(caster: Actor, p: SpellData, target: Actor) -> void:
 ## Damage + number + sound + down/slain message.
 func _deal(src: Actor, target: Actor, amount: int, dtype: String, crit: bool, note := "", by := "") -> void:
 	var dmg := _adjust(maxi(1, amount), dtype, target)
-	apply_damage(target, dmg)
+	apply_damage(target, dmg, dtype, crit)
 	_say("%s %s %s: %d%s" % [by if by != "" else src.display_name(), "CRITS" if crit else "hits", target.display_name(), dmg, note])
 	Sfx.play("crit_hit" if crit else _hit_sound(dtype))
 	FloatText.spawn(map, target.body_position() + Vector2(0, -10), ("CRIT %d" if crit else "%d") % dmg,
@@ -1535,6 +1705,7 @@ func _spell_colour(p: SpellData) -> Color:
 	match p.vfx:
 		"web": return Color8(232, 232, 236)
 		"fear_ray": return Color8(190, 130, 255)
+		"hold": return Color8(150, 200, 255)
 	match p.damage_type:
 		"fire": return Color8(255, 140, 50)
 		"radiant": return Color8(255, 236, 150)
@@ -1584,7 +1755,7 @@ static func _unique(arr: Array[Actor]) -> Array[Actor]:
 
 ## All combat damage goes through here: concentration saves, dropping to 0, death-save failures
 ## for a hero already down, and massive damage (damage left over >= max HP kills outright).
-func apply_damage(target: Actor, dmg: int) -> void:
+func apply_damage(target: Actor, dmg: int, dtype := "", crit := false) -> void:
 	if not target.is_alive():
 		if target is Hero and not target.dead:
 			if dmg >= target.stats.max_hp:
@@ -1594,6 +1765,17 @@ func apply_damage(target: Actor, dmg: int) -> void:
 				_death_fail(target, 1, "takes damage while down")
 		return
 	var before := target.hp
+	# Undead Fortitude (zombie): a CON save (DC 5 + the damage) to stay up at 1 HP, unless the
+	# damage is radiant or a critical hit.
+	if dmg >= target.hp and dmg > 0 and "undead_fortitude" in target.stats.traits and dtype != "radiant" and not crit:
+		var fs := roll_save(target, "CON")
+		_detail("  %s Undead Fortitude (CON) save: %s vs DC %d" % [target.display_name(), fs.describe(), 5 + dmg])
+		if fs.total >= 5 + dmg:
+			dmg = target.hp - 1
+			_say("%s refuses to fall! (Undead Fortitude)" % target.display_name())
+			FloatText.spawn(map, target.body_position() + Vector2(0, -22), "UNDEAD FORTITUDE", COL_MAGIC, 10)
+	if dmg > 0 and target.has_condition("turned"):
+		target.remove_condition("turned")
 	target.take_damage(dmg)
 	if target.concentrating:
 		if not target.is_alive():
@@ -1611,6 +1793,15 @@ func apply_damage(target: Actor, dmg: int) -> void:
 		target.stable = false
 		if dmg - before >= target.stats.max_hp:
 			_die(target, "massive damage")
+
+
+## A paralyzed creature loses its turn (then saves at its end, end_turn).
+func _paralyzed_turn(a: Actor) -> void:
+	_say("%s is paralyzed and can't act." % a.display_name())
+	status_changed.emit("%s is paralyzed..." % a.display_name())
+	await get_tree().create_timer(0.9).timeout
+	if in_combat and current == a:
+		end_turn()
 
 
 static func _is_dying(h: Actor) -> bool:
@@ -1705,6 +1896,42 @@ func _offer_shield(target: Actor, attacker: Actor, what: String, total: int, ac:
 	SpellFx.sparkles(map, target.body_position(), Color8(130, 170, 255))
 	FloatText.spawn(map, target.body_position() + Vector2(0, -18), "SHIELD", Color8(150, 180, 255), 10)
 	return true
+
+
+## Uncanny Dodge (Rogue 5): reaction when hit by an attack it can see - halve the damage. Asks the
+## player when it matters (8+ damage, or the hit would drop them); returns true if used.
+func _offer_uncanny_dodge(target: Actor, attacker: Actor, what: String, dmg: int) -> bool:
+	if not target is Hero or target.reaction_used or dmg < 2 or target.power("uncanny_dodge") == null:
+		return false
+	if not target.is_alive() or target.has_condition("paralyzed"):
+		return false
+	if dmg < 8 and dmg < target.hp:
+		return false               # not worth the reaction: don't ask
+	var yes := false
+	if auto_reaction >= 0:
+		yes = auto_reaction == 1
+	else:
+		reaction_pending = true
+		reaction_prompt.emit("%s's %s hits %s for %d.\nUse Uncanny Dodge? Halve the damage (%d), uses your reaction." % [
+				attacker.display_name(), what, target.display_name(), dmg, dmg / 2])
+		yes = await reaction_answered
+		reaction_pending = false
+	if not yes:
+		return false
+	target.reaction_used = true
+	_say("%s uses Uncanny Dodge!" % target.display_name())
+	Sfx.play("miss_swish", -2.0, 1.2)
+	FloatText.spawn(map, target.body_position() + Vector2(0, -26), "DODGE", COL_ALLY, 10)
+	return true
+
+
+## Another creature on `attacker`'s side stands next to `target` (pack tactics, martial advantage).
+func _ally_next_to(attacker: Actor, target: Actor) -> bool:
+	for x in order:
+		if x != attacker and x.is_alive() and DungeonMap._same_side(x, attacker) \
+				and not x.has_condition("paralyzed") and DungeonMap.grid_distance(x.cell, target.cell) <= 1:
+			return true
+	return false
 
 
 func answer_reaction(yes: bool) -> void:
@@ -1866,7 +2093,7 @@ func _dice_crit(attacker: Actor, target: Actor, what: String, roll: DiceRoll, ac
 
 ## How much a monster wants to use condition power `p` on hero `h` from cell `c` (0 = can't/won't).
 ## chance the condition lands x how much it's worth (in expected-damage units).
-const CONDITION_VALUE := {"restrained": 9.0, "frightened": 12.0, "prone": 4.0}
+const CONDITION_VALUE := {"restrained": 9.0, "frightened": 12.0, "prone": 4.0, "paralyzed": 16.0}
 ## A little randomness so monsters don't do exactly the same thing every turn.
 const AI_JITTER := 1.5
 
@@ -2125,3 +2352,57 @@ func drink_now(who: Actor, item_id: String) -> int:
 	_detail("  %s: %s -> %d" % [it.display_name, r.describe(), r.total])
 	_say("%s drinks a %s and regains %d HP%s" % [who.display_name(), it.display_name, got, " (back up!)" if was_down else ""])
 	return got
+
+
+# --- class features (Phase 5) ------------------------------------------------------------------
+
+## Undead enemies `caster` can turn: within the power's range and in sight.
+func _undead_in_range(caster: Actor, p: SpellData) -> Array[Actor]:
+	var out: Array[Actor] = []
+	for a in order:
+		if a.is_alive() and not DungeonMap._same_side(a, caster) and a.stats.creature_type == "undead" \
+				and DungeonMap.grid_distance(caster.cell, a.cell) <= p.range_cells() \
+				and map.has_line_of_sight(caster.cell, a.cell):
+			out.append(a)
+	return out
+
+
+## Channel Divinity: Turn Undead (SRD) - each undead in 30 ft that sees the cleric makes a WIS
+## save or is turned for a minute (ends on damage). Cleric 5: Destroy Undead - a turned undead
+## of CR 1/2 or lower is destroyed outright.
+func _turn_undead(caster: Actor, p: SpellData) -> void:
+	caster.play_action("cast")
+	Sfx.play("radiant")
+	SpellFx.sparkles(map, caster.body_position(), Color8(255, 236, 150))
+	await SpellFx.charge(map, _cast_from(caster) + Vector2(0, 2), Color8(255, 236, 150))
+	var dc := p.dc_for(caster.stats)
+	for a in _undead_in_range(caster, p):
+		var s := roll_save(a, "WIS")
+		var saved := s.total >= dc
+		_detail("  %s WIS save: %s vs DC %d - %s" % [a.display_name(), s.describe(), dc, "success" if saved else "FAILED"])
+		if saved:
+			_say("%s resists the holy light" % a.display_name())
+			FloatText.spawn(map, a.body_position() + Vector2(0, -10), "RESISTED", Color8(200, 196, 210), 10)
+			continue
+		SpellFx.column(map, a.position)
+		if caster.stats.destroy_undead_cr >= 0.0 and a.stats.challenge <= caster.stats.destroy_undead_cr:
+			_say("%s is destroyed by the holy light!" % a.display_name())
+			FloatText.spawn(map, a.body_position() + Vector2(0, -10), "DESTROYED", COL_ACTIVE, 10)
+			apply_damage(a, a.hp, "radiant")
+		else:
+			a.add_condition("turned", 10, caster, p)
+			_say("%s is turned!" % a.display_name())
+			FloatText.spawn(map, a.body_position() + Vector2(0, -10), "TURNED", COL_ACTIVE, 10)
+		await get_tree().create_timer(0.15).timeout
+	await get_tree().create_timer(0.4).timeout
+
+
+## Burning Hands: a fan of flame bursts over the cone, nearest cells first.
+func _burning_hands_fx(caster: Actor, cells: Array[Vector2i]) -> void:
+	var sorted := cells.duplicate()
+	sorted.sort_custom(func(x, y): return DungeonMap.grid_distance(caster.cell, x) < DungeonMap.grid_distance(caster.cell, y))
+	Sfx.play("fire_impact")
+	for c: Vector2i in sorted:
+		SpellFx.burst(map, IsoGrid.cell_to_world(c), 0.45, 0.7)
+		await get_tree().create_timer(0.03).timeout
+	await get_tree().create_timer(0.3).timeout

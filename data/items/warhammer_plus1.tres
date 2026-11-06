@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_vllwm"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_8o8m2"]
+
+[sub_resource type="Resource" id="Resource_btfup"]
+script = ExtResource("1_vllwm")
+name = "Warhammer +1"
+damage = "1d8"
+damage_type = "bludgeoning"
+
+[resource]
+resource_name = "Warhammer +1"
+script = ExtResource("2_8o8m2")
+id = "warhammer_plus1"
+display_name = "Warhammer +1"
+kind = 0
+description = "Dwarf-made. The head rings like a bell on every blow.
+Magic: +1 to hit and damage."
+value_gp = 515
+magic_bonus = 1
+attack = SubResource("Resource_btfup")
+category = "martial"

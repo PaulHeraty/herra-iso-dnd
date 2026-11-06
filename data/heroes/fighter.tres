@@ -1,29 +1,28 @@
 [gd_resource type="Resource" script_class="CreatureStats" format=3]
 
-[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_pwjl6"]
-[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_dv2d3"]
-[ext_resource type="Resource" path="res://data/spells/second_wind.tres" id="3_qnc6f"]
-[ext_resource type="Resource" path="res://data/spells/shove.tres" id="4_clnly"]
-[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="5_km8d3"]
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_dv2d3"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_qnc6f"]
+[ext_resource type="Resource" path="res://data/spells/second_wind.tres" id="3_clnly"]
+[ext_resource type="Resource" path="res://data/spells/shove.tres" id="4_km8d3"]
+[ext_resource type="Resource" path="res://data/spells/action_surge.tres" id="5_6dh4b"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="6_3viyi"]
 
 [resource]
 resource_name = "Fighter"
-script = ExtResource("5_km8d3")
+script = ExtResource("6_3viyi")
 id = "fighter"
 display_name = "Fighter"
 class_id = "fighter"
-level = 5
+level = 1
 str_score = 16
 dex_score = 12
 con_score = 14
 wis_score = 12
 cha_score = 8
 save_proficiencies = Array[String](["STR", "CON"])
-max_hp = 44
-hit_dice = "5d10"
-proficiency_bonus = 3
-extra_attacks = 1
-powers = Array[ExtResource("2_dv2d3")]([ExtResource("3_qnc6f"), ExtResource("4_clnly")])
+max_hp = 12
+hit_dice = "1d10"
+powers = Array[ExtResource("2_qnc6f")]([ExtResource("3_clnly"), ExtResource("4_km8d3"), ExtResource("5_6dh4b")])
 skill_proficiencies = Array[String](["athletics", "perception"])
 armor_training = Array[String](["light", "medium", "heavy", "shield"])
 weapon_training = Array[String](["simple", "martial"])

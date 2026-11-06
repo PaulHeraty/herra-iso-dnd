@@ -1,0 +1,53 @@
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_vdtch"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_61kdi"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="3_idw4f"]
+
+[sub_resource type="Resource" id="Resource_ui7nr"]
+resource_name = "Longsword"
+script = ExtResource("1_vdtch")
+name = "Longsword"
+ability = 1
+damage = "1d8+2"
+to_hit_override = 4
+
+[sub_resource type="Resource" id="Resource_pieor"]
+resource_name = "Longbow"
+script = ExtResource("1_vdtch")
+name = "Longbow"
+kind = 1
+ability = 1
+range_ft = 150
+long_range_ft = 600
+damage = "1d8+2"
+damage_type = "piercing"
+to_hit_override = 4
+sfx = "bow_shot"
+
+[resource]
+resource_name = "Wight"
+script = ExtResource("3_idw4f")
+id = "wight"
+display_name = "Wight"
+challenge = 3.0
+xp = 700
+creature_type = "undead"
+str_score = 15
+dex_score = 14
+con_score = 16
+wis_score = 13
+cha_score = 15
+max_hp = 45
+hit_dice = "6d8+18"
+armor_class = 14
+resistances = Array[String](["necrotic"])
+immunities = Array[String](["poison"])
+traits = Array[String](["resist_nonmagical"])
+sight_ft = 60
+attacks = Array[ExtResource("1_vdtch")]([SubResource("Resource_ui7nr"), SubResource("Resource_pieor")])
+extra_attacks = 1
+skill_overrides = {
+"perception": 3,
+"stealth": 4
+}

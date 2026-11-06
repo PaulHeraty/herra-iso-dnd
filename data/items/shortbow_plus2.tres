@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_rjry3"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_rxosc"]
+
+[sub_resource type="Resource" id="Resource_1g834"]
+script = ExtResource("1_rjry3")
+name = "Shortbow +2"
+kind = 1
+ability = 1
+range_ft = 80
+long_range_ft = 320
+damage_type = "piercing"
+
+[resource]
+resource_name = "Shortbow +2"
+script = ExtResource("2_rxosc")
+id = "shortbow_plus2"
+display_name = "Shortbow +2"
+kind = 0
+description = "Wrapped in silver wire. Its arrows hardly make a sound.
+Magic: +2 to hit and damage."
+value_gp = 2025
+magic_bonus = 2
+attack = SubResource("Resource_1g834")
+ranged_slot = true
+two_handed = true

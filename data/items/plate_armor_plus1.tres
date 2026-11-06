@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_s21i5"]
+
+[resource]
+resource_name = "Plate Armour +1"
+script = ExtResource("1_s21i5")
+id = "plate_armor_plus1"
+display_name = "Plate Armour +1"
+kind = 1
+description = "Black-lacquered plate. It fits whoever wears it.
+Magic: +1 AC."
+value_gp = 2500
+magic_bonus = 1
+armor_type = "heavy"
+base_ac = 18
+dex_cap = 0
+str_required = 15
+stealth_disadvantage = true

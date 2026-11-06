@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_h8dag"]
+
+[resource]
+resource_name = "Shield +2"
+script = ExtResource("1_h8dag")
+id = "shield_plus2"
+display_name = "Shield +2"
+kind = 2
+description = "An ancient kite shield with a hawk painted on it. Nothing gets past it.
+Magic: +2 AC."
+value_gp = 4010
+magic_bonus = 2
+base_ac = 2

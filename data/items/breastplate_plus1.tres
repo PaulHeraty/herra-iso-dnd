@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_khidc"]
+
+[resource]
+resource_name = "Breastplate +1"
+script = ExtResource("1_khidc")
+id = "breastplate_plus1"
+display_name = "Breastplate +1"
+kind = 1
+description = "Burnished steel. Arrows skid off it.
+Magic: +1 AC."
+value_gp = 1400
+magic_bonus = 1
+armor_type = "medium"
+base_ac = 14
+dex_cap = 2

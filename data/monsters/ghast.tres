@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_at6af"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_mv7j5"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="3_q83iu"]
+
+[sub_resource type="Resource" id="Resource_0lntq"]
+resource_name = "Claws"
+script = ExtResource("1_at6af")
+name = "Claws"
+ability = 1
+damage = "2d6+3"
+to_hit_override = 5
+rider_save = "CON"
+rider_dc = 10
+rider_condition = "paralyzed"
+rider_condition_rounds = 10
+
+[sub_resource type="Resource" id="Resource_na3lp"]
+resource_name = "Bite"
+script = ExtResource("1_at6af")
+name = "Bite"
+ability = 1
+damage = "2d8+3"
+damage_type = "piercing"
+to_hit_override = 3
+
+[resource]
+resource_name = "Ghast"
+script = ExtResource("3_q83iu")
+id = "ghast"
+display_name = "Ghast"
+challenge = 2.0
+xp = 450
+creature_type = "undead"
+str_score = 16
+dex_score = 17
+int_score = 11
+cha_score = 8
+max_hp = 36
+hit_dice = "8d8"
+armor_class = 13
+resistances = Array[String](["necrotic"])
+immunities = Array[String](["poison"])
+traits = Array[String](["turn_resistance"])
+attacks = Array[ExtResource("1_at6af")]([SubResource("Resource_0lntq"), SubResource("Resource_na3lp")])

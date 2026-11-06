@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_cgwnc"]
+
+[resource]
+resource_name = "Mass Healing Word"
+script = ExtResource("1_cgwnc")
+id = "mass_healing_word"
+display_name = "Mass Healing Word"
+description = "Bonus action: up to six allies within 60 ft each heal 1d4 + your spellcasting modifier. +1d4 per slot above 3rd."
+level = 3
+classes = Array[String](["cleric"])
+cast_time = 1
+target = 1
+range_ft = 60
+max_targets = 6
+resolve = 3
+add_ability_mod = true
+heal = "1d4"
+upcast_dice = "1d4"
+vfx = "heal"

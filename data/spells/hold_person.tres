@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_m24rx"]
+
+[resource]
+resource_name = "Hold Person"
+script = ExtResource("1_m24rx")
+id = "hold_person"
+display_name = "Hold Person"
+description = "A humanoid must make a WIS save or be paralyzed (it saves again at the end of each of its turns). Hits from within 5 ft crit. Concentration, up to 1 minute. +1 target per slot above 2nd."
+level = 2
+classes = Array[String](["cleric", "wizard"])
+range_ft = 60
+resolve = 1
+save_ability = "WIS"
+upcast_targets = 1
+creature_types = Array[String](["humanoid"])
+condition = "paralyzed"
+condition_rounds = 10
+concentration = true
+save_each_turn = true
+sfx = "charge"
+vfx = "hold"

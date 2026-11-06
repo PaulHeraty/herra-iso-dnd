@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_lkd2e"]
+
+[resource]
+resource_name = "Ring of Resistance (necrotic)"
+script = ExtResource("1_lkd2e")
+id = "ring_resistance_necrotic"
+display_name = "Ring of Resistance (necrotic)"
+kind = 6
+description = "A black iron ring set with a violet stone. The touch of the grave does half damage to its wearer."
+value_gp = 500
+resistances = Array[String](["necrotic"])

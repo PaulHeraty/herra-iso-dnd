@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_h4btk"]
+
+[resource]
+resource_name = "Chief's Key"
+script = ExtResource("1_h4btk")
+id = "warren_key"
+display_name = "Chief's Key"
+kind = 5
+description = "A crude iron key on a thong of goblin hide. It opens a lock somewhere in the dungeon."
+key_id = "warren"

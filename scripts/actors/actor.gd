@@ -246,6 +246,9 @@ func reset_resources() -> void:
 	for p: SpellData in stats.powers:
 		if p.uses > 0:
 			uses_left[p.id] = p.uses
+	# Arcane Recovery (Wizard): once a day, a short rest brings back some spell slots (Rest).
+	if stats.class_id == "wizard":
+		uses_left["arcane_recovery"] = 1
 
 
 ## Lowest slot level (>= the spell's level) with a slot left; 0 if none (cantrips return 0 too).

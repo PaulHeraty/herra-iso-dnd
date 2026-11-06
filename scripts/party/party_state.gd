@@ -25,6 +25,7 @@ static func save(map: DungeonMap) -> void:
 			hit_dice_left = h.hit_dice_left,
 			death_successes = h.death_successes, death_failures = h.death_failures,
 			stable = h.stable, dead = h.dead, equipment = h.equipment.duplicate(),
+			level = h.level, xp = h.xp,
 		}
 
 
@@ -34,6 +35,8 @@ static func apply(h: Hero) -> void:
 		return
 	var s: Dictionary = _heroes[h.hero_class]
 	h.equipment = s.get("equipment", h.equipment).duplicate()
+	h.level = s.get("level", 1)
+	h.xp = s.get("xp", 0)
 	h.refresh_stats()
 	h.hp = s.hp
 	h.slots_left = s.slots_left.duplicate()

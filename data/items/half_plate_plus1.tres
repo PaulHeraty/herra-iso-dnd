@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_dgvc4"]
+
+[resource]
+resource_name = "Half Plate +1"
+script = ExtResource("1_dgvc4")
+id = "half_plate_plus1"
+display_name = "Half Plate +1"
+kind = 1
+description = "Enamelled plates in faded royal blue.
+Magic: +1 AC."
+value_gp = 1750
+magic_bonus = 1
+armor_type = "medium"
+base_ac = 15
+dex_cap = 2
+stealth_disadvantage = true

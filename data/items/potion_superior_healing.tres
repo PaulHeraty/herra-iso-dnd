@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_lrjio"]
+
+[resource]
+resource_name = "Potion of Superior Healing"
+script = ExtResource("1_lrjio")
+id = "potion_superior_healing"
+display_name = "Potion of Superior Healing"
+kind = 3
+description = "A ruby-dark potion that glows from within. Drink it to regain 8d4 + 8 hit points."
+value_gp = 450
+stackable = true
+heal = "8d4+8"

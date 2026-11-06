@@ -54,10 +54,14 @@ enum Recharge { NONE, SHORT_REST, LONG_REST, DICE }       ## DICE = "Recharge 5-
 @export var upcast_targets := 0
 ## Cantrips: dice count at character levels 5 / 11 / 17 (index 0 = levels 1-4).
 @export var cantrip_dice: Array[int] = []
+## Only creatures of these types can be targeted ("humanoid" for Hold Person; empty = any).
+@export var creature_types: Array[String] = []
 @export_group("Conditions")
 @export var condition := ""                  ## applied on a failed save / hit / always (AUTO): "blessed"...
 @export var condition_rounds := 0
 @export var concentration := false
+## The condition ends when the bearer makes the save at the end of one of its turns (Hold Person).
+@export var save_each_turn := false
 @export_group("Uses")
 @export var uses := 0                        ## per rest (0 = unlimited / slot-based)
 @export var recharge := Recharge.NONE

@@ -1,31 +1,31 @@
 [gd_resource type="Resource" script_class="CreatureStats" format=3]
 
-[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_0vm8f"]
-[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_7t45k"]
-[ext_resource type="Resource" path="res://data/spells/sacred_flame.tres" id="3_cj410"]
-[ext_resource type="Resource" path="res://data/spells/cure_wounds.tres" id="4_r1w0a"]
-[ext_resource type="Resource" path="res://data/spells/bless.tres" id="5_qffdq"]
-[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="6_msbuf"]
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_qffdq"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_msbuf"]
+[ext_resource type="Resource" path="res://data/spells/sacred_flame.tres" id="3_ybcvv"]
+[ext_resource type="Resource" path="res://data/spells/cure_wounds.tres" id="4_e88dh"]
+[ext_resource type="Resource" path="res://data/spells/healing_word.tres" id="5_e1ply"]
+[ext_resource type="Resource" path="res://data/spells/bless.tres" id="6_wywou"]
+[ext_resource type="Resource" path="res://data/spells/turn_undead.tres" id="7_yr35r"]
+[ext_resource type="Resource" path="res://data/spells/hold_person.tres" id="8_pbpnm"]
+[ext_resource type="Resource" path="res://data/spells/mass_healing_word.tres" id="9_51j0r"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="10_1vfrw"]
 
 [resource]
 resource_name = "Cleric"
-script = ExtResource("6_msbuf")
+script = ExtResource("10_1vfrw")
 id = "cleric"
 display_name = "Cleric"
 class_id = "cleric"
-level = 5
+level = 1
 str_score = 14
 con_score = 14
-wis_score = 18
+wis_score = 16
 cha_score = 12
 save_proficiencies = Array[String](["WIS", "CHA"])
-max_hp = 38
-hit_dice = "5d8"
-proficiency_bonus = 3
-powers = Array[ExtResource("2_7t45k")]([ExtResource("3_cj410"), ExtResource("4_r1w0a"), ExtResource("5_qffdq")])
+powers = Array[ExtResource("2_msbuf")]([ExtResource("3_ybcvv"), ExtResource("4_e88dh"), ExtResource("5_e1ply"), ExtResource("6_wywou"), ExtResource("7_yr35r"), ExtResource("8_pbpnm"), ExtResource("9_51j0r")])
 skill_proficiencies = Array[String](["insight", "medicine"])
 spell_ability = "WIS"
-spell_slots = Array[int]([4, 3, 2])
 armor_training = Array[String](["light", "medium", "heavy", "shield"])
 weapon_training = Array[String](["simple"])
 starting_equipment = Array[String](["mace", "shield", "chain_mail"])

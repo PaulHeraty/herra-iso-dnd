@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_62ua4"]
+[ext_resource type="Resource" path="res://data/spells/healing_word.tres" id="2_mjv7a"]
+
+[resource]
+resource_name = "Scroll of Healing Word"
+script = ExtResource("1_62ua4")
+id = "scroll_healing_word"
+display_name = "Scroll of Healing Word"
+kind = 4
+description = "A single word of power, gilded.
+Healing Word (1st level): Bonus action, 60 ft: heal 1d4 + your spellcasting modifier. Brings a dying ally back.
+Cleric only. Crumbles once read. DC 13, attack +5."
+value_gp = 75
+stackable = true
+spell = ExtResource("2_mjv7a")

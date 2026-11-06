@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_jh8dn"]
+[ext_resource type="Resource" path="res://data/spells/mass_healing_word.tres" id="2_vbsdb"]
+
+[resource]
+resource_name = "Scroll of Mass Healing Word"
+script = ExtResource("1_jh8dn")
+id = "scroll_mass_healing_word"
+display_name = "Scroll of Mass Healing Word"
+kind = 4
+description = "Six names, and a prayer for each.
+Mass Healing Word (3rd level): Bonus action: up to six allies within 60 ft each heal 1d4 + your spellcasting modifier.
+Cleric only. Crumbles once read. DC 15, attack +7."
+value_gp = 300
+stackable = true
+spell = ExtResource("2_vbsdb")

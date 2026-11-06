@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_kgtqu"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_0feho"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="3_8fmh0"]
+
+[sub_resource type="Resource" id="Resource_25kj1"]
+resource_name = "Claws"
+script = ExtResource("1_kgtqu")
+name = "Claws"
+ability = 1
+damage = "2d4+2"
+to_hit_override = 4
+rider_save = "CON"
+rider_dc = 10
+rider_condition = "paralyzed"
+rider_condition_rounds = 10
+
+[sub_resource type="Resource" id="Resource_efuky"]
+resource_name = "Bite"
+script = ExtResource("1_kgtqu")
+name = "Bite"
+ability = 1
+damage = "2d6+2"
+damage_type = "piercing"
+to_hit_override = 2
+
+[resource]
+resource_name = "Ghoul"
+script = ExtResource("3_8fmh0")
+id = "ghoul"
+display_name = "Ghoul"
+challenge = 1.0
+xp = 200
+creature_type = "undead"
+str_score = 13
+dex_score = 15
+int_score = 7
+cha_score = 6
+max_hp = 22
+hit_dice = "5d8"
+armor_class = 12
+immunities = Array[String](["poison"])
+attacks = Array[ExtResource("1_kgtqu")]([SubResource("Resource_25kj1"), SubResource("Resource_efuky")])

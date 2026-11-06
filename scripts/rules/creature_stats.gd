@@ -31,6 +31,10 @@ enum Size { TINY, SMALL, MEDIUM, LARGE, HUGE }
 @export var immunities: Array[String] = []
 ## Conditions that can't be put on it ("restrained"...; heroes: from rings, Equipment.build_stats).
 @export var condition_immunities: Array[String] = []
+## Special monster traits (SRD): "pack_tactics" (advantage when an ally is next to the target),
+## "martial_advantage" (+2d6 once a turn when an ally is next to the target), "undead_fortitude"
+## (CON save to drop to 1 HP instead of 0), "turn_resistance" (advantage vs Turn Undead).
+@export var traits: Array[String] = []
 @export_group("Movement")
 @export var speed_ft := 30
 @export var fly := false                ## floats/flies: ignores difficult terrain (later)
@@ -63,6 +67,11 @@ enum Size { TINY, SMALL, MEDIUM, LARGE, HUGE }
 ## armour that gives disadvantage on Stealth.
 var item_save_bonus := 0
 var stealth_disadvantage := false
+## Runtime only (Progression.apply on a hero copy): a natural roll this high crits (Champion 19),
+## Sneak Attack d6s, Destroy Undead CR (-1 = none).
+var crit_range := 20
+var sneak_dice := 0
+var destroy_undead_cr := -1.0
 
 const FT_PER_CELL := 5
 

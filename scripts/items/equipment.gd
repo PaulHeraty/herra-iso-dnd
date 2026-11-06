@@ -95,9 +95,12 @@ static func starting(base: CreatureStats) -> Dictionary:
 
 ## The stats a hero with base stat block `base` and equipment `eq` fights with. A copy of `base`:
 ## armor_class, attacks, speed and the save bonus are worked out from the equipment.
-static func build_stats(base: CreatureStats, eq: Dictionary) -> CreatureStats:
+static func build_stats(base: CreatureStats, eq: Dictionary, level := 0) -> CreatureStats:
 	var s: CreatureStats = base.duplicate()
-	var dex := base.mod("DEX")
+	# Heroes: the level-1 stat block grown to `level` (0 = the level written in the file).
+	if base.class_id != "":
+		Progression.apply(s, level if level > 0 else maxi(1, base.level))
+	var dex := s.mod("DEX")
 	var ac := 10 + dex
 	var save_b := 0
 	var attacks: Array[AttackData] = []
@@ -113,8 +116,11 @@ static func build_stats(base: CreatureStats, eq: Dictionary) -> CreatureStats:
 	if armor:
 		var d := dex if armor.dex_cap < 0 else mini(dex, armor.dex_cap)
 		ac = armor.base_ac + armor.magic_bonus + d
-		if armor.str_required > base.str_score:
+		if armor.str_required > s.str_score:
 			s.speed_ft = maxi(5, base.speed_ft - 10)
+		# Fighting Style: Defense (Fighter) - +1 AC while wearing armour.
+		if base.class_id == "fighter":
+			ac += 1
 		s.stealth_disadvantage = armor.stealth_disadvantage
 	var shield := _item(eq, "off")
 	if shield:
@@ -149,6 +155,7 @@ static func _weapon_attack(base: CreatureStats, item: ItemData) -> AttackData:
 	var a: AttackData = item.attack.duplicate()
 	a.name = item.display_name
 	a.magic_bonus += item.magic_bonus
+	a.magical = item.is_magic()
 	a.proficient = is_trained(base, item)
 	return a
 

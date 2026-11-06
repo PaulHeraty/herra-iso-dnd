@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_5qyc2"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_syahj"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="3_webv6"]
+
+[sub_resource type="Resource" id="Resource_8u60m"]
+resource_name = "Bite"
+script = ExtResource("1_5qyc2")
+name = "Bite"
+ability = 1
+damage = "2d4+2"
+damage_type = "piercing"
+to_hit_override = 4
+rider_save = "STR"
+rider_dc = 11
+rider_condition = "prone"
+
+[resource]
+resource_name = "Wolf"
+script = ExtResource("3_webv6")
+id = "wolf"
+display_name = "Wolf"
+challenge = 0.25
+xp = 50
+creature_type = "beast"
+str_score = 12
+dex_score = 15
+con_score = 12
+int_score = 3
+wis_score = 12
+cha_score = 6
+max_hp = 11
+hit_dice = "2d8+2"
+armor_class = 13
+traits = Array[String](["pack_tactics"])
+speed_ft = 40
+sight_ft = 50
+attacks = Array[ExtResource("1_5qyc2")]([SubResource("Resource_8u60m")])
+skill_overrides = {
+"perception": 3,
+"stealth": 4
+}

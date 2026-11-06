@@ -1,0 +1,45 @@
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_k4uuk"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_0chjg"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="3_35ajt"]
+
+[sub_resource type="Resource" id="Resource_5y638"]
+resource_name = "Scimitar"
+script = ExtResource("1_k4uuk")
+name = "Scimitar"
+ability = 1
+damage = "1d6+2"
+to_hit_override = 4
+
+[sub_resource type="Resource" id="Resource_dajew"]
+resource_name = "Javelin"
+script = ExtResource("1_k4uuk")
+name = "Javelin"
+kind = 1
+ability = 1
+range_ft = 30
+long_range_ft = 120
+damage_type = "piercing"
+to_hit_override = 2
+sfx = "bow_shot"
+
+[resource]
+resource_name = "Goblin Boss"
+script = ExtResource("3_35ajt")
+id = "goblin_boss"
+display_name = "Goblin Boss"
+challenge = 1.0
+xp = 200
+size = 1
+dex_score = 14
+wis_score = 8
+max_hp = 21
+hit_dice = "6d6"
+armor_class = 17
+attacks = Array[ExtResource("1_k4uuk")]([SubResource("Resource_5y638"), SubResource("Resource_dajew")])
+extra_attacks = 1
+skill_overrides = {
+"perception": -1,
+"stealth": 6
+}

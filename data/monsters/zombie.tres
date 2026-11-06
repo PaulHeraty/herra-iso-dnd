@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_pdyek"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_ntyqf"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="3_2u86q"]
+
+[sub_resource type="Resource" id="Resource_4f7wj"]
+resource_name = "Slam"
+script = ExtResource("1_pdyek")
+name = "Slam"
+ability = 1
+damage = "1d6+1"
+damage_type = "bludgeoning"
+to_hit_override = 3
+
+[resource]
+resource_name = "Zombie"
+script = ExtResource("3_2u86q")
+id = "zombie"
+display_name = "Zombie"
+challenge = 0.25
+xp = 50
+creature_type = "undead"
+str_score = 13
+dex_score = 6
+con_score = 16
+int_score = 3
+wis_score = 6
+cha_score = 5
+save_proficiencies = Array[String](["WIS"])
+max_hp = 22
+hit_dice = "3d8+9"
+armor_class = 8
+immunities = Array[String](["poison"])
+traits = Array[String](["undead_fortitude"])
+speed_ft = 20
+attacks = Array[ExtResource("1_pdyek")]([SubResource("Resource_4f7wj")])
+skill_overrides = {
+"perception": -2
+}

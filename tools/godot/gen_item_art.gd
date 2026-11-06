@@ -53,6 +53,7 @@ const ICON_PAL := {
 	"G": Color8(112, 128, 152), "B": Color8(110, 150, 240), "v": Color8(60, 80, 160),
 	"P": Color8(234, 222, 184), "Q": Color8(190, 170, 126), "e": Color8(110, 210, 120),
 	"E": Color8(50, 140, 80), "n": Color8(222, 214, 196),
+	"V": Color8(176, 110, 236), "x": Color8(98, 50, 146),
 }
 
 const POTION := [
@@ -621,3 +622,113 @@ func _icon_ring_free_action(cv: Canvas) -> void:
 func _icon_ring_resistance(cv: Canvas) -> void:
 	_ring(cv, "Y", "y", "o")
 	cv.rows([".e.", "eeE", ".E."], 5, 2)
+
+
+# --- Phase 5 items -------------------------------------------------------------------------------
+
+## A curved blade: the longsword's, bowed out towards the top-right, a small brass guard.
+func _icon_scimitar(cv: Canvas) -> void:
+	_sword(cv, -12, 4, 1, 9)
+	cv.axis(func(a: int, c: int) -> String:
+		if a >= -11 and a <= -3:
+			var bow := roundi(2.0 * sin((a + 11) / 8.0 * PI) )
+			if c == 14 and bow >= 1:
+				return "s"
+			if c == 15 and bow >= 2:
+				return "m"
+		return "")
+
+
+func _axe_head(cv: Canvas, at: float, size: float, double := false) -> void:
+	cv.axis(func(a: int, c: int) -> String:
+		var spread := c - 13
+		var side := spread
+		if double and spread < 0:
+			side = -spread + 1
+		if side < 1 or side > roundi(size):
+			return ""
+		var w := 1.0 + side * 0.7
+		if absf(a - at) <= w:
+			if side == roundi(size):
+				return "w"
+			return "S" if side >= size * 0.5 else "s"
+		return "")
+
+
+func _icon_battleaxe(cv: Canvas) -> void:
+	_haft(cv, -11)
+	_axe_head(cv, -9.0, 6.0)
+
+
+func _icon_greataxe(cv: Canvas) -> void:
+	_haft(cv, -13, true, 13)
+	_axe_head(cv, -10.0, 6.0, true)
+
+
+func _icon_morningstar(cv: Canvas) -> void:
+	_haft(cv, -5)
+	cv.axis(func(a: int, c: int) -> String:
+		var da := a + 9
+		var dc := c * 2 - 25
+		var r2 := da * da * 4 + dc * dc
+		if r2 <= 40:
+			return "w" if (da <= -1 and dc <= -1) else ("S" if r2 <= 20 else "s")
+		if r2 <= 110 and ((absi(da) <= 0 and absi(dc) <= 13) or (absi(dc) <= 1 and absi(da) <= 5) or absi(absi(da) * 2 - absi(dc)) <= 1):
+			return "w"
+		return "")
+
+
+func _icon_heavy_crossbow(cv: Canvas) -> void:
+	_icon_light_crossbow(cv)
+	for p: Vector2i in cv.px.keys():
+		if cv.px[p] == "S":
+			cv.px[p] = "m"
+		elif cv.px[p] == "C":
+			cv.px[p] = "b"
+
+
+func _icon_breastplate(cv: Canvas) -> void:
+	_armour(cv, SHIRT, ["m", "w", "S", "s", "l"], "plate")
+
+
+func _icon_half_plate(cv: Canvas) -> void:
+	_armour(cv, COAT, ["o", "Y", "y", "o", "l"], "plate")
+
+
+func _icon_potion_superior_healing(cv: Canvas) -> void:
+	cv.rows(POTION_GREATER)
+	for p: Vector2i in cv.px.keys():
+		match cv.px[p]:
+			"r": cv.px[p] = "q"
+			"R": cv.px[p] = "r"
+			"y": cv.px[p] = "Y"
+
+
+## A longsword whose blade burns: orange and gold along the edge.
+func _icon_flame_tongue(cv: Canvas) -> void:
+	_sword(cv, -13, 5, 2, 10)
+	for p: Vector2i in cv.px.keys():
+		match cv.px[p]:
+			"w": cv.px[p] = "Y"
+			"S": cv.px[p] = "R"
+			"s": cv.px[p] = "r"
+	cv.axis(func(a: int, c: int) -> String:
+		if a >= -12 and a <= 2 and c == 11 and (a % 3 == 0):
+			return "y"
+		return "")
+
+
+## A mace with a golden sunburst head.
+func _icon_mace_of_disruption(cv: Canvas) -> void:
+	_icon_mace(cv)
+	for p: Vector2i in cv.px.keys():
+		match cv.px[p]:
+			"S": cv.px[p] = "Y"
+			"s": cv.px[p] = "y"
+			"m": cv.px[p] = "o"
+
+
+## Gold band with a dark violet stone.
+func _icon_ring_resistance_necrotic(cv: Canvas) -> void:
+	_ring(cv, "Y", "y", "o")
+	cv.rows([".V.", "VVx", ".x."], 5, 2)

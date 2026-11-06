@@ -13,7 +13,7 @@ const PAL := {
 	"R": Color8(140, 30, 36), "p": Color8(200, 110, 230), "c": Color8(170, 150, 255),
 	"e": Color8(110, 210, 120), "E": Color8(60, 150, 80), "o": Color8(240, 150, 80),
 }
-const ORDER := ["blessed", "prone", "restrained", "hidden", "frightened", "shielded", "concentrating", "dying", "stable"]
+const ORDER := ["blessed", "prone", "restrained", "hidden", "frightened", "shielded", "concentrating", "dying", "stable", "paralyzed", "turned"]
 const ICONS := {
 	"blessed": [
 		"...y...",
@@ -95,6 +95,24 @@ const ICONS := {
 		".eeeeE.",
 		"..eEE..",
 		"...E...",
+	],
+	"paralyzed": [
+		"...c...",
+		"..cBc..",
+		".cBwBc.",
+		"cBwwwBc",
+		".cBwBc.",
+		"..cBc..",
+		"...c...",
+	],
+	"turned": [
+		"...Y...",
+		"..yYy..",
+		"...Y...",
+		"yYYwYYy",
+		"...Y...",
+		"...Y...",
+		"...y...",
 	],
 }
 

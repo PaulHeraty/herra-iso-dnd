@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_khb2q"]
+
+[resource]
+resource_name = "Breastplate"
+script = ExtResource("1_khb2q")
+id = "breastplate"
+display_name = "Breastplate"
+kind = 1
+description = "A fitted steel cuirass. AC 14 + DEX (max 2). Quiet."
+value_gp = 400
+armor_type = "medium"
+base_ac = 14
+dex_cap = 2

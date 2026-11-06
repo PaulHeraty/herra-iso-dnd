@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_fkkvq"]
+
+[resource]
+resource_name = "Turn Undead"
+script = ExtResource("1_fkkvq")
+id = "turn_undead"
+display_name = "Turn Undead"
+description = "Channel Divinity (once per short rest): every undead within 30 ft that can see you makes a WIS save or is turned for a minute - it flees and can't attack until it takes damage. From 5th level, weak undead (CR 1/2 or less) are destroyed."
+kind = 1
+target = 3
+needs_los = false
+resolve = 1
+save_ability = "WIS"
+uses = 1
+recharge = 1
+sfx = "radiant"

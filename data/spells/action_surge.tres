@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_ab65d"]
+
+[resource]
+resource_name = "Action Surge"
+script = ExtResource("1_ab65d")
+id = "action_surge"
+display_name = "Action Surge"
+description = "Once per short rest, after using your action: take one more action this turn (attack again, or drink a potion...)."
+kind = 1
+cast_time = 3
+target = 3
+range_ft = 0
+needs_los = false
+uses = 1
+recharge = 1

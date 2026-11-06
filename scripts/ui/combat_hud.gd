@@ -30,6 +30,7 @@ const COL_LOG_BAD := Color8(240, 110, 100)
 const COL_LOG_GOOD := Color8(140, 220, 130)
 const COL_LOG_MAGIC := Color8(214, 120, 230)
 const COL_GOLD := Color8(255, 215, 90)
+const COL_XP := Color8(170, 110, 240)
 
 var combat: CombatManager
 var _banner: Label
@@ -76,6 +77,7 @@ func _ready() -> void:
 	combat.announce.connect(_on_announce)
 	combat.victory.connect(_on_victory)
 	combat.defeat.connect(_on_defeat)
+	combat.level_ups.connect(show_level_ups)
 	_build_end_screen()
 	_build_rest_buttons()
 	inventory_screen = InventoryScreen.new()
@@ -236,6 +238,22 @@ func _build_panel(root: Control) -> void:
 		frame.add_child(pic)
 		var name_l := _label(card, Vector2(43, 3), COL_TEXT)
 		name_l.text = h.display_name()
+		var lvl_l := _label(card, Vector2(card_w - 26, 3), COL_DIM)
+		lvl_l.size = Vector2(23, 0)
+		lvl_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		# XP towards the next level: a thin purple line under the slot pips.
+		var xp_back := ColorRect.new()
+		xp_back.color = Color8(36, 28, 50)
+		xp_back.position = Vector2(3, 52)
+		xp_back.size = Vector2(card_w - 6, 1)
+		xp_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card.add_child(xp_back)
+		var xp_bar := ColorRect.new()
+		xp_bar.color = COL_XP
+		xp_bar.position = xp_back.position
+		xp_bar.size = xp_back.size
+		xp_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card.add_child(xp_bar)
 		var hp_l := _label(card, Vector2(43, 15), COL_HP)
 		var cond_l := _label(card, Vector2(43, 27), COL_DIM)
 		var back := ColorRect.new()
@@ -250,20 +268,7 @@ func _build_panel(root: Control) -> void:
 		bar.size = back.size
 		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card.add_child(bar)
-		# Spell-slot pips: one group per spell level (Cleric/Mage: 4 / 3 / 2).
 		var pips: Array[Dictionary] = []
-		var px := 3
-		for lvl in h.stats.spell_slots.size():
-			for s in h.stats.spell_slots[lvl]:
-				var pip := ColorRect.new()
-				pip.position = Vector2(px, 48)
-				pip.size = Vector2(6, 3)
-				pip.color = COL_SLOT
-				pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-				card.add_child(pip)
-				pips.append({rect = pip, level = lvl, index = s})
-				px += 8
-			px += 4
 		# Condition icons (hover: name + effect) and death-save pips.
 		var icons: Array[TextureRect] = []
 		for k in 7:
@@ -291,7 +296,7 @@ func _build_panel(root: Control) -> void:
 			dp.visible = false
 			card.add_child(dp)
 			dpips.append(dp)
-		_cards.append({hero = h, panel = card, pic = pic, hp = hp_l, cond = cond_l, bar = bar, bar_w = back.size.x, pips = pips, icons = icons, dpips = dpips})
+		_cards.append({hero = h, panel = card, pic = pic, hp = hp_l, lvl = lvl_l, xp = xp_bar, xp_w = xp_back.size.x, slot_sig = "", cond = cond_l, bar = bar, bar_w = back.size.x, pips = pips, icons = icons, dpips = dpips})
 	# Action menu.
 	var mx := 4 + 4 * (card_w + 3)
 	var labels := [["attack", "Attack"], ["spell", "Spell"], ["item", "Item"], ["wait", "Wait"]]
@@ -351,6 +356,15 @@ func _update_card(card: Dictionary, cur: Actor) -> void:
 		else:
 			dp.color = Color8(220, 60, 60) if (k - 3) < h.death_failures else Color8(70, 26, 30)
 	card.pic.modulate = Color.WHITE if h.is_alive() else Color(0.45, 0.45, 0.55)
+	# Spell-slot pips: one group per spell level (rebuilt when a level-up changes the slots).
+	var sig := str(h.stats.spell_slots)
+	if sig != card.slot_sig:
+		_build_pips(card)
+		card.slot_sig = sig
+	card.lvl.text = "Lv %d" % h.level
+	var nxt := Progression.xp_for_next(h.level)
+	var prev: int = Progression.XP_FOR_LEVEL[h.level - 1]
+	card.xp.size.x = card.xp_w if nxt == 0 else roundf(card.xp_w * clampf(float(h.xp - prev) / (nxt - prev), 0.0, 1.0))
 	for p: Dictionary in card.pips:
 		var left: int = h.slots_left[p.level] if p.level < h.slots_left.size() else 0
 		p.rect.color = COL_SLOT if p.index < left else COL_SLOT_USED
@@ -913,3 +927,62 @@ func _input(event: InputEvent) -> void:
 	# Any click or key closes the loot box (the click still does its normal job).
 	if _loot and ((event is InputEventMouseButton and event.pressed) or (event is InputEventKey and event.pressed)):
 		_close_loot.call_deferred()
+
+
+func _build_pips(card: Dictionary) -> void:
+	for p: Dictionary in card.pips:
+		p.rect.queue_free()
+	card.pips.clear()
+	var h: Hero = card.hero
+	var px := 3
+	for lvl in h.stats.spell_slots.size():
+		for s in h.stats.spell_slots[lvl]:
+			var pip := ColorRect.new()
+			pip.position = Vector2(px, 48)
+			pip.size = Vector2(6, 3)
+			pip.color = COL_SLOT
+			pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			card.panel.add_child(pip)
+			card.pips.append({rect = pip, level = lvl, index = s})
+			px += 7 if h.stats.spell_slots[lvl] > 3 else 8
+		px += 4
+
+
+# --- level up (Progression) ------------------------------------------------------------------
+
+const LEVEL_W := 250
+
+## Level-ups after a fight: one box listing every hero that went up and what they gained, a
+## "LEVEL UP!" over each hero, sparkles, a fanfare. Closes like the loot box.
+func show_level_ups(ups: Array) -> void:
+	if ups.is_empty():
+		return
+	if _loot:
+		_loot.queue_free()
+	_loot = Panel.new()
+	_loot.add_theme_stylebox_override("panel", _box(COL_BG, COL_XP.darkened(0.2)))
+	_loot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_panel.get_parent().add_child(_loot)
+	var title := _label(_loot, Vector2(6, 3), COL_XP.lightened(0.3))
+	title.text = "LEVEL UP!"
+	var y := 16.0
+	var shown := {}
+	for u in ups:
+		var h: Hero = u.hero
+		var l := _label(_loot, Vector2(8, y), COL_BANNER)
+		l.text = "%s - level %d" % [h.display_name(), u.level]
+		y += 11
+		for g: String in u.gains:
+			var d := _label(_loot, Vector2(16, y), COL_TEXT)
+			d.text = g
+			y += 11
+		if not shown.has(h):
+			shown[h] = true
+			FloatText.spawn(combat.map, h.body_position() + Vector2(0, -16), "LEVEL UP!", COL_XP.lightened(0.3), 10)
+			SpellFx.sparkles(combat.map.entities, h.body_position(), COL_XP.lightened(0.2))
+	_loot.size = Vector2(LEVEL_W, y + 5)
+	_loot.position = Vector2(roundf((SCREEN.x - LEVEL_W) / 2.0), 50)
+	_loot_t = LOOT_TIME + 3.0
+	_loot.modulate.a = 0.0
+	create_tween().tween_property(_loot, "modulate:a", 1.0, 0.15)
+	Sfx.play("level_up")

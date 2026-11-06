@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_ejyky"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_fdqqo"]
+
+[sub_resource type="Resource" id="Resource_yrtwp"]
+script = ExtResource("1_ejyky")
+name = "Morningstar"
+damage = "1d8"
+damage_type = "piercing"
+
+[resource]
+resource_name = "Morningstar"
+script = ExtResource("2_fdqqo")
+id = "morningstar"
+display_name = "Morningstar"
+kind = 0
+description = "A spiked iron ball on a haft."
+value_gp = 15
+attack = SubResource("Resource_yrtwp")
+category = "martial"

@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_qfl0v"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_lm18j"]
+
+[sub_resource type="Resource" id="Resource_v7qp7"]
+script = ExtResource("1_qfl0v")
+name = "Scimitar +1"
+ability = 2
+
+[resource]
+resource_name = "Scimitar +1"
+script = ExtResource("2_lm18j")
+id = "scimitar_plus1"
+display_name = "Scimitar +1"
+kind = 0
+description = "A desert blade with a moon etched near the hilt.
+Magic: +1 to hit and damage."
+value_gp = 525
+magic_bonus = 1
+attack = SubResource("Resource_v7qp7")
+category = "martial"

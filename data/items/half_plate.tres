@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_1lus5"]
+
+[resource]
+resource_name = "Half Plate"
+script = ExtResource("1_1lus5")
+id = "half_plate"
+display_name = "Half Plate"
+kind = 1
+description = "Plates over most of the body. AC 15 + DEX (max 2). Noisy."
+value_gp = 750
+armor_type = "medium"
+base_ac = 15
+dex_cap = 2
+stealth_disadvantage = true

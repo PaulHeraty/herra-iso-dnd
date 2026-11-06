@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_4i3fp"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_1nrry"]
+
+[sub_resource type="Resource" id="Resource_lhmey"]
+script = ExtResource("1_4i3fp")
+name = "Mace of Disruption"
+damage_type = "bludgeoning"
+rider_damage = "2d6"
+rider_damage_type = "radiant"
+rider_vs = Array[String](["undead", "fiend"])
+
+[resource]
+resource_name = "Mace of Disruption"
+script = ExtResource("2_1nrry")
+id = "mace_of_disruption"
+display_name = "Mace of Disruption"
+kind = 0
+description = "Sunlight seems to cling to its golden head.
+Magic: +2d6 radiant damage against undead and fiends."
+value_gp = 4000
+icon = 38
+wondrous = true
+base_item = "mace"
+attack = SubResource("Resource_lhmey")

@@ -35,6 +35,9 @@ static func short_rest(party: Array) -> PackedStringArray:
 		for p: SpellData in h.stats.powers:
 			if p.recharge == SpellData.Recharge.SHORT_REST and p.uses > 0:
 				h.uses_left[p.id] = p.uses
+		var rec := arcane_recovery(h)
+		if rec != "":
+			out.append(rec)
 		if spent > 0:
 			out.append("%s spends %d hit %s: +%d HP (%d left)" % [h.display_name(), spent, "die" if spent == 1 else "dice", healed, h.hit_dice_left])
 		elif h.hp >= h.stats.max_hp:
@@ -42,6 +45,24 @@ static func short_rest(party: Array) -> PackedStringArray:
 		else:
 			out.append("%s has no hit dice left" % h.display_name())
 	return out
+
+
+## Arcane Recovery (SRD Wizard): once per long rest, on a short rest, regain expended spell slots
+## with a combined level up to half the wizard level (rounded up). Highest slots first.
+static func arcane_recovery(h: Actor) -> String:
+	if h.uses_left.get("arcane_recovery", 0) <= 0:
+		return ""
+	var budget := ceili(h.stats.level / 2.0)
+	var got: PackedStringArray = []
+	for lvl in range(mini(h.stats.spell_slots.size(), 5), 0, -1):
+		while budget >= lvl and h.slots_left[lvl - 1] < h.stats.spell_slots[lvl - 1]:
+			h.slots_left[lvl - 1] += 1
+			budget -= lvl
+			got.append(CombatManager.power_tag_level(lvl))
+	if got.is_empty():
+		return ""
+	h.uses_left["arcane_recovery"] = 0
+	return "%s: Arcane Recovery - %s-level slot%s back" % [h.display_name(), ", ".join(got), "" if got.size() == 1 else "s"]
 
 
 static func long_rest(party: Array) -> PackedStringArray:

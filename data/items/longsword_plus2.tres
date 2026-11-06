@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_bfipw"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_xug3e"]
+
+[sub_resource type="Resource" id="Resource_vyjm7"]
+script = ExtResource("1_bfipw")
+name = "Longsword +2"
+damage = "1d8"
+
+[resource]
+resource_name = "Longsword +2"
+script = ExtResource("2_xug3e")
+id = "longsword_plus2"
+display_name = "Longsword +2"
+kind = 0
+description = "An heirloom blade. Its edge has never been honed and never needed it.
+Magic: +2 to hit and damage."
+value_gp = 2015
+magic_bonus = 2
+attack = SubResource("Resource_vyjm7")
+category = "martial"

@@ -5,7 +5,7 @@ extends MapMarker
 ## cocoon, urn. Blocks movement (not sight) unless `blocks` is off. Art from
 ## tools/godot/gen_dungeon_art.gd. Drop it under Entities; pick the kind in the inspector.
 
-enum Kind { BARREL, CRATE, SARCOPHAGUS, RUBBLE, COCOON, URN }
+enum Kind { BARREL, CRATE, SARCOPHAGUS, RUBBLE, COCOON, URN, TREE_OAK, TREE_PINE, BUSH, BOULDER, STUMP, LOG, TENT, GRAVE }
 
 ## texture, feet offset (top-left of the image relative to the cell centre), shadow radius
 const KINDS := {
@@ -15,6 +15,15 @@ const KINDS := {
 	Kind.RUBBLE: ["rubble", Vector2(-16, -12), 0.0],
 	Kind.COCOON: ["cocoon", Vector2(-8, -22), 5.0],
 	Kind.URN: ["urn", Vector2(-7, -13), 4.0],
+	# outdoors (tools/godot/gen_outdoor_art.gd)
+	Kind.TREE_OAK: ["tree_oak", Vector2(-20, -54), 10.0],
+	Kind.TREE_PINE: ["tree_pine", Vector2(-16, -58), 8.0],
+	Kind.BUSH: ["bush", Vector2(-11, -13), 7.0],
+	Kind.BOULDER: ["boulder", Vector2(-14, -19), 0.0],
+	Kind.STUMP: ["stump", Vector2(-8, -10), 5.0],
+	Kind.LOG: ["log", Vector2(-15, -9), 0.0],
+	Kind.TENT: ["tent", Vector2(-18, -27), 0.0],
+	Kind.GRAVE: ["grave", Vector2(-7, -16), 4.0],
 }
 
 @export var kind := Kind.BARREL:
@@ -28,6 +37,25 @@ const KINDS := {
 		along_y = v
 		queue_redraw()
 @export var blocks := true
+
+## Kinds you can't see through (trees, boulders, tents): they block line of sight and fog sight.
+const SIGHT_BLOCKERS := [Kind.TREE_OAK, Kind.TREE_PINE, Kind.BOULDER, Kind.TENT]
+## Tall kinds fade when someone stands behind them (DungeonMap).
+const TALL := [Kind.TREE_OAK, Kind.TREE_PINE, Kind.TENT]
+
+
+func blocks_sight() -> bool:
+	return blocks and kind in SIGHT_BLOCKERS
+
+
+func is_tall() -> bool:
+	return kind in TALL
+
+
+## The sprite's box relative to the marker (for fading when a figure is behind it).
+func sprite_rect() -> Rect2:
+	var k: Array = KINDS[kind]
+	return Rect2(position + k[1], _texture().get_size())
 
 var _tex: Texture2D
 

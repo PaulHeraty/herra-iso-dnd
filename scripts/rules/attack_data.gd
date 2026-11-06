@@ -20,11 +20,19 @@ enum Ability { STR, DEX, FINESSE, SPELL }   ## FINESSE = better of STR/DEX; SPEL
 @export var magic_bonus := 0
 ## Monsters: the stat block's "+5 to hit"; -99 = compute it (heroes).
 @export var to_hit_override := -99
+## A magic weapon (any +N or a named one): gets through "resistant to nonmagical weapons".
+@export var magical := false
 ## Extra damage riding on a hit, e.g. the Giant Spider's poison (save for half). Empty = none.
 @export var rider_damage := ""
 @export var rider_damage_type := ""
 @export var rider_save := ""            ## ability of the save: "CON", "DEX"...
 @export var rider_dc := 0
+## A condition riding on a hit (save vs rider_dc with rider_save to avoid it; no save = always):
+## wolf bite -> prone (STR 11), ghoul claws -> paralyzed (CON 10, saves again each turn).
+@export var rider_condition := ""
+@export var rider_condition_rounds := -1
+## The rider damage only hits creatures of these types (Mace of Disruption: undead); empty = all.
+@export var rider_vs: Array[String] = []
 @export var sfx := ""                   ## sound id (assets/sfx/<id>.wav), "" = default
 
 const FT_PER_CELL := 5

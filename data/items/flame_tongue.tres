@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_12byr"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_fft4v"]
+
+[sub_resource type="Resource" id="Resource_ynyn5"]
+script = ExtResource("1_12byr")
+name = "Flame Tongue"
+damage = "1d8"
+rider_damage = "2d6"
+rider_damage_type = "fire"
+
+[resource]
+resource_name = "Flame Tongue"
+script = ExtResource("2_fft4v")
+id = "flame_tongue"
+display_name = "Flame Tongue"
+kind = 0
+description = "A longsword whose blade bursts into flame when drawn.
+Magic: +2d6 fire damage on every hit."
+value_gp = 5000
+icon = 37
+wondrous = true
+base_item = "longsword"
+attack = SubResource("Resource_ynyn5")
+category = "martial"

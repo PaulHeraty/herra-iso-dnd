@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_xnj14"]
+
+[resource]
+resource_name = "Dreadful Glare"
+script = ExtResource("1_xnj14")
+id = "dreadful_glare"
+display_name = "Dreadful Glare"
+description = "Recharge 5-6. A creature that meets its gaze makes a WIS save (DC 11) or is frightened until the end of its next turn."
+kind = 2
+range_ft = 60
+resolve = 1
+save_ability = "WIS"
+dc_override = 11
+condition = "frightened"
+condition_rounds = 2
+recharge = 3
+sfx = "ray_zap"
+vfx = "fear_ray"

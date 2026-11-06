@@ -450,7 +450,7 @@ func _compare(h: Hero, it: ItemData) -> PackedStringArray:
 	if it.kind == ItemData.Kind.WEAPON and not Equipment.is_trained(h.base_stats, it):
 		out.append(_c("%s isn't proficient: no proficiency bonus to hit." % h.display_name(), COL_WARN))
 	var new_eq := Equipment.with_item(h.equipment, it, slot)
-	var after := Equipment.build_stats(h.base_stats, new_eq)
+	var after := Equipment.build_stats(h.base_stats, new_eq, h.level)
 	var before := h.stats
 	var changes: PackedStringArray = []
 	if after.armor_class != before.armor_class:

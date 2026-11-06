@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/actors/monster.gd" id="1_m"]
+[ext_resource type="Texture2D" path="res://assets/sprites/monsters/giant_rat_sheet.png" id="2_t"]
+
+[node name="GiantRat" type="Node2D"]
+script = ExtResource("1_m")
+shadow_radius = 5.0
+body_height = 3.0
+monster_id = "giant_rat"
+anims = {
+"attack": [0, 6, 3, 9.0, false],
+"death": [0, 11, 6, 10.0, false],
+"hurt": [0, 9, 2, 10.0, false],
+"idle": [0, 0, 2, 1.5, true],
+"walk": [0, 2, 4, 10.0, true]
+}
+back_row_offset = 1
+death_fade_delay = 1.5
+hp_bar_y = -11.0
+hp_bar_w = 16
+
+[node name="Sprite" type="Sprite2D" parent="."]
+texture = ExtResource("2_t")
+centered = false
+offset = Vector2(-12, -14)
+hframes = 17
+vframes = 2

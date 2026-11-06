@@ -20,6 +20,10 @@ const DIR := "res://data/items/"
 ## Several of these share one bag slot (potions, scrolls, treasure).
 @export var stackable := false
 @export var magic_bonus := 0            ## +1 weapon / armour / shield
+## Magic without a +N (Flame Tongue, Mace of Disruption): shows as magic, beats "nonmagical" resistance.
+@export var wondrous := false
+## The plain item this one is a version of ("longsword" for Flame Tongue): training, slot rules.
+@export var base_item := ""
 @export_group("Weapon")
 @export var attack: AttackData          ## damage dice, ability, ranges (magic_bonus is added on top)
 @export var category := "simple"        ## "simple" / "martial"
@@ -49,6 +53,8 @@ const ICON_ORDER := [
 	"shield", "potion_healing", "potion_greater_healing", "ring_protection", "ring",
 	"ring_free_action", "ring_resistance",
 	"scroll", "key", "gem", "gold",
+	"scimitar", "battleaxe", "greataxe", "morningstar", "heavy_crossbow", "breastplate", "half_plate",
+	"potion_superior_healing", "flame_tongue", "mace_of_disruption", "ring_resistance_necrotic",
 ]
 const KIND_ICON := {
 	Kind.WEAPON: "longsword", Kind.ARMOR: "leather_armor", Kind.SHIELD: "shield",
@@ -72,13 +78,15 @@ func icon_index() -> int:
 
 ## The plain item a magic "+1" version is made from ("longsword_plus1" -> "longsword").
 func base_id() -> String:
-	return id.trim_suffix("_plus1")
+	if base_item != "":
+		return base_item
+	return id.trim_suffix("_plus1").trim_suffix("_plus2")
 
 
 ## Magic items: +N weapons / armour / shields and every ring. Their names show in the magic
 ## colour and their icons come from the sheet's second row (a blue glimmer around the picture).
 func is_magic() -> bool:
-	return magic_bonus > 0 or kind == Kind.RING
+	return magic_bonus > 0 or kind == Kind.RING or wondrous
 
 
 ## A 16x16 texture of the icon (a fresh AtlasTexture on the icon sheet).
