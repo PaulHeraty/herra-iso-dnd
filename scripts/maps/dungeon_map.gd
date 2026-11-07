@@ -61,6 +61,7 @@ var mech: Mechanisms
 var hud: CombatHud
 ## Save / load (F5 quick save, F6 save to a slot, F9 load).
 var save_screen: SaveScreen
+var help: HelpBox
 ## The victory screen (after Brannoc pays for the Wraith), made when first shown.
 var victory_screen: VictoryScreen
 ## Set by the intro: the next map to load fades in from black (a new game starts from it).
@@ -169,6 +170,11 @@ func _ready() -> void:
 	save_screen.name = "SaveScreen"
 	save_screen.map = self
 	add_child(save_screen)
+	help = HelpBox.new()
+	help.name = "HelpBox"
+	help.map = self
+	add_child(help)                   # last: it takes the keys first while a help box is up
+	help.setup(self)
 	Quest.note_map(scene_file_path)
 	_place_portals(false)
 	inventory.changed.connect(quest_check)
@@ -546,6 +552,7 @@ func _try_lock(thing: Node, what: String, by: Array[Hero]) -> bool:
 		Sfx.play("lock_click")
 		thing.locked = false
 		return true
+	HelpBox.tip("locked")
 	if thing.key_id != "" and thing.lock_dc <= 0:
 		combat._say("The %s is locked. It needs a key." % what)
 		Sfx.play("door_locked")
@@ -641,6 +648,7 @@ func _loot(chest: Chest) -> void:
 	SpellFx.sparkles(self, top + Vector2(0, 6), Color8(255, 220, 120), false)
 	if hud:
 		hud.show_loot(chest.gold, found)
+		HelpBox.tip("chest", hud._loot)
 
 
 func _on_door_opened() -> void:
@@ -690,6 +698,7 @@ func take_stairs(st: Stairs) -> void:
 	MapState.save(self)
 	PartyState.save(self)
 	MapState.next_entry = st.target_entry
+	HelpBox.arrived_by_stairs = true
 	get_tree().change_scene_to_file(st.target_map)
 
 

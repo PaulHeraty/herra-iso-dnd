@@ -632,6 +632,7 @@ func _open_powers() -> void:
 	var h := combat.current
 	if not h is Hero or combat.moving:
 		return
+	HelpBox.tip("spells")
 	if combat.targeting:
 		combat.cancel_targeting()
 	var rows := []
@@ -1208,6 +1209,7 @@ const TOAST_W := 280
 func quest_toast(stages: Array) -> void:
 	if stages.is_empty():
 		return
+	HelpBox.tip("quest")
 	if _toast:
 		_toast.queue_free()
 	_toast = Panel.new()

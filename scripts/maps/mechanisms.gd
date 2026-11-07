@@ -243,6 +243,7 @@ func _spotter(heroes: Array[Hero], cell: Vector2i, dc: int) -> Hero:
 
 
 func _found_trap(t: Trap, _by: Hero, line: String) -> void:
+	HelpBox.tip("trap_spotted")
 	t.spotted = true
 	map._refresh_fog_look()             # now it is drawn
 	_say(line)
@@ -254,6 +255,7 @@ func _found_trap(t: Trap, _by: Hero, line: String) -> void:
 
 
 func _found_secret(d: Door, line: String) -> void:
+	HelpBox.tip("secret_door")
 	d.found = true
 	if map.map_picture:
 		map.map_picture.dirty = true
@@ -313,6 +315,7 @@ func _searchable(heroes: Array[Hero], cell: Vector2i) -> bool:
 
 ## The trap goes off on `victim` (who stepped on it, or fumbled disarming it).
 func spring(t: Trap, victim: Actor) -> void:
+	HelpBox.tip("trap_sprung")
 	t.sprung = true
 	t.spotted = true
 	map._refresh_fog_look()
@@ -511,6 +514,7 @@ func fire(channel: String, on: bool) -> void:
 func pull(lever: Lever, who: Actor) -> void:
 	if _busy:
 		return
+	HelpBox.tip("puzzle")
 	if lever.role == "reset":
 		Sfx.play("lever")
 		lever.down = true
@@ -599,6 +603,7 @@ func update_plates(quiet := false) -> void:
 
 ## Light or douse a brazier; in a RING puzzle its two neighbours flip too.
 func toggle_brazier(b: Brazier) -> void:
+	HelpBox.tip("puzzle")
 	var p := puzzle_for(b.link)
 	if p and p.solved:
 		_say("The flames burn steady and bright. Best leave them be.")
@@ -708,6 +713,7 @@ func push_target(block: Prop, from: Vector2i) -> Vector2i:
 
 ## The leader pushes the block one cell on and steps into its place (the party follows).
 func push(block: Prop) -> void:
+	HelpBox.tip("puzzle")
 	if _combat().in_combat:
 		_say("No time for that now!")
 		return
@@ -733,6 +739,7 @@ func push(block: Prop) -> void:
 func talk_to_face(f: StoneFace) -> void:
 	if map.hud == null:
 		return
+	HelpBox.tip("riddle")
 	map.hud.close_screens()
 	map.hud.frame_speaker(f)
 	var bye := {text = "Leave", call = map.hud.dialogue.close, bye = true}
@@ -816,6 +823,7 @@ func check_triggers() -> bool:
 
 ## The ambush: the seal drops, the hidden monsters appear and the fight starts (or they join it).
 func spring_ambush(t: Trigger) -> void:
+	HelpBox.tip("ambush")
 	t.fired = true
 	if map.controller:
 		map.controller.stop()
@@ -887,6 +895,7 @@ func after_combat() -> void:
 func read_lore(n: LoreNote) -> void:
 	if map.hud == null:
 		return
+	HelpBox.tip("lore")
 	map.hud.close_screens()
 	var first := not n.read
 	n.read = true
