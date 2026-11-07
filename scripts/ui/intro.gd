@@ -50,7 +50,7 @@ var _module: AdventureModule
 func _ready() -> void:
 	size = SCREEN
 	Settings.apply()
-	Music.stop(1.0)                          # (a title tune comes later)
+	Music.stop(1.0)                          # silent through the splash; the title tune starts with the name
 	theme = CombatHud.make_theme()
 	var bg := ColorRect.new()
 	bg.size = SCREEN
@@ -199,6 +199,7 @@ func _game_title(l: Control, y: float, k: int) -> void:
 
 func _title() -> void:
 	_stage = Stage.TITLE
+	Music.play("title", 2.0)
 	var l := _new_layer()
 	_game_title(l, 128, 5)
 	var sub := _label(l, Vector2.ZERO, CombatHud.COL_TEXT)
@@ -218,6 +219,7 @@ func _title() -> void:
 
 func _menu() -> void:
 	_stage = Stage.MENU
+	Music.play("title", 1.0)                 # (already on unless the title was skipped)
 	var l := _new_layer()
 	_game_title(l, 60, 4)
 	var y := 170.0
@@ -494,6 +496,7 @@ func _leave_to(scene: String, from_black: bool) -> void:
 		_typing.kill()
 	if _tween:
 		_tween.kill()
+	Music.stop(1.0)                          # the map starts its own track
 	var tw := create_tween()
 	tw.tween_property(_black, "color:a", 1.0, 1.0 if from_black else 0.5)
 	tw.tween_interval(0.3)

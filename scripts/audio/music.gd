@@ -12,7 +12,9 @@ const DIR := "res://assets/music/"
 const BUS := "Music"
 const FADE := 1.5
 ## Track level trims in dB (music sits under the effects).
-const TRIM := {"dungeon": -9.0, "combat": -10.0}
+## Matched by RMS (gen_music.gd prints it): each track lands near -26 dBFS before the Music bus.
+const TRIM := {"dungeon": -9.0, "combat": -10.0, "woods": -10.5, "frost": -9.0, "tower": -11.0,
+		"boss": -10.0, "title": -10.5}
 const FALLBACK := {"tower": "dungeon", "boss": "combat"}
 ## Monsters whose fight plays "boss".
 const BOSSES: Array[String] = ["eye_tyrant", "wraith", "young_white_dragon", "frost_wizard"]

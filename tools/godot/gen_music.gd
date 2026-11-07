@@ -17,6 +17,9 @@ const INST := {
 	"arp": {"wave": "pulse", "duty": 0.125, "a": 0.004, "d": 0.18, "s": 0.0, "r": 0.05},
 	"bass_tri": {"wave": "tri", "a": 0.01, "d": 0.6, "s": 0.7, "r": 0.15},
 	"bass_pulse": {"wave": "pulse", "duty": 0.5, "a": 0.004, "d": 0.12, "s": 0.5, "r": 0.03},
+	"flute": {"wave": "tri", "a": 0.035, "d": 0.3, "s": 0.75, "r": 0.14, "vib": 0.012, "vib_hz": 5.0, "vib_delay": 0.15},
+	"pluck": {"wave": "pulse", "duty": 0.25, "a": 0.002, "d": 0.22, "s": 0.0, "r": 0.05},
+	"bell": {"wave": "tri", "a": 0.002, "d": 0.9, "s": 0.12, "r": 0.6},
 	"pad": {"wave": "pulse", "duty": 0.5, "a": 0.35, "d": 0.5, "s": 0.6, "r": 0.6, "vib": 0.004, "vib_hz": 3.5, "vib_delay": 0.0},
 }
 
@@ -27,14 +30,30 @@ const MINOR := [0, 3, 7]
 
 
 func _init() -> void:
-	var all := {"dungeon": _song_dungeon, "combat": _song_combat}
+	var all := {"dungeon": _song_dungeon, "combat": _song_combat, "woods": _song_woods,
+			"frost": _song_frost, "tower": _song_tower, "boss": _song_boss, "title": _song_title}
 	var only := OS.get_cmdline_user_args()
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
 	for nm: String in all:
 		if only.is_empty() or nm in only:
 			var song: Dictionary = (all[nm] as Callable).call()
+			if not _check(nm, song):
+				continue
 			_save(nm, _render(song), song.get("peak", 0.8))
 	quit()
+
+
+## Every channel's line must be exactly `steps` tokens long (a bar with a token too many or too few
+## would shift everything after it).
+func _check(nm: String, song: Dictionary) -> bool:
+	var ok := true
+	for i in song.channels.size():
+		var ch: Dictionary = song.channels[i]
+		var n: int = (ch.drums if ch.has("drums") else ch.notes).split(" ", false).size()
+		if n != song.steps:
+			push_error("%s: channel %d has %d steps, not %d" % [nm, i, n, song.steps])
+			ok = false
+	return ok
 
 
 # --- songs -----------------------------------------------------------------------------------------
@@ -148,6 +167,263 @@ func _song_combat() -> Dictionary:
 		],
 		"peak": 0.8,
 	}
+
+
+## The Harrow Woods: a folk tune in G, 96 BPM, 8th-note steps, 16 bars (~40 s). A triangle "flute"
+## lead, a plucked 25% arpeggio, a bouncing root-5th triangle bass, soft hats on the off-beats.
+func _song_woods() -> Dictionary:
+	var chords := ["G", "G", "Em", "Em", "C", "D", "G", "G",
+			"Em", "Em", "C", "C", "Am", "D", "G", "D"]
+	var lead := [
+		"D5 - B4 - D5 - G5 -",
+		"F#5 - E5 - D5 - - -",
+		"B4 - E5 - G5 - F#5 E5",
+		"D5 - - - B4 - - -",
+		"C5 - E5 - G5 - E5 -",
+		"F#5 - E5 - D5 - A4 -",
+		"B4 - - - G4 - A4 B4",
+		"G4 - - - - - . .",
+		". . E5 - F#5 - G5 -",
+		"B5 - A5 - G5 - E5 -",
+		"G5 - - - E5 - C5 -",
+		"E5 - D5 - C5 - - -",
+		"A4 - C5 - E5 - A5 -",
+		"F#5 - - - E5 - D5 -",
+		"D5 - B4 - G4 - B4 -",
+		"A4 - - - D5 - - .",
+	]
+	var arp := []
+	var bass := []
+	for c in chords:
+		var r := _chord_root(c, 4)
+		var iv := _chord_iv(c)
+		for k in [0, iv[2], 12, iv[1] + 12, iv[2] + 12, iv[1] + 12, 12, iv[2]]:
+			arp.append(_name(r + k))
+		var r2 := _chord_root(c, 2)
+		bass.append_array([_name(r2), "-", _name(r2 + 7), "-", _name(r2 + 12), "-", _name(r2 + 7), "-"])
+	var drums := ""
+	for i in chords.size():
+		drums += "t . h . . . h . " if i % 2 == 0 else ". . h . . . h h "
+	return {
+		"bpm": 96.0, "steps_per_beat": 2, "steps": chords.size() * 8,
+		"channels": [
+			{"inst": "flute", "notes": " ".join(lead), "vol": 0.46, "echo": [3, 0.25, 0.3]},
+			{"inst": "pluck", "notes": " ".join(arp), "vol": 0.09, "echo": [3, 0.2, 0.25]},
+			{"inst": "bass_tri", "notes": " ".join(bass), "vol": 0.40},
+			{"drums": drums, "vol": 0.20},
+		],
+		"peak": 0.75,
+	}
+
+
+## The Frostfell: cold and wide open, B minor at 66 BPM, 8th-note steps, 16 bars (~58 s). Slow
+## pulse pads (two voices), long triangle bass notes, a high bell melody with a long echo, and
+## gusts of wind (filtered noise) every four bars.
+func _song_frost() -> Dictionary:
+	var chords := ["Bm", "Bm", "G", "G", "Em", "Em", "F#", "F#",
+			"Bm", "Bm", "D", "D", "G", "Em", "F#", "F#"]
+	var lead := [
+		". . . . F#5 - - -",
+		"B5 - - - A5 - F#5 -",
+		"G5 - - - - - . .",
+		". . D5 - E5 - F#5 -",
+		"G5 - - - F#5 - E5 -",
+		"B4 - - - - - . .",
+		". . C#5 - E5 - F#5 -",
+		"A#4 - - - C#5 - - -",
+		"B4 - - - D5 - F#5 -",
+		"B5 - - - - - A5 -",
+		"F#5 - - - A5 - D6 -",
+		"C#6 - - - A5 - - -",
+		"B5 - - - G5 - D5 -",
+		"E5 - - - G5 - B5 -",
+		"A#5 - - - F#5 - C#5 -",
+		"F#5 - - - - - . .",
+	]
+	var drums := ""
+	for i in chords.size():
+		drums += "w . . . . . . . " if i % 4 == 0 else ". . . . . . . . "
+	return {
+		"bpm": 66.0, "steps_per_beat": 2, "steps": chords.size() * 8,
+		"channels": [
+			{"inst": "bell", "notes": " ".join(lead), "vol": 0.40, "echo": [3, 0.45, 0.5]},
+			{"inst": "pad", "notes": _held(chords, 4, 1, 8), "vol": 0.07},
+			{"inst": "pad", "notes": _held(chords, 4, 2, 8), "vol": 0.06},
+			{"inst": "bass_tri", "notes": _held(chords, 2, 0, 8), "vol": 0.40},
+			{"drums": drums, "vol": 0.30},
+		],
+		"peak": 0.72,
+	}
+
+
+## The Rimecaller's tower: arcane clockwork, C minor at 88 BPM, 16th-note steps, 16 bars (~44 s).
+## A ticking 16th arpeggio (the orrery), a soft lead in 8ths, a triangle bass and a clock of hats.
+func _song_tower() -> Dictionary:
+	var chords := ["Cm", "Cm", "Ab", "Ab", "Fm", "Fm", "G", "G",
+			"Cm", "Cm", "Ab", "Bb", "Fm", "Db", "G", "G"]
+	var lead8 := [
+		"G4 - C5 - D5 - Eb5 -",
+		"D5 - C5 - G4 - - -",
+		"Ab4 - C5 - Eb5 - G5 -",
+		"F5 - Eb5 - C5 - - -",
+		"F4 - Ab4 - C5 - F5 -",
+		"Eb5 - D5 - C5 - Ab4 -",
+		"B4 - - - D5 - F5 -",
+		"Eb5 - D5 - B4 - - -",
+		"C5 - Eb5 - G5 - C6 -",
+		"B5 - G5 - Eb5 - D5 -",
+		"C5 - - - Eb5 - Ab5 -",
+		"G5 - F5 - D5 - Bb4 -",
+		"Ab5 - G5 - F5 - C5 -",
+		"Db5 - F5 - Ab5 - F5 -",
+		"G5 - F5 - D5 - B4 -",
+		"D5 - - - B4 - - -",
+	]
+	var arp := []
+	var bass := []
+	for c in chords:
+		var r := _chord_root(c, 4)
+		var iv := _chord_iv(c)
+		for rep in 2:
+			for k in [0, iv[1], iv[2], 12, iv[1] + 12, 12, iv[2], iv[1]]:
+				arp.append(_name(r + k))
+		var r2 := _chord_root(c, 2)
+		bass.append_array([_name(r2), "-", "-", "-", _name(r2 + 7), "-", "-", "-",
+				_name(r2 + 12), "-", _name(r2 + 7), "-", _name(r2), "-", "-", "-"])
+	var drums := ""
+	for i in chords.size():
+		drums += ("t" if i % 2 == 0 else "h") + " . . . h . . . h . . . h . . . "
+	return {
+		"bpm": 88.0, "steps_per_beat": 4, "steps": chords.size() * 16,
+		"channels": [
+			{"inst": "lead_soft", "notes": " ".join(_double(lead8)), "vol": 0.28, "echo": [6, 0.35, 0.4]},
+			{"inst": "arp", "notes": " ".join(arp), "vol": 0.08, "echo": [3, 0.3, 0.3]},
+			{"inst": "bass_tri", "notes": " ".join(bass), "vol": 0.40},
+			{"drums": drums, "vol": 0.20},
+		],
+		"peak": 0.75,
+	}
+
+
+## Boss fights: D minor at 160 BPM, 16th-note steps, 16 bars (24 s). A 16th pedal bass, the lead
+## doubled an octave down, a fast arpeggio, heavy drums with fills. Ends on A (the dominant) so the
+## loop drives back into the top.
+func _song_boss() -> Dictionary:
+	var chords := ["Dm", "Dm", "Bb", "C", "Dm", "Dm", "Gm", "A",
+			"Bb", "Bb", "Gm", "Gm", "Eb", "Eb", "A", "A"]
+	var lead8 := [
+		"D5 - - - A4 - D5 -",
+		"F5 - E5 - D5 - A4 -",
+		"Bb4 - D5 - F5 - - -",
+		"E5 - - - C5 - E5 -",
+		"A5 - - - F5 - D5 -",
+		"A5 - Bb5 - A5 - F5 -",
+		"G5 - - - D5 - Bb4 -",
+		"C#5 - E5 - A5 - - -",
+		"D6 - - - Bb5 - F5 -",
+		"D6 C6 Bb5 - A5 - F5 -",
+		"G5 - - - Bb5 - D6 -",
+		"C6 Bb5 A5 - G5 - - -",
+		"G5 - - - Eb5 - Bb4 -",
+		"Eb5 - F5 - G5 - Bb5 -",
+		"A5 - - - C#6 - - -",
+		"E5 - G5 - C#5 - A4 -",
+	]
+	var lead := _double(lead8)
+	var low := []
+	for t: String in lead:
+		low.append(t if t in ["-", "."] else _name(_midi(t) - 12))
+	var arp := []
+	var bass := []
+	for c in chords:
+		var r4 := _chord_root(c, 4)
+		var iv := _chord_iv(c)
+		for s in 16:
+			arp.append(_name(r4 + [0, iv[1], iv[2], 12, iv[2], iv[1]][s % 6]))
+		var r2 := _chord_root(c, 2)
+		for k in [0, 0, 12, 0, 0, 0, 12, 0, 0, 0, 12, 0, 7, 0, 12, 10]:
+			bass.append(_name(r2 + k))
+	var drums := ""
+	for i in chords.size():
+		if i % 4 == 3:
+			drums += "K . S . K S . S K S S S S S S S "
+		else:
+			drums += "K . h K S . h . K K h . S . h h "
+	return {
+		"bpm": 160.0, "steps_per_beat": 4, "steps": chords.size() * 16,
+		"channels": [
+			{"inst": "lead", "notes": " ".join(lead), "vol": 0.24, "echo": [3, 0.2, 0.22]},
+			{"inst": "lead_soft", "notes": " ".join(low), "vol": 0.12},
+			{"inst": "arp", "notes": " ".join(arp), "vol": 0.06},
+			{"inst": "bass_pulse", "notes": " ".join(bass), "vol": 0.22},
+			{"drums": drums, "vol": 0.42},
+		],
+		"peak": 0.82,
+	}
+
+
+## The start screen: a heroic march in C, 100 BPM, 8th-note steps, 16 bars (~38 s). A 25% lead with
+## an echo, pads, a triangle bass on the beats, a soft march of kick, snare and hats.
+func _song_title() -> Dictionary:
+	var chords := ["C", "C", "Am", "Am", "F", "G", "C", "C",
+			"F", "F", "Dm", "G", "Am", "F", "G", "G"]
+	var lead := [
+		"C5 - - - G4 - C5 -",
+		"E5 - - - D5 C5 D5 -",
+		"E5 - - - A4 - C5 -",
+		"E5 - - - - - . .",
+		"F5 - - - E5 - D5 -",
+		"D5 - - - B4 - G4 -",
+		"C5 - E5 - G5 - - -",
+		"G5 - - - - - . .",
+		"A5 - - - G5 - F5 -",
+		"C5 - - - F5 - A5 -",
+		"A5 - - - F5 - D5 -",
+		"G5 - F5 - E5 - D5 -",
+		"E5 - - - C5 - A4 -",
+		"F5 - - - A5 - C6 -",
+		"B5 - - - G5 - D5 -",
+		"D5 - - - B4 - - -",
+	]
+	var bass := []
+	for c in chords:
+		var r2 := _chord_root(c, 2)
+		bass.append_array([_name(r2), "-", _name(r2 + 12), "-", _name(r2 + 7), "-", _name(r2 + 12), "-"])
+	var drums := ""
+	for i in chords.size():
+		drums += "K . h . S . h . " if i % 4 != 3 else "K . h . S . S S "
+	return {
+		"bpm": 100.0, "steps_per_beat": 2, "steps": chords.size() * 8,
+		"channels": [
+			{"inst": "lead", "notes": " ".join(lead), "vol": 0.26, "echo": [3, 0.3, 0.32]},
+			{"inst": "pad", "notes": _held(chords, 4, 1, 8), "vol": 0.06},
+			{"inst": "pad", "notes": _held(chords, 4, 2, 8), "vol": 0.05},
+			{"inst": "bass_tri", "notes": " ".join(bass), "vol": 0.40},
+			{"drums": drums, "vol": 0.22},
+		],
+		"peak": 0.75,
+	}
+
+
+## 8th-note bars -> 16th steps (each token held for 2 steps).
+func _double(bars: Array) -> Array:
+	var out := []
+	for bar: String in bars:
+		for tok in bar.split(" ", false):
+			out.append(tok)
+			out.append("-" if tok != "." else ".")
+	return out
+
+
+## One chord tone (0 root, 1 third, 2 fifth) held through each bar, tied over repeated chords.
+func _held(chords: Array, octave: int, tone: int, per_bar: int) -> String:
+	var out := []
+	for i in chords.size():
+		var tie: bool = i > 0 and chords[i] == chords[i - 1]
+		out.append("-" if tie else _name(_chord_root(chords[i], octave) + _chord_iv(chords[i])[tone]))
+		for s in per_bar - 1:
+			out.append("-")
+	return " ".join(out)
 
 
 # --- notes -----------------------------------------------------------------------------------------
@@ -315,6 +591,19 @@ func _drum(buf: PackedFloat32Array, kind: String, at: int) -> void:
 				lp += 0.35 * (w - lp)
 				var tone := sin(TAU * 190.0 * i / RATE) * pow(1.0 - t, 6.0) * 0.5
 				buf[(at + i) % total] += ((w - lp) * 0.9 + tone) * pow(1.0 - t, 3.0)
+		"w":                                    # a gust of wind: noise through a sweeping resonant band-pass
+			var n := int(4.0 * RATE)
+			var low := 0.0
+			var band := 0.0
+			for i in n:
+				var t := float(i) / n
+				var fc := 450.0 + 900.0 * sin(PI * t) + 250.0 * sin(TAU * 3.0 * t)
+				var f := 2.0 * sin(PI * fc / RATE)
+				var w := _rng.randf_range(-1.0, 1.0)
+				low += f * band
+				var high := w - low - 0.35 * band
+				band += f * high
+				buf[(at + i) % total] += band * 0.25 * pow(sin(PI * t), 2.0)
 		"h":                                    # closed hat: bright noise, very short
 			var n := int(0.035 * RATE)
 			var prev := 0.0
