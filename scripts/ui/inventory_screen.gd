@@ -411,8 +411,9 @@ func _hover_slot(slot: String) -> void:
 		_info_title.add_theme_color_override("font_color", CombatHud.COL_TEXT)
 		_info_sub.text = ""
 		var what := {main = "a melee weapon", off = "a shield", ranged = "a bow, crossbow or throwing axe",
-				armor = "armour", ring1 = "a ring", ring2 = "a ring"}
-		_info_body.text = "[color=#%s]Drag %s here from the bag.[/color]" % [CombatHud.COL_DIM.to_html(false), what[slot]]
+				armor = "armour", ring1 = "a ring", ring2 = "a ring",
+				worn1 = "a cloak, amulet, gauntlets, bracers or headband", worn2 = "a cloak, amulet, gauntlets, bracers or headband"}
+		_info_body.text = "[color=#%s]Drag %s here from the bag.[/color]" % [CombatHud.COL_DIM.to_html(false), what.get(slot, "an item")]
 
 
 func _hover_none() -> void:
