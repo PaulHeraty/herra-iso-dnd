@@ -21,8 +21,9 @@ const STATS := {
 }
 const WALK_OFFSET := Vector2(-16, -30)       ## HeroLook walk cells are 32x32 like the action cells
 const ACTION_OFFSET := Vector2(-16, -30)
-const ACTION_COLS := 16
-## Action sheet animations: [first column, frame count, fps]. Must match gen_hero_actions.gd.
+const ACTION_COLS := 19            ## HeroLook action sheets (the static default-kit files have 16: no throw)
+## Action sheet animations: [first column, frame count, fps]. Must match HeroLook (and gen_hero_actions.gd
+## for columns 0-15). throw: wind-up with the ranged weapon, release (it flies), follow-through.
 ## cast: frame 0 = raise, then frames 1-3 loop until end_action(). down: holds its last frame
 ## (lying) until the hero gets up.
 const ACTION_ANIMS := {
@@ -31,6 +32,7 @@ const ACTION_ANIMS := {
 	"cast": [7, 4, 9.0],
 	"hurt": [11, 2, 8.0],
 	"down": [13, 3, 9.0],
+	"throw": [16, 3, 9.0],
 }
 ## Spells leave from here while casting (world px from the feet, front / back view, unmirrored):
 ## the Mage's raised staff gem, the Cleric's lifted holy symbol.
@@ -109,7 +111,11 @@ func _use_walk_sheet() -> void:
 # --- actions ---------------------------------------------------------------------------------
 
 func has_action(anim: String) -> bool:
-	return _action_tex != null and ACTION_ANIMS.has(anim)
+	return _action_tex != null and ACTION_ANIMS.has(anim) and ACTION_ANIMS[anim][0] + ACTION_ANIMS[anim][1] <= _action_cols()
+
+
+func _action_cols() -> int:
+	return _action_tex.get_width() / 32 if _action_tex else ACTION_COLS
 
 
 ## Play an action animation (no-op without an action sheet). attack / shoot / hurt return to
@@ -122,7 +128,7 @@ func play_action(anim: String) -> void:
 	sprite.rotation_degrees = 0.0
 	if _action == "":
 		sprite.texture = _action_tex
-		sprite.hframes = ACTION_COLS
+		sprite.hframes = _action_cols()
 		sprite.vframes = 2
 		sprite.offset = ACTION_OFFSET
 	_action = anim
@@ -135,7 +141,7 @@ func action_hit_time(anim: String) -> float:
 	if not has_action(anim):
 		return 0.0
 	var a: Array = ACTION_ANIMS[anim]
-	return (1.0 if anim == "attack" else 2.0) / a[2]
+	return (1.0 if anim in ["attack", "throw"] else 2.0) / a[2]
 
 
 func current_action() -> String:
@@ -187,7 +193,7 @@ func _show_action_frame() -> void:
 		i = 0 if n == 0 else 1 + (n - 1) % (a[1] - 1)
 	else:
 		i = mini(n, a[1] - 1)
-	sprite.frame = _row * ACTION_COLS + a[0] + i
+	sprite.frame = _row * _action_cols() + a[0] + i
 
 
 func _update_facing_visual() -> void:
@@ -333,6 +339,7 @@ func _refresh_look() -> void:
 		_use_walk_sheet()
 	else:
 		sprite.texture = _action_tex
+		sprite.hframes = _action_cols()
 	sprite.frame = fr
 	_setup_fx()
 

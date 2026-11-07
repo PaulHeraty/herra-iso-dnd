@@ -30,7 +30,7 @@ func _map() -> DungeonMap:
 
 
 func _clean() -> void:
-	for i in range(1, SaveGame.SLOTS + 1):
+	for i in range(SaveGame.QUICK, SaveGame.SLOTS + 1):
 		if FileAccess.file_exists(SaveGame.slot_path(i)):
 			DirAccess.remove_absolute(SaveGame.slot_path(i))
 
@@ -129,9 +129,26 @@ func _run() -> void:
 	_check(d2.is_open, "the opened door stays open")
 	_check(m.fog.explored.size() == explored, "explored cells kept (%d)" % m.fog.explored.size())
 
-	# --- the screen: F5 pauses, a typed name, Enter saves ---
+	# --- F5: the quick save (no screen, always the same file) ---
+	_check(SaveGame.slot_path(SaveGame.QUICK).ends_with("quick-save.sav"), "the quick save is its own file (quick-save.sav)")
+	m.save_screen.quick_save()
+	var q1 := SaveGame.info(SaveGame.QUICK)
+	_check(not m.save_screen.visible and q1.get("name") == SaveGame.QUICK_NAME, "F5 quick saves without opening a screen")
+	_check(SaveGame.default_name() == "save003", "the quick save doesn't use up a default name (%s)" % SaveGame.default_name())
+	m.inventory.add_gold(5)
+	m.save_screen.quick_save()
+	_check(SaveGame.info(SaveGame.QUICK).get("gold") == m.inventory.gold, "F5 again overwrites the quick save")
+	var files := DirAccess.get_files_at(SaveGame.dir)
+	_check(files.size() == 3 and "quick-save.sav" in files, "on disk: the quick save + the 2 used slots (%s)" % [files])
+	m.save_screen.open(false)
+	_check(m.save_screen._rows[SaveGame.QUICK].visible and m.save_screen.selected == SaveGame.QUICK, "the load screen lists the quick save (the newest, picked)")
+	m.save_screen.close()
+	m.inventory.add_gold(-5)
+
+	# --- F6: the save screen, a typed name, Enter saves ---
 	m.save_screen.open(true)
-	_check(m.save_screen.visible and paused, "F5 screen opens and pauses the game")
+	_check(m.save_screen.visible and paused, "F6 screen opens and pauses the game")
+	_check(not m.save_screen._rows[SaveGame.QUICK].visible, "the save screen shows only the 3 slots")
 	_check(m.save_screen.selected == 1, "save screen picks the first empty slot")
 	m.save_screen._name.text = "From the screen"
 	m.save_screen.confirm()

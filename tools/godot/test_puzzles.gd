@@ -1,7 +1,8 @@
 extends SceneTree
 ## Phase 6 test: traps (spotting, paths round them, disarming, springing), Search, secret doors,
 ## levers + portcullises, the lever sequence, blocks + plates (and the reset lever), the brazier
-## ring, the riddle face, room notes, an alarm, and all of it kept by MapState. Prints PASS/FAIL.
+## ring, the riddle face, room notes, an alarm, ambushes (a sealing one, a drop), lore + the journal,
+## a mimic, and all of it kept by MapState. Prints PASS/FAIL.
 ## Needs a window (no --headless), e.g.:
 ##   HERRA_AUTO_REACT=1 tools/run_godot.sh -t 120 --path . -s res://tools/godot/test_puzzles.gd
 ## Uses the campaign maps built by modules/wraith_below/build_maps.gd; things are found by name
@@ -348,6 +349,75 @@ func _run() -> void:
 	_check(face.solved, "the right answer")
 	await create_timer(0.3).timeout
 	_check(hoard.found and hoard.is_open, "the secret door to the kings' hoard grinds open")
+
+	# --- ambushes, lore, a mimic (Phase 6 step 4) --------------------------------------------------
+	m = await _open("res://modules/wraith_below/maps/dungeon_1.tscn")
+	var amb: Trigger = _named(m, "Ambush_O")
+	var lurkers: Array = _all(m, MonsterSpawn).filter(func(s): return s.ambush == amb.link)
+	_check(amb != null and lurkers.size() == 2 and lurkers.all(func(s): return s.lurking() and s.monster == null),
+			"floor 1: two hidden guardians wait in the Lords' Vault")
+	_check(not m.monsters.any(func(x): return x.stats.id == "animated_armor"), "... not spawned (nothing to see or bump into)")
+	var gate1: Door = null
+	for d: Door in _all(m, Door):
+		if d.link == amb.seal:
+			gate1 = d
+	gate1.open()
+	var ar := amb.area()
+	var vault_cells: Array[Vector2i] = []
+	for x in range(ar.position.x + 1, ar.end.x - 1):
+		for y in range(ar.position.y + 2, ar.end.y - 1):
+			if m.terrain_walkable(Vector2i(x, y)) and not lurkers.any(func(s): return s.get_cell() == Vector2i(x, y)):
+				vault_cells.append(Vector2i(x, y))
+	var at_gate: Vector2i = gate1.sides()[0] if not ar.has_point(gate1.sides()[0]) else gate1.sides()[1]
+	for i in m.party.size():
+		m.party[i].place_at(vault_cells[i] if i < 3 else at_gate)
+	m.update_fog()
+	m.mech.check_triggers()
+	_check(not amb.fired, "the sealing ambush waits while a hero is still outside")
+	m.party[3].place_at(vault_cells[3])
+	m.update_fog()
+	_check(m.mech.check_triggers() and amb.fired, "... and springs once the whole party is in")
+	var armours: Array = m.monsters.filter(func(x): return x.stats.id == "animated_armor")
+	_check(armours.size() == 2 and armours.all(func(x): return x.visible and x.is_alive()), "two suits of animated armour appear")
+	_check(not gate1.is_open, "the portcullis drops behind the party")
+	await create_timer(1.0).timeout
+	_check(m.combat.in_combat or m.combat._starting, "... and the fight starts")
+	var st1 := MapState.snapshot(m)
+	_check(st1.get("marks", {}).has(String(amb.name)) and st1.marks.has(String(lurkers[0].name)), "MapState keeps the sprung ambush and its woken guardians")
+	for x in armours:
+		x.take_damage(999)
+	m.combat.end_combat()
+	m.mech.after_combat()
+	await create_timer(0.8).timeout
+	_check(amb.done and gate1.is_open, "the guardians destroyed: the portcullis rises again")
+	# lore
+	var letter: LoreNote = _named(m, "Lore_A_0")
+	_check(letter != null and letter.kind == LoreNote.Kind.REMAINS and not letter.read, "floor 1: a dead miner's letter in the entrance hall")
+	_check(not m.terrain_walkable(letter.get_cell()), "it takes up its cell")
+	_check(m.mech.thing_under(IsoGrid.cell_to_world(letter.get_cell())) == letter, "it can be clicked")
+	var n_lore := Quest.lore.size()
+	m.mech.read_lore(letter)
+	_check(letter.read and m.hud.dialogue.visible and Quest.lore.size() == n_lore + 1, "reading it: the dialogue box + a journal entry")
+	m.hud.dialogue.close()
+	m.mech.read_lore(letter)
+	m.hud.dialogue.close()
+	_check(Quest.lore.size() == n_lore + 1, "reading it again doesn't add it twice")
+	_check(Quest.to_dict().lore.size() == n_lore + 1, "the journal is saved with the story")
+	# a drop ambush on floor 2 (no seal: one hero walking in is enough)
+	m = await _open("res://modules/wraith_below/maps/dungeon_2.tscn")
+	var web: Trigger = _named(m, "Ambush_J")
+	_check(web != null and web.how == Trigger.How.DROP and not web.whole_party, "floor 2: spiders waiting overhead in the Silk Gallery")
+	var wc := web.area().get_center()
+	m.party[0].place_at(wc)
+	for i in range(1, m.party.size()):
+		m.party[i].place_at(Vector2i(-300 - i * 3, -300))
+	m.update_fog()
+	m.mech.check_triggers()
+	_check(web.fired and m.monsters.filter(func(x): return x.stats.id == "giant_spider" and DungeonMap.grid_distance(x.cell, wc) < 9).size() >= 2,
+			"one hero walks in: the spiders drop")
+	# floor 4: a mimic among the chests
+	m = await _open("res://modules/wraith_below/maps/dungeon_4.tscn")
+	_check(_all(m, Chest).any(func(c): return c.mimic), "floor 4: one of the chests is a mimic")
 
 	# --- the woods: the first trap ----------------------------------------------------------------------
 	m = await _open("res://modules/wraith_below/maps/surface.tscn")

@@ -22,6 +22,12 @@ extends RefCounted
 ##   link options    {secret = true, sdc, link}: a secret door (on the SECOND room's wall: list the
 ##                   hidden room first); {gate = "name"}: a portcullis opened by the puzzle whose
 ##                   `opens` (or lever whose link) is "name"; {trap = {...}}: a trap mid-corridor
+##                   {seal = "name"}: a portcullis standing open that an ambush (below) drops
+##   ambush          {spawn = "aa", how = step / rise / drop, text, seal = "name", at = [cells]}: hidden
+##                   monsters that appear when the party walks in (a Trigger over the room; with `seal`
+##                   it waits until the whole party is inside, then drops the links with that seal)
+##   lore            [{kind = book / tablet / remains, at = cell (or auto: by the back-left wall), title, text}]
+##                   things to read (LoreNote); the journal keeps them
 ## THE WOODS are clearings joined by dirt paths; every cell near them is a block of forest (or
 ## cliff in the cliff zones), so the clearings read as glades in a dense wood.
 
@@ -36,6 +42,7 @@ const TRAP_TYPES := {"spikes": Trap.TrapType.SPIKES, "darts": Trap.TrapType.DART
 ## default damage type, one_shot
 const TRAP_DEFAULTS := {"spikes": ["piercing", false], "darts": ["poison", false], "fire": ["fire", false],
 	"pit": ["bludgeoning", true], "alarm": ["", true]}
+const LORE_KINDS := {"book": LoreNote.Kind.BOOK, "tablet": LoreNote.Kind.TABLET, "remains": LoreNote.Kind.REMAINS}
 const SYMBOLS := {"sun": Lever.Symbol.SUN, "moon": Lever.Symbol.MOON, "star": Lever.Symbol.STAR,
 	"skull": Lever.Symbol.SKULL, "eye": Lever.Symbol.EYE}
 
@@ -96,6 +103,9 @@ func xp_of(d: Dictionary) -> int:
 	var areas: Dictionary = d.get("rooms", d.get("clearings", {}))
 	for k in areas:
 		for ch in areas[k].get("spawn", ""):
+			var s: CreatureStats = load("res://data/monsters/%s.tres" % MONSTERS[ch])
+			xp += s.xp
+		for ch in areas[k].get("ambush", {}).get("spawn", ""):
 			var s: CreatureStats = load("res://data/monsters/%s.tres" % MONSTERS[ch])
 			xp += s.xp
 		# Phase 6: disarmed traps and solved puzzles / riddles
@@ -231,6 +241,10 @@ func build_floor(d: Dictionary, root_name: String, path: String) -> bool:
 		elif dopts.has("gate"):
 			door.style = Door.Style.PORTCULLIS
 			door.link = dopts.gate
+		elif dopts.has("seal"):
+			door.style = Door.Style.PORTCULLIS
+			door.link = dopts.seal
+			door.is_open = true
 
 	var blocked := {}        # cells with props / chests / braziers / stairs (for the checks)
 	var group := 1
@@ -292,6 +306,15 @@ func build_floor(d: Dictionary, root_name: String, path: String) -> bool:
 			_trap(tspec, tc, entities, root, "Trap_%s_%d_%d" % [rn, tc.x, tc.y])
 			used[tc] = true
 		_note(room, r, entities, root, rn)
+		for li in room.get("lore", []).size():
+			var ls: Dictionary = room.lore[li]
+			var lc: Vector2i = o + ls.at if ls.has("at") else _free_near(o + Vector2i(0, 2), r, keep, used)
+			if keep.has(lc) or used.has(lc):
+				push_error("%s: lore in %s at %s is in the way of something" % [root_name, rn, lc])
+				_ok = false
+			_lore(ls, lc, entities, root, "Lore_%s_%d" % [rn, li])
+			used[lc] = true
+			blocked[lc] = true
 		for nd in room.get("npcs", []):
 			var nc: Vector2i = o + nd.at
 			if keep.has(nc) or used.has(nc):
@@ -384,6 +407,18 @@ func build_floor(d: Dictionary, root_name: String, path: String) -> bool:
 				_set_preview(sp, id)
 				used[mc] = true
 			group += 1
+		if room.has("ambush"):
+			var amb: Dictionary = room.ambush
+			var acells: Array[Vector2i] = []
+			if amb.has("at"):
+				for c: Vector2i in amb.at:
+					acells.append(o + c)
+			else:
+				acells = _monster_cells(r, String(amb.spawn).length(), entries.get(rn, []), keep, used)
+			ok = _ambush(amb, acells, r, rn, group, entities, root, root_name, entries.get(rn, [r.get_center()])) and ok
+			for c in acells:
+				used[c] = true
+			group += 1
 	for ct in corridor_traps:
 		_trap(ct[1], ct[0], entities, root, "Trap_%s_%d_%d" % [ct[2], ct[0].x, ct[0].y])
 	(root.get_node("Camera") as Camera2D).position = IsoGrid.view_cell_to_world(start_cell)
@@ -438,6 +473,43 @@ func _note(room: Dictionary, r: Rect2i, entities: Node2D, root: Node, rn: String
 	n.text = text
 	n.size = r.size
 	n.modal = room.has("clue")
+
+
+## Something to read (LoreNote).
+func _lore(spec: Dictionary, c: Vector2i, entities: Node2D, root: Node, node_name: String) -> void:
+	var n := _inst("lore_note", entities, root, c, node_name)
+	n.kind = LORE_KINDS[spec.get("kind", "book")]
+	n.title = spec.get("title", "")
+	n.text = spec.get("text", "")
+	if n.kind == LoreNote.Kind.REMAINS:
+		n.position = IsoGrid.view_cell_to_world(c) + LoreNote.SORT_UP
+
+
+## An ambush over area `r`: hidden monsters at `cells` (one group) + the Trigger that wakes them.
+func _ambush(amb: Dictionary, cells: Array[Vector2i], r: Rect2i, an: String, group: int, entities: Node2D, root: Node,
+		root_name: String, face: Array) -> bool:
+	var spawn: String = amb.spawn
+	if cells.size() < spawn.length():
+		push_error("%s: no room for the ambush in %s" % [root_name, an])
+		return false
+	var link := "ambush_%s" % an
+	for i in spawn.length():
+		var id: String = MONSTERS[spawn[i]]
+		var mc: Vector2i = cells[i]
+		var sp := _inst("monster_spawn", entities, root, mc, "%s_%s_%d_%d" % [id.to_pascal_case(), an, mc.x, mc.y])
+		sp.monster_id = id
+		sp.group_id = group
+		sp.ambush = link
+		sp.facing = _facing_toward(mc, face)
+		_set_preview(sp, id)
+	var t := _inst("trigger", entities, root, r.position, "Ambush_" + an)
+	t.link = link
+	t.size = r.size
+	t.text = amb.get("text", "")
+	t.how = {"step": Trigger.How.STEP_OUT, "rise": Trigger.How.RISE, "drop": Trigger.How.DROP}[amb.get("how", "step")]
+	t.seal = amb.get("seal", "")
+	t.whole_party = t.seal != ""
+	return true
 
 
 ## Place a puzzle's pieces (cells relative to the room) and its Puzzle marker.
@@ -821,6 +893,30 @@ func build_surface(d: Dictionary, root_name: String, path: String) -> bool:
 				sp.group_id = group
 				sp.facing = _facing_toward(mc, entry_cells)
 				_set_preview(sp, id)
+			group += 1
+		# things to read: placed last, so the trees and monsters keep their random draws (the woods
+		# stay as they were); a spot a monster took is an error
+		for li in cl.get("lore", []).size():
+			var ls: Dictionary = cl.lore[li]
+			var lc: Vector2i = o + ls.at
+			var taken := false
+			for n in entities.get_children():
+				if n is MonsterSpawn and n.get_cell() == lc:
+					taken = true
+			if not floor_cells.has(lc) or blocked.has(lc) or used.has(lc) or taken:
+				push_error("%s: lore in %s at %s is not on open ground" % [root_name, cn, ls.at])
+				_ok = false
+			_lore(ls, lc, entities, root, "Lore_%s_%d" % [cn, li])
+			used[lc] = true
+			blocked[lc] = true
+		if cl.has("ambush"):
+			var acells: Array[Vector2i] = []
+			for c: Vector2i in cl.ambush.at:
+				acells.append(o + c)
+				if not floor_cells.has(o + c) or blocked.has(o + c):
+					push_error("%s: ambusher in %s at %s is not on open ground" % [root_name, cn, c])
+					_ok = false
+			ok = _ambush(cl.ambush, acells, r, cn, group, entities, root, root_name, entry_cells) and ok
 			group += 1
 	# the ward: walls of magic ice across a path (Door ICE), melted by the puzzle that opens `link`
 	for w in d.get("wards", []):

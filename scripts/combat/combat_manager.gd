@@ -233,14 +233,15 @@ func attack_options_from(attacker: Actor, target: Actor, from: Vector2i) -> Arra
 
 
 ## Hero animation for a ranged weapon attack: a bow or crossbow = shoot (the action sheet draws
-## the equipped one), a thrown weapon = the attack swing. "" for monsters.
+## the equipped one), a thrown weapon (handaxe) = throw. "" for monsters.
 func _ranged_anim(attacker: Actor) -> String:
 	if not attacker is Hero:
 		return ""
 	var r := ItemData.get_item(attacker.equipment.get("ranged", ""))
-	if r and HeroLook.WEAPON_KIND.get(r.base_id(), "") in ["shortbow", "longbow", "crossbow", "heavy_crossbow"]:
+	var kind: String = HeroLook.WEAPON_KIND.get(r.base_id(), "") if r else ""
+	if kind != "" and not HeroLook.is_thrown(kind):
 		return "shoot"
-	return "attack"
+	return "throw" if kind != "" and attacker.has_action("throw") else "attack"
 
 
 ## Roll an attack and apply it. Awaitable.
@@ -262,10 +263,13 @@ func perform_attack(attacker: Actor, target: Actor, opt: Dictionary) -> void:
 			attacker.play_action(anim)
 			await get_tree().create_timer(attacker.action_hit_time(anim)).timeout
 		var beam := a.damage_type in ["necrotic", "force", "radiant", "fire", "cold", "lightning"]
-		Sfx.play("ray_zap" if beam else "bow_shot")
+		if anim == "throw" and not beam:
+			Sfx.play("bow_shot", -2.0, 0.6)
+		else:
+			Sfx.play("ray_zap" if beam else "bow_shot")
 		var col := Color8(230, 90, 200) if beam else Color8(220, 200, 160)
-		var p := Projectile.fire(map, attacker.body_position(), target.body_position(),
-				Projectile.Style.BEAM if beam else Projectile.Style.ARROW, col)
+		var style := Projectile.Style.BEAM if beam else (Projectile.Style.THROWN if anim == "throw" else Projectile.Style.ARROW)
+		var p := Projectile.fire(map, attacker.body_position(), target.body_position(), style, col)
 		await p.done
 		if attacker is Hero and attacker.current_action() == "cast":
 			attacker.end_action()

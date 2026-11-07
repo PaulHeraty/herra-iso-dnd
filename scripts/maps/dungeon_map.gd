@@ -59,7 +59,7 @@ var combat: CombatManager
 ## Traps, levers, plates, puzzles, secret doors, blocks, room notes (Phase 6).
 var mech: Mechanisms
 var hud: CombatHud
-## Save / load slots (F5 / F9).
+## Save / load (F5 quick save, F6 save to a slot, F9 load).
 var save_screen: SaveScreen
 ## The victory screen (after Brannoc pays for the Wraith), made when first shown.
 var victory_screen: VictoryScreen
@@ -281,14 +281,14 @@ func _static_cells() -> Dictionary:
 					move[n.get_cell()] = true
 			elif n is Chest and n.mimic and n.opened:
 				pass                    # a woken mimic: the chest is gone
-			elif n is Chest or n is Brazier or n is Lever or n is StoneFace:
+			elif n is Chest or n is Brazier or n is Lever or n is StoneFace or n is LoreNote:
 				move[n.get_cell()] = true
 			elif n is Prop:
 				if n.blocks:
 					move[n.get_cell()] = true
 				if n.blocks_sight():
 					sight[n.get_cell()] = true
-			elif n is MonsterSpawn and n.monster == null and not n.cleared:
+			elif n is MonsterSpawn and n.monster == null and not n.cleared and not n.lurking():
 				spawns[n.get_cell()] = true
 		_static = {move = move, sight = sight, spawns = spawns, doors = doors}
 	return _static
@@ -1049,24 +1049,80 @@ func _formation_cells(origin: Vector2i, n: int) -> Array[Vector2i]:
 	return out
 
 
-## A Monster actor at every MonsterSpawn whose scenes/actors/monsters/<monster_id>.tscn exists.
+## A Monster actor at every MonsterSpawn whose scenes/actors/monsters/<monster_id>.tscn exists
+## (ambushers that haven't appeared yet wait for their Trigger: wake_ambusher).
 func _spawn_monsters() -> void:
 	for n in entities.get_children():
-		if not n is MonsterSpawn or n.cleared:
+		if not n is MonsterSpawn or n.cleared or n.lurking():
 			continue
-		var path := "res://scenes/actors/monsters/%s.tscn" % n.monster_id
-		if not ResourceLoader.exists(path):
-			push_warning("%s: no scene for monster '%s'" % [name, n.monster_id])
-			if preview_missing_monsters and n.preview:
-				_spawn_preview_sprite(n)
-			continue
-		var m: Monster = (load(path) as PackedScene).instantiate()
-		m.group_id = n.group_id
-		entities.add_child(m)
-		m.facing = PartyStart.FACING_DIR[n.facing]
-		m.place_at(n.get_cell())
-		n.monster = m
-		monsters.append(m)
+		_spawn_from(n, n.get_cell())
+
+
+func _spawn_from(n: MonsterSpawn, cell: Vector2i) -> Monster:
+	var path := "res://scenes/actors/monsters/%s.tscn" % n.monster_id
+	if not ResourceLoader.exists(path):
+		push_warning("%s: no scene for monster '%s'" % [name, n.monster_id])
+		if preview_missing_monsters and n.preview:
+			_spawn_preview_sprite(n)
+		return null
+	var m: Monster = (load(path) as PackedScene).instantiate()
+	m.group_id = n.group_id
+	entities.add_child(m)
+	m.facing = PartyStart.FACING_DIR[n.facing]
+	m.place_at(cell)
+	n.monster = m
+	monsters.append(m)
+	return m
+
+
+## An ambusher appears (Trigger, Mechanisms): on its cell, or the nearest free one if someone
+## stands there; it faces the nearest hero. `how` = Trigger.How (the entrance it makes).
+func wake_ambusher(n: MonsterSpawn, how: int) -> Monster:
+	var cell := n.get_cell()
+	if occupant(cell) != null or not terrain_walkable(cell):
+		var best := cell
+		var bd := 1 << 30
+		for dx in range(-3, 4):
+			for dy in range(-3, 4):
+				var c := cell + Vector2i(dx, dy)
+				var d := absi(dx) + absi(dy)
+				if d < bd and terrain_walkable(c) and occupant(c) == null and is_explored(c):
+					best = c
+					bd = d
+		cell = best
+	n.woken = true
+	var m := _spawn_from(n, cell)
+	invalidate_static()
+	if m == null:
+		return null
+	var near: Hero = null
+	for h in party:
+		if h.is_alive() and (near == null or grid_distance(h.cell, cell) < grid_distance(near.cell, cell)):
+			near = h
+	if near:
+		m.facing = (near.cell - cell).clampi(-1, 1)
+	m.visible = true
+	var at := m.body_position()
+	match how:
+		Trigger.How.RISE:
+			m.sprite.position = Vector2(0, 14)
+			m.sprite.modulate = Color(0.3, 0.3, 0.3, 0.0)
+			var tw := m.create_tween().set_parallel()
+			tw.tween_property(m.sprite, "position", Vector2.ZERO, 0.7).set_ease(Tween.EASE_OUT)
+			tw.tween_property(m.sprite, "modulate", Color.WHITE, 0.7)
+			SpellFx.sparkles(self, IsoGrid.cell_to_world(cell), Color8(110, 92, 70), false)
+		Trigger.How.DROP:
+			m.sprite.position = Vector2(0, -90)
+			var tw := m.create_tween()
+			tw.tween_property(m.sprite, "position", Vector2.ZERO, 0.35).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+			tw.tween_callback(func():
+				Sfx.play("stone_push", -2.0, 0.8)
+				SpellFx.sparkles(self, IsoGrid.cell_to_world(cell), Color8(150, 146, 140), false))
+		_:
+			m.sprite.modulate = Color(0, 0, 0, 0)
+			m.create_tween().tween_property(m.sprite, "modulate", Color.WHITE, 0.5)
+			SpellFx.sparkles(self, at, Color8(90, 80, 110), false)
+	return m
 
 
 func _spawn_preview_sprite(n: MonsterSpawn) -> void:
@@ -1171,6 +1227,8 @@ func _on_combat_ended() -> void:
 			if m.stats:
 				Quest.note_kill(m.stats.id)
 	quest_check()
+	if mech:
+		mech.after_combat()
 	_npc_t = 0.6
 
 

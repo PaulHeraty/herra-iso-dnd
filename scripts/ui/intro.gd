@@ -236,14 +236,15 @@ func _load_menu() -> void:
 	_stage = Stage.LOAD
 	var l := _new_layer()
 	_heading(l, "Load a game", "")
-	var y := 74.0
-	for slot in range(1, SaveGame.SLOTS + 1):
+	var y := 64.0
+	for slot in range(SaveGame.QUICK, SaveGame.SLOTS + 1):
 		var h := SaveGame.info(slot)
+		var what := "Quick save" if slot == SaveGame.QUICK else "Slot %d" % slot
 		var lines: Array[String] = []
 		if h.is_empty():
-			lines = ["Slot %d: empty" % slot]
+			lines = ["%s: empty" % what]
 		else:
-			lines = ["Slot %d: %s" % [slot, h.get("name", "")],
+			lines = [what if slot == SaveGame.QUICK else "%s: %s" % [what, h.get("name", "")],
 				"%s - %s, level %d, %d gold" % [h.get("module_title", "The Wraith Below"), h.get("map_title", ""), h.get("level", 1), h.get("gold", 0)],
 				SaveGame.time_text(int(h.get("time", 0)))]
 		y += _card(l, Rect2(150, y, 340, 44), lines, not h.is_empty(), _load_slot.bind(slot)) + 6
@@ -341,6 +342,41 @@ func _pick_module(m: AdventureModule) -> void:
 
 # --- 5. The adventure's story ----------------------------------------------------------------------
 
+## What hero `i` (HEROES order = Hero.HeroClass) will wear: the kept party's gear, a quick start's
+## kit, else the class's starting equipment.
+func _outfit(i: int) -> Dictionary:
+	var kept: Dictionary = _party.get("party", {}).get("heroes", {}).get(i, {})
+	if kept.has("equipment"):
+		return kept.equipment
+	var base: CreatureStats = load(Hero.STATS[i])
+	var eq := Equipment.starting(base)
+	if _party.is_empty() and _module and not _module.fits_level(1):
+		for iid in _module.new_party_kit.get(base.class_id, []):
+			var it := ItemData.get_item(iid)
+			if it and it.is_equipment():
+				eq[Equipment.default_slot(it, eq)] = iid
+	return eq
+
+
+## A hero's front idle frame (cell 0 of a HeroLook walk or effects sheet), 3x, feet at `feet_cell`
+## + the 16x24 figure cell's bottom.
+func _hero_pic(sheet: Texture2D, feet_cell: Vector2, flip: bool) -> TextureRect:
+	const K := 3
+	var pic := TextureRect.new()
+	var at := AtlasTexture.new()
+	at.atlas = sheet
+	at.region = Rect2(0, 0, 32, 32)
+	pic.texture = at
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_SCALE
+	pic.size = Vector2(32 * K, 32 * K)
+	pic.position = feet_cell - Vector2(8 * K, 8 * K)
+	pic.flip_h = flip
+	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return pic
+
+
 func _story() -> void:
 	_stage = Stage.STORY
 	_pages.assign(_module.intro_pages if _module else [])
@@ -348,28 +384,33 @@ func _story() -> void:
 		_start_game()
 		return
 	var l := _new_layer()
-	# The party: four heroes, front idle frame of their walk sheets, 3x.
+	# The party: four heroes in the gear they bring (HeroLook), front idle frame, 3x. The 32x32
+	# cell holds the 16x24 figure cell at (8, 8), so weapons and shields can stick out.
 	const K := 3
 	var gap := 64
 	var x0 := SCREEN.x / 2.0 - gap * 1.5 - 8 * K
 	for i in HEROES.size():
-		var tex: Texture2D = load("res://assets/sprites/heroes/%s_sheet.png" % HEROES[i])
-		var pic := TextureRect.new()
-		var at := AtlasTexture.new()
-		at.atlas = tex
-		at.region = Rect2(0, 0, 16, 24)
-		pic.texture = at
-		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		pic.stretch_mode = TextureRect.STRETCH_SCALE
-		pic.size = Vector2(16 * K, 24 * K)
-		pic.position = Vector2(roundf(x0 + i * gap), BOX.position.y - 24 * K - 14)
-		pic.flip_h = i >= 2                      # the two on the right face the others
-		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var look := HeroLook.sheets(HEROES[i], _outfit(i))
+		var pos := Vector2(roundf(x0 + i * gap), BOX.position.y - 24 * K - 14)
+		var pic := _hero_pic(look.walk, pos, i >= 2)       # the two on the right face the others
 		l.add_child(pic)
+		if look.fx_walk:
+			var fx := _hero_pic(look.fx_walk, pos, i >= 2)
+			var mat := ShaderMaterial.new()
+			mat.shader = Hero.FX_SHADER
+			mat.set_shader_parameter("sheet_px", Vector2(look.fx_walk.get_size()))
+			mat.set_shader_parameter("main_mode", look.main_fx.mode)
+			mat.set_shader_parameter("main_color", look.main_fx.color)
+			mat.set_shader_parameter("ranged_mode", look.ranged_fx.mode)
+			mat.set_shader_parameter("ranged_color", look.ranged_fx.color)
+			mat.set_shader_parameter("glint", look.glint.strength)
+			mat.set_shader_parameter("glint_color", look.glint.color)
+			mat.set_shader_parameter("phase", i * 2.7)
+			fx.material = mat
+			l.add_child(fx)
 		var shadow := ColorRect.new()          # a flat dark oval-ish strip under their feet
 		shadow.color = Color(0, 0, 0, 0.45)
-		shadow.position = pic.position + Vector2(3 * K, 24 * K - 2)
+		shadow.position = pos + Vector2(3 * K, 24 * K - 2)
 		shadow.size = Vector2(10 * K, 3)
 		l.add_child(shadow)
 		l.move_child(shadow, pic.get_index())

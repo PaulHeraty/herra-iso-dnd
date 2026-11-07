@@ -62,6 +62,12 @@ func say(speaker: String, portrait: Texture2D, text: String, choices: Array) -> 
 	_pic.texture = portrait
 	_text.text = text
 	_text.visible_characters = 0
+	# long texts (lore, clues): the box grows upwards to fit them; its bottom stays put
+	var th := CombatHud.FONT.get_multiline_string_size(_text.get_parsed_text(), HORIZONTAL_ALIGNMENT_LEFT, RECT.size.x - 58, 10).y
+	var h := maxf(RECT.size.y, 17.0 + th + 26.0)
+	size = Vector2(RECT.size.x, h)
+	position = Vector2(RECT.position.x, RECT.end.y - h)
+	_text.size = Vector2(RECT.size.x - 58, h - 34)
 	_choices = choices
 	for b in _buttons:
 		b.queue_free()
@@ -72,7 +78,7 @@ func say(speaker: String, portrait: Texture2D, text: String, choices: Array) -> 
 		b.text = "%d. %s" % [i + 1, choices[i].text]
 		b.focus_mode = Control.FOCUS_NONE
 		var w := CombatHud.FONT.get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x + 12
-		b.position = Vector2(x, RECT.size.y - 17)
+		b.position = Vector2(x, size.y - 17)
 		add_child(b)
 		b.set_deferred("size", Vector2(w, 13))
 		b.pressed.connect(pick.bind(i))

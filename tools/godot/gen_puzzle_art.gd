@@ -1,5 +1,6 @@
 extends SceneTree
-## Phase 6 art: traps, pressure plates, levers, the pushable stone block and the riddle stone face
+## Phase 6 art: traps, pressure plates, levers, the pushable stone block, the riddle stone face and the
+## things to read (lore_book: a lectern, lore_tablet: a carved stone, lore_remains: bones + a pack and letter)
 ## -> assets/sprites/props/*.png
 ## Run: Godot_console --headless --path . -s res://tools/godot/gen_puzzle_art.gd  (then --import)
 ##
@@ -39,6 +40,7 @@ func _init() -> void:
 	_levers()
 	_block()
 	_stone_face()
+	_lore()
 	print("gen_puzzle_art: done")
 	quit()
 
@@ -377,3 +379,92 @@ func _stone_face() -> void:
 				val = 0.25                                     # ear
 		return _q(clampf(val, 0, 1), px, py, FLOOR))
 	_save("stone_face", true)
+
+
+# --- things to read (LoreNote) ------------------------------------------------------------------
+
+const PARCH := [Color8(120, 100, 72), Color8(170, 148, 108), Color8(212, 194, 150), Color8(240, 228, 192)]
+const INK := Color8(58, 40, 34)
+
+
+func _lore() -> void:
+	_lore_book()
+	_lore_tablet()
+	_lore_remains()
+
+
+## A wooden lectern (24x34, cell centre (12, 27)): a foot, a post, a sloped desk with an open book.
+func _lore_book() -> void:
+	_new(24, 34, Vector2(12, 27))
+	var wood := func(face: String, u: float, v: float, px: int, py: int) -> Color:
+		var val: float = FACE_LIGHT[face]
+		if face == "top" and (u < 1.0 or v < 1.0):
+			val = 0.95
+		return _q(val, px, py, WOOD)
+	_box(-0.22, 0.22, -0.22, 0.22, 0.0, 2.0, wood)
+	_box(-0.07, 0.07, -0.07, 0.07, 2.0, 13.0, wood)
+	# the desk: a slab whose top is the book (pages either side of a dark spine)
+	_box(-0.3, 0.3, -0.24, 0.24, 13.0, 15.0, func(face: String, u: float, v: float, px: int, py: int) -> Color:
+		if face != "top":
+			return _q(FACE_LIGHT[face], px, py, WOOD)
+		if u < 1.2 or v < 1.0 or u > 8.4 or v > 6.6:
+			return _q(0.8, px, py, WOOD)                       # the desk's rim
+		if absf(u - 4.8) < 0.6:
+			return INK                                         # the spine
+		if py % 2 == 0 and absf(u - 4.8) > 1.3 and u > 1.8 and u < 7.8:
+			return INK.lerp(PARCH[2], 0.3)                    # lines of writing
+		return PARCH[3] if u < 4.8 else PARCH[2])
+	_save("lore_book", true)
+
+
+## An upright slab of stone (24x34, cell centre (12, 27)) carved with rows of runes on its lit face.
+func _lore_tablet() -> void:
+	_new(24, 34, Vector2(12, 27))
+	_box(-0.3, 0.3, -0.1, 0.1, 0.0, 2.0, func(face: String, u: float, v: float, px: int, py: int) -> Color:
+		return _q(FACE_LIGHT[face] - 0.1, px, py, BRICK))
+	_box(-0.26, 0.26, -0.07, 0.07, 2.0, 21.0, func(face: String, u: float, v: float, px: int, py: int) -> Color:
+		var val: float = FACE_LIGHT[face]
+		if face == "top":
+			return _q(0.9, px, py, FLOOR)
+		if face == "left":
+			var row := int((v - 3.0) / 3.0)
+			if v > 3.0 and v < 17.0 and fmod(v - 3.0, 3.0) < 1.2 and u > 1.4 and u < 7.0:
+				if (int(u * 1.7) + row * 3) % 4 != 0:
+					val = 0.22                                 # a carved rune
+			if v > 18.0:
+				val += 0.1                                     # worn top edge
+		return _q(clampf(val, 0, 1), px, py, FLOOR))
+	_save("lore_tablet", true)
+
+
+## A fallen adventurer (34x18 flat, cell centre (17, 9)): a skull and ribs, a leather pack and a letter.
+func _lore_remains() -> void:
+	_new(34, 18, Vector2(17, 9))
+	# the letter: a pale sheet on the floor with lines of ink
+	_fill(PackedVector2Array([_scr(-0.02, -0.46, 0), _scr(0.42, -0.46, 0), _scr(0.42, -0.06, 0), _scr(-0.02, -0.06, 0)]),
+		func(px: int, py: int) -> Color:
+			if py % 2 == 1 and (px + py) % 6 != 0:
+				return INK.lerp(PARCH[2], 0.25)
+			return PARCH[3] if (px + py) % 3 != 0 else PARCH[2])
+	# the pack: a small leather box with a strap
+	_box(-0.44, -0.16, 0.12, 0.4, 0.0, 4.0, func(face: String, u: float, v: float, px: int, py: int) -> Color:
+		var val: float = FACE_LIGHT[face]
+		if face == "top" and absf(v - 2.2) < 0.7:
+			val = 0.3
+		return _q(val, px, py, WOOD))
+	# ribs: three pale arcs, then the skull on top of everything
+	for i in 3:
+		var a := _scr(0.08 + i * 0.1, 0.18, 0) + Vector2(0, -1)
+		_px(a, SILK[2])
+		_px(a + Vector2(1, -1), SILK[3])
+		_px(a + Vector2(2, -1), SILK[3])
+		_px(a + Vector2(3, 0), SILK[2])
+	_line(_scr(0.04, 0.12, 0) + Vector2(0, -1), _scr(0.4, 0.12, 0) + Vector2(0, -1), SILK[1])
+	var skull := [".##.", "####", "#..#", ".##."]
+	var sk := _scr(-0.18, -0.2, 0) + Vector2(-2, -3)
+	for y in skull.size():
+		for x in 4:
+			match skull[y][x]:
+				"#": _px(sk + Vector2(x, y), SILK[3] if y < 2 else SILK[2])
+				".": if y == 2: _px(sk + Vector2(x, y), INK)
+	_save("lore_remains", true)

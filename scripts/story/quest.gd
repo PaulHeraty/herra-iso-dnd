@@ -50,6 +50,8 @@ static var kills := {}
 static var flags := {}
 ## Side quests: id -> {given, claimed, done = {stage id: true}}.
 static var side := {}
+## The journal: lore the party has read (LoreNote), in the order read: [{id, title, text}].
+static var lore: Array = []
 
 
 static func reset() -> void:
@@ -61,11 +63,12 @@ static func reset() -> void:
 	kills = {}
 	flags = {}
 	side = {}
+	lore = []
 
 
 static func to_dict() -> Dictionary:
 	return {met = met, given = given, claimed = claimed, done = done.duplicate(),
-			visited = visited.duplicate(), kills = kills.duplicate(), flags = flags.duplicate(), side = side.duplicate(true)}
+			visited = visited.duplicate(), kills = kills.duplicate(), flags = flags.duplicate(), side = side.duplicate(true), lore = lore.duplicate(true)}
 
 
 static func from_dict(d: Dictionary) -> void:
@@ -78,6 +81,7 @@ static func from_dict(d: Dictionary) -> void:
 	kills = d.get("kills", {}).duplicate()
 	flags = d.get("flags", {}).duplicate()
 	side = d.get("side", {}).duplicate(true)
+	lore = d.get("lore", []).duplicate(true)
 
 
 static func note_map(path: String) -> void:
@@ -250,3 +254,13 @@ static func _update_side(bag: Inventory) -> Array[Dictionary]:
 				o.quest = q.title
 				out.append(o)
 	return out
+
+
+# --- the journal (lore read) ------------------------------------------------------------------------
+
+## Keep a note the party has read (once per note).
+static func add_lore(id: String, title: String, text: String) -> void:
+	for e: Dictionary in lore:
+		if e.id == id:
+			return
+	lore.append({id = id, title = title, text = text})

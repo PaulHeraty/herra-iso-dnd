@@ -1,13 +1,17 @@
 class_name SaveGame
-## Save games: SLOTS slots, one file each (user://saves/slot<N>.sav, Godot's binary var format,
+## Save games: the quick save (slot QUICK = 0, user://saves/quick-save.sav: F5 overwrites it at once)
+## + SLOTS named slots (user://saves/slot<N>.sav, F6), one file each (Godot's binary var format,
 ## no objects). A file holds a small header (shown in the slot list) and the game itself:
 ## the module being played, PartyState + every map's MapState (the current one as it is now), where each hero stands and
 ## faces, and the view rotation. Saving is outside combat only (the state model has no fights in
 ## it); loading works any time. Loading goes through the same path as the stairs: the static state
 ## is set, then the saved map scene is loaded with MapState.next_entry = MapState.AT_SAVE.
-## SaveScreen (F5 / F9) is the UI.
+## SaveScreen (F6 save, F9 load) is the UI; F5 = quick_save().
 
 const SLOTS := 3
+## The quick save's slot number (always overwritten, never counted for the default names).
+const QUICK := 0
+const QUICK_NAME := "Quick save"
 ## Where the slot files go (tests point this elsewhere so real saves are never touched).
 static var dir := "user://saves"
 const VERSION := 1
@@ -17,6 +21,8 @@ const NAME_MAX := 24
 
 
 static func slot_path(slot: int) -> String:
+	if slot == QUICK:
+		return "%s/quick-save.sav" % dir
 	return "%s/slot%d.sav" % [dir, slot]
 
 
@@ -60,8 +66,8 @@ static func save(map: DungeonMap, slot: int, save_name: String) -> String:
 	var why := blocked_reason(map)
 	if why != "":
 		return why
-	var n := _highest_number() + 1
-	save_name = save_name.strip_edges().left(NAME_MAX)
+	var n := 0 if slot == QUICK else _highest_number() + 1
+	save_name = QUICK_NAME if slot == QUICK else save_name.strip_edges().left(NAME_MAX)
 	if save_name == "":
 		save_name = DEFAULT_FMT % n
 	var lead_level := 1
@@ -75,7 +81,7 @@ static func save(map: DungeonMap, slot: int, save_name: String) -> String:
 	var d := {
 		version = VERSION,
 		header = {
-			name = save_name, number = n, time = int(Time.get_unix_time_from_system()),
+			name = save_name, number = n, time = int(Time.get_unix_time_from_system()), stamp = Time.get_unix_time_from_system(),
 			map_path = map.scene_file_path, map_title = map.map_title, level = lead_level,
 			gold = map.inventory.gold,
 			module = Modules.current.id if Modules.current else "", module_title = Modules.current.title if Modules.current else "",
@@ -143,3 +149,8 @@ static func time_text(unix: int) -> String:
 	var local := unix + int(Time.get_time_zone_from_system().get("bias", 0)) * 60
 	var t := Time.get_datetime_dict_from_unix_time(local)
 	return "%04d-%02d-%02d %02d:%02d" % [t.year, t.month, t.day, t.hour, t.minute]
+
+
+## F5: write the game to the quick save at once (overwriting it). Returns "" or why it couldn't.
+static func quick_save(map: DungeonMap) -> String:
+	return save(map, QUICK, QUICK_NAME)

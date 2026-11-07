@@ -26,7 +26,7 @@ const SETS := {
 		["mage", {"main": "dagger_plus2", "worn1": "cloak_protection"}],
 	],
 }
-const ACTION_COLS := [1, 5, 9, 15]     # strike, shoot draw, cast glow, lying
+const ACTION_COLS := [1, 5, 9, 16, 15] # strike, shoot draw, cast glow, throw wind-up, lying
 
 
 func _init() -> void:

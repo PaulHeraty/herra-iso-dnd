@@ -99,6 +99,14 @@ const HURT := [
 	{"g": "idle", "shift": [-1, 1], "lean": [-2, -1], "dtilt": -0.5},
 	{"g": "idle", "shift": [-1, 0], "lean": [-1, 0], "dtilt": -0.25},
 ]
+## Throwing the ranged weapon (a handaxe): wind-up behind the head, release (it has flown), follow-through.
+const THROW := [
+	{"g": [-4, 1], "d": [-0.6, 1], "lean": [-1, 0], "behind": [true, false], "w": "ranged"},
+	{"g": [7, 6], "d": [1, 0.3], "lean": [1, 1], "w": ""},
+	{"g": [6, 10], "d": [1, -1], "lean": [1, 0], "w": ""},
+]
+## Action sheet columns: attack 0-3, shoot 4-6, cast 7-10, hurt 11-12, down 13-15, throw 16-18 (Hero.ACTION_ANIMS).
+const COLS := 19
 
 ## Item base id -> how it is drawn. Swords may share a look, but each kind has its own shape.
 const WEAPON_KIND := {
@@ -108,6 +116,11 @@ const WEAPON_KIND := {
 	"quarterstaff": "staff",
 	"shortbow": "shortbow", "longbow": "longbow", "light_crossbow": "crossbow", "heavy_crossbow": "heavy_crossbow",
 }
+## Ranged kinds that are thrown (the throw frames) rather than shot.
+static func is_thrown(kind: String) -> bool:
+	return kind != "" and not kind in ["shortbow", "longbow", "crossbow", "heavy_crossbow"]
+
+
 ## How far the weapon reaches past the grip (spark point when raised, swoosh radius).
 const REACH := {
 	"dagger": 4, "shortsword": 6, "longsword": 10, "greatsword": 13, "rapier": 10, "scimitar": 8,
@@ -285,6 +298,9 @@ class _Builder:
 	var main_fx: Dictionary
 	var ranged_fx: Dictionary
 	var glint: Dictionary
+	## the weapon being drawn: its effect (blade tint) and tag (T_MAIN, or T_RANGED for a thrown one)
+	var _wfx: Dictionary
+	var _wtag := T_MAIN
 
 	func _init(l: Dictionary) -> void:
 		look = l
@@ -294,13 +310,14 @@ class _Builder:
 		main_fx = HeroLook.weapon_fx(l.main_id)
 		ranged_fx = HeroLook.weapon_fx(l.ranged_id)
 		glint = HeroLook.glint_of(l)
+		_wfx = main_fx
 
 	func build() -> Dictionary:
 		var walk := Image.create_empty(CELL * 5, CELL * 2, false, Image.FORMAT_RGBA8)
-		var action := Image.create_empty(CELL * 16, CELL * 2, false, Image.FORMAT_RGBA8)
+		var action := Image.create_empty(CELL * COLS, CELL * 2, false, Image.FORMAT_RGBA8)
 		var any_fx: bool = main_fx.mode != Fx.NONE or ranged_fx.mode != Fx.NONE or glint.strength > 0.0
 		var fx_walk := Image.create_empty(CELL * 5, CELL * 2, false, Image.FORMAT_RGBA8) if any_fx else null
-		var fx_action := Image.create_empty(CELL * 16, CELL * 2, false, Image.FORMAT_RGBA8) if any_fx else null
+		var fx_action := Image.create_empty(CELL * COLS, CELL * 2, false, Image.FORMAT_RGBA8) if any_fx else null
 		var views := ["front", "back"]
 		for row in 2:
 			var view: String = views[row]
@@ -354,6 +371,9 @@ class _Builder:
 		out.append(_kneel(view, base, cx, 1))
 		out.append(_kneel(view, base, cx, 2))
 		out.append(_lying(base))
+		# throw (a handaxe in the ranged slot); others: the attack frames
+		for i in 3:
+			out.append(_pose(view, base, cx, THROW[i]) if HeroLook.is_thrown(look.ranged) else out[i])
 		return out
 
 	# --- the body ---------------------------------------------------------------------------
@@ -639,7 +659,13 @@ class _Builder:
 			dir = Vector2(p["d"][0] * fwd, -p["d"][1])
 		var behind: bool = p.get("behind", [false, false])[0 if view == "front" else 1]
 		_arm(f, shoulder, grip + _hand_offset(v, dir), PAL[rig["arm"]])
-		_weapon(f, look.main, grip, dir, behind)
+		var w: String = p.get("w", "main")
+		if w == "ranged":
+			_wfx = ranged_fx
+			_wtag = T_RANGED
+		_weapon(f, look.main if w == "main" else (look.ranged if w == "ranged" else ""), grip, dir, behind)
+		_wfx = main_fx
+		_wtag = T_MAIN
 		_hand(f, v, grip, dir)
 		return f
 
@@ -689,7 +715,7 @@ class _Builder:
 	func _weapon(f: Frame, kind: String, g: Vector2i, dir: Vector2, behind: bool) -> void:
 		if kind == "":
 			return
-		var tint = main_fx.blade
+		var tint = _wfx.blade
 		var steel: Color = tint if tint != null else PAL["w"]
 		var metal: Color = tint.darkened(0.25) if tint != null else PAL["m"]
 		var dark: Color = tint.darkened(0.5) if tint != null else PAL["M"]
@@ -701,7 +727,7 @@ class _Builder:
 			if diagonal and absi(side) >= 2:
 				# fill the gap a diagonal side offset leaves
 				f.put(ORIGIN + p - Vector2i(pp.x * signi(side), 0), c, true if behind else false, tg)
-		var M := T_MAIN
+		var M := _wtag
 		match kind:
 			"dagger":
 				put.call(-1, PAL["B"])
@@ -791,11 +817,11 @@ class _Builder:
 	func _axe_head(put: Callable, s: int, t0: int, t1: int, steel: Color, metal: Color, dark: Color) -> void:
 		var mid := (t0 + t1) / 2
 		for t in range(t0 + 1, t1):
-			put.call(t, metal if absi(t - mid) <= 1 else dark, s, T_MAIN)
+			put.call(t, metal if absi(t - mid) <= 1 else dark, s, _wtag)
 		for t in range(t0, t1 + 1):
-			put.call(t, metal, 2 * s, T_MAIN)
+			put.call(t, metal, 2 * s, _wtag)
 		for t in range(t0 - 1, t1 + 2):
-			put.call(t, steel if absi(t - mid) < (t1 - t0) / 2 + 1 else dark, 3 * s, T_MAIN)
+			put.call(t, steel if absi(t - mid) < (t1 - t0) / 2 + 1 else dark, 3 * s, _wtag)
 
 
 	func _gem(f: Frame, c: Vector2i, size: int) -> void:

@@ -547,6 +547,8 @@ func _refresh() -> void:
 		for st in ["normal", "hover", "pressed"]:
 			_tabs[i].add_theme_stylebox_override(st, sb)
 		_tabs[i].modulate = Color.WHITE if not h.dead else Color(0.6, 0.6, 0.7)
+		if not _tabs[i].icon is AtlasTexture or (_tabs[i].icon as AtlasTexture).atlas != h.walk_texture():
+			_tabs[i].icon = h.head_icon()          # the outfit (and its sprites) changed
 	for slot: String in _slots:
 		var d: Dictionary = _slots[slot]
 		var iid: String = hero.equipment.get(slot, "")

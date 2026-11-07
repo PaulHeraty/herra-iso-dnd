@@ -1,7 +1,8 @@
 class_name Mechanisms
 extends Node
 ## Phase 6 dungeon features on a map: traps (spotting, springing, disarming), Search (F), secret
-## doors, levers, pressure plates, puzzles, pushable blocks, the riddle stone face and room notes.
+## doors, levers, pressure plates, puzzles, pushable blocks, the riddle stone face, room notes,
+## ambushes (Trigger: hidden monsters appear, a portcullis may seal the room) and lore to read (LoreNote).
 ## Made by DungeonMap (map.mech). The PartyController / CombatManager ask it what is under the
 ## mouse and tell it when someone has stepped; it opens doors through `fire(link)`.
 ##
@@ -21,6 +22,7 @@ var map: DungeonMap
 var traps: Array[Trap] = []
 var plates: Array[PressurePlate] = []
 var notes: Array[RoomNote] = []
+var triggers: Array[Trigger] = []
 ## Things the player uses (levers, linked braziers, blocks, plates, stone faces): walls in front of
 ## them fade while they are in sight (DungeonMap), so nothing important hides behind a wall.
 var pieces: Array[MapMarker] = []
@@ -37,8 +39,16 @@ func setup(m: DungeonMap) -> void:
 			plates.append(n)
 		elif n is RoomNote:
 			notes.append(n)
-		if n is Lever or n is StoneFace or n is PressurePlate or (n is Brazier and n.link != "") or (n is Prop and n.pushable):
+		elif n is Trigger:
+			triggers.append(n)
+		if n is Lever or n is StoneFace or n is PressurePlate or n is LoreNote or (n is Brazier and n.link != "") or (n is Prop and n.pushable):
 			pieces.append(n)
+	# a sprung ambush whose monsters still live (the party left, or saved mid-fight): the seal is down
+	for t in triggers:
+		if t.fired and not t.done and t.seal != "":
+			for d: Door in _all(Door):
+				if d.link == t.seal:
+					d.is_open = false
 	update_plates(true)
 
 
@@ -102,7 +112,7 @@ func thing_under(pos: Vector2) -> MapMarker:
 		var hit := false
 		if n is Trap:
 			hit = n.blocks_party() and n.get_cell() == cell
-		elif n is Lever or n is StoneFace:
+		elif n is Lever or n is StoneFace or n is LoreNote:
 			hit = n.get_cell() == cell or n.sprite_rect().has_point(pos)
 		elif n is Brazier:
 			hit = n.link != "" and (n.get_cell() == cell or n.sprite_rect().has_point(pos))
@@ -152,6 +162,8 @@ func interact(thing: MapMarker) -> void:
 		push(thing)
 	elif thing is StoneFace:
 		talk_to_face(thing)
+	elif thing is LoreNote:
+		read_lore(thing)
 
 
 # --- stepping ----------------------------------------------------------------------------------
@@ -167,6 +179,8 @@ func after_party_step() -> bool:
 			stop = true
 			break
 	update_plates()
+	if check_triggers():
+		return true
 	if check_notes():
 		stop = true
 	return stop
@@ -182,6 +196,8 @@ func after_combat_step(who: Actor) -> bool:
 			spring(t, who)
 			stop = true
 	update_plates()
+	if who is Hero and check_triggers():
+		stop = true
 	return stop
 
 
@@ -777,3 +793,108 @@ func _show_note(n: RoomNote) -> bool:
 		return true
 	map.hud.caption(n.title, n.text)
 	return false
+
+
+# --- ambushes (Trigger) --------------------------------------------------------------------------
+
+## A hero has stepped: spring any ambush whose area they are in. True if one sprang (stop walking).
+func check_triggers() -> bool:
+	var heroes := _conscious()
+	if heroes.is_empty():
+		return false
+	for t in triggers:
+		if t.fired:
+			continue
+		var r := t.area()
+		var inside := heroes.filter(func(h: Hero): return r.has_point(h.cell))
+		if inside.is_empty() or (t.whole_party and inside.size() < heroes.size()):
+			continue
+		spring_ambush(t)
+		return true
+	return false
+
+
+## The ambush: the seal drops, the hidden monsters appear and the fight starts (or they join it).
+func spring_ambush(t: Trigger) -> void:
+	t.fired = true
+	if map.controller:
+		map.controller.stop()
+	var sealed := 0
+	if t.seal != "":
+		for d: Door in _all(Door):
+			if d.link == t.seal and d.is_open and map.occupant(d.get_cell()) == null:
+				d.close()
+				sealed += 1
+		if sealed > 0:
+			Sfx.play("trap_pit", -2.0, 0.7)
+			map.camera_controller.shake(3.0, 0.25)
+	var woke: Array[Monster] = []
+	for n in map.entities.get_children():
+		if n is MonsterSpawn and n.ambush == t.link and n.lurking():
+			var m := map.wake_ambusher(n, t.how)
+			if m:
+				woke.append(m)
+	if t.text != "":
+		if map.hud:
+			map.hud.caption("Ambush!", t.text)        # (the caption logs it too)
+		else:
+			_say(t.text)
+	if sealed > 0:
+		_say("Behind you, %s slams down!" % ("a portcullis" if sealed == 1 else "the portcullises"))
+	map.invalidate_static()
+	map.refresh_navigation()
+	map._refresh_fog_look()
+	if woke.is_empty():
+		t.done = true
+		return
+	Sfx.play("trap_alarm", -6.0, 0.8)
+	FloatText.spawn(map, woke[0].body_position() + Vector2(0, -18), "AMBUSH!", COL_DANGER, 12)
+	if _combat().in_combat:
+		_combat()._check_join()
+		return
+	var near: Hero = null
+	for h in _conscious():
+		if near == null or DungeonMap.grid_distance(h.cell, woke[0].cell) < DungeonMap.grid_distance(near.cell, woke[0].cell):
+			near = h
+	if near:
+		# a moment to see them appear, then the fight
+		get_tree().create_timer(0.7).timeout.connect(func():
+			if is_instance_valid(near) and not _combat().in_combat:
+				_combat().start_combat(woke[0], near))
+
+
+## After a fight: an ambush whose monsters are all dead is over; its seal lifts.
+func after_combat() -> void:
+	for t in triggers:
+		if not t.fired or t.done:
+			continue
+		var alive := false
+		for n in map.entities.get_children():
+			if n is MonsterSpawn and n.ambush == t.link and not n.cleared and (n.lurking() or (n.monster and n.monster.is_alive())):
+				alive = true
+		if alive:
+			continue
+		t.done = true
+		if t.seal != "":
+			_say("With a clank of chains, the portcullis grinds back up.")
+			fire(t.seal, true)
+			map.refresh_navigation()
+
+
+# --- lore (LoreNote) -------------------------------------------------------------------------------
+
+## Read a book / tablet / dead adventurer's letter in the dialogue box; it goes into the journal.
+func read_lore(n: LoreNote) -> void:
+	if map.hud == null:
+		return
+	map.hud.close_screens()
+	var first := not n.read
+	n.read = true
+	Quest.add_lore(n.lore_id(), n.title, n.text)
+	if first:
+		_say("Read: %s (kept in the journal, J)." % n.title)
+		Sfx.play("scroll_read", -6.0)
+	var icon := AtlasTexture.new()
+	icon.atlas = load("res://assets/ui/item_icons.png")
+	icon.region = Rect2(ItemData.ICON_ORDER.find("scroll") * 16, 0, 16, 16)
+	map.hud.dialogue.say(n.title, icon, n.text, [{text = "Close", call = map.hud.dialogue.close, bye = true}])

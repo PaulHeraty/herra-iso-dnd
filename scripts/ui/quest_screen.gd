@@ -1,6 +1,7 @@
 class_name QuestScreen
 extends Panel
 ## The quest log (Quest button / J): the main quest and any side quests: who gave each, the reward,
+## (Journal page: the lore the party has read, LoreNote; pick a title to read it again)
 ## the last few stages done (ticked) and the one the party is on now (later ones stay hidden). Read-only; J, Esc or a click
 ## on the map closes it. Lives on the CombatHud's root (inherits its theme).
 
@@ -9,6 +10,9 @@ const COL_DONE := Color8(120, 186, 116)
 
 var combat: CombatManager
 var _body: Control
+var _page := "quests"            ## or "journal"
+var _sel := -1                   ## journal: the entry shown (-1 = the latest)
+var _page_btns := {}
 
 static var _tick_tex: Texture2D
 
@@ -23,6 +27,19 @@ func _ready() -> void:
 	title.text = "QUEST LOG"
 	var close_l := _label(self, Vector2(RECT.size.x - 74, 4), CombatHud.COL_DIM)
 	close_l.text = "J / Esc: close"
+	var bx := 92.0
+	for p in ["quests", "journal"]:
+		var b := Button.new()
+		b.focus_mode = Control.FOCUS_NONE
+		b.position = Vector2(bx, 2)
+		b.add_theme_font_size_override("font_size", 10)
+		b.pressed.connect(func():
+			_page = p
+			Sfx.play("ui_select", -10.0)
+			_build())
+		add_child(b)
+		_page_btns[p] = b
+		bx += 74.0
 	var rule := ColorRect.new()
 	rule.color = CombatHud.COL_EDGE
 	rule.position = Vector2(4, 17)
@@ -55,6 +72,14 @@ func _build() -> void:
 	_body.position = Vector2(0, 22)
 	_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_body)
+	_page_btns.quests.text = "Quests"
+	_page_btns.journal.text = "Journal (%d)" % Quest.lore.size()
+	for p in _page_btns:
+		_page_btns[p].set_deferred("size", Vector2(70, 14))
+		_page_btns[p].modulate = Color.WHITE if p == _page else Color(0.65, 0.65, 0.7)
+	if _page == "journal":
+		_journal()
+		return
 	var w := RECT.size.x - 24
 	var sides: Array[Dictionary] = []
 	for q in Quest.side_quests():
@@ -176,3 +201,51 @@ func _text(pos: Vector2, w: float, col: Color) -> Label:
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.size = Vector2(w, 0)
 	return l
+
+
+## The journal: titles down the left (the latest at the bottom), the chosen entry's text on the right.
+func _journal() -> void:
+	_body.mouse_filter = Control.MOUSE_FILTER_PASS
+	if Quest.lore.is_empty():
+		var l := _text(Vector2(10, 4), RECT.size.x - 24, CombatHud.COL_DIM)
+		l.text = "Nothing in the journal yet. Books, inscriptions and letters the party reads are kept here."
+		_fit(40.0)
+		return
+	var sel := _sel if _sel >= 0 and _sel < Quest.lore.size() else Quest.lore.size() - 1
+	const LIST_W := 128.0
+	const ROWS := 14
+	var first := maxi(0, mini(sel - ROWS / 2, Quest.lore.size() - ROWS))
+	var y := 2.0
+	for i in range(first, mini(Quest.lore.size(), first + ROWS)):
+		var e: Dictionary = Quest.lore[i]
+		var b := Button.new()
+		b.focus_mode = Control.FOCUS_NONE
+		b.flat = i != sel
+		b.text = String(e.title)
+		b.clip_text = true
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.position = Vector2(8, y)
+		b.add_theme_font_size_override("font_size", 10)
+		b.add_theme_color_override("font_color", CombatHud.COL_BANNER if i == sel else CombatHud.COL_TEXT)
+		b.pressed.connect(func():
+			_sel = i
+			Sfx.play("ui_select", -10.0)
+			_build())
+		_body.add_child(b)
+		b.set_deferred("size", Vector2(LIST_W, 14))
+		y += 15
+	var rule := ColorRect.new()
+	rule.color = CombatHud.COL_EDGE
+	rule.position = Vector2(LIST_W + 14, 2)
+	rule.size = Vector2(1, maxf(y, 120.0) - 4)
+	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_body.add_child(rule)
+	var e: Dictionary = Quest.lore[sel]
+	var t := _label(_body, Vector2(LIST_W + 22, 2), CombatHud.COL_BANNER)
+	t.text = String(e.title)
+	var body := _text(Vector2(LIST_W + 22, 16), RECT.size.x - LIST_W - 34, CombatHud.COL_TEXT)
+	body.text = String(e.text)
+	var th := CombatHud.FONT.get_multiline_string_size(body.text, HORIZONTAL_ALIGNMENT_LEFT, body.size.x, 10).y
+	var h := maxf(y, 22.0 + th + 12.0)
+	rule.size = Vector2(1, h - 4)
+	_fit(h)

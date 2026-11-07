@@ -606,7 +606,7 @@ func _test_looks() -> void:
 	var plain := HeroLook.sheets("fighter", {"main": "longsword", "off": "shield", "armor": "chain_mail"})
 	var plate := HeroLook.sheets("fighter", {"main": "longsword", "off": "shield", "armor": "plate_armor"})
 	var axe := HeroLook.sheets("fighter", {"main": "greataxe", "armor": "chain_mail"})
-	check(plain.walk.get_size() == Vector2(160, 64) and plain.action.get_size() == Vector2(512, 64), "sheets: walk 5x2, action 16x2 (32 px cells)")
+	check(plain.walk.get_size() == Vector2(160, 64) and plain.action.get_size() == Vector2(608, 64), "sheets: walk 5x2, action 19x2 (32 px cells)")
 	check(plain.walk.get_image().get_data() != plate.walk.get_image().get_data(), "plate looks different from chain mail")
 	check(plain.action.get_image().get_data() != axe.action.get_image().get_data(), "a greataxe looks different from a longsword")
 	check(plain.fx_walk == null and plain.main_fx.mode == HeroLook.Fx.NONE, "plain gear: no effects overlay")
@@ -622,3 +622,12 @@ func _test_looks() -> void:
 	var bare := HeroLook.sheets("mage", {"main": "quarterstaff"})
 	check(cloak.walk.get_image().get_data() != bare.walk.get_image().get_data() and is_same(robe, bare),
 			"a cloak shows; an amulet doesn't (same sheets as without it)")
+	# throwing: the handaxe is drawn in the wind-up (column 16), and gone at the release (17)
+	var thrower := HeroLook.sheets("fighter", {"main": "longsword", "ranged": "handaxe", "armor": "chain_mail"})
+	var unarmed := HeroLook.sheets("fighter", {"main": "longsword", "armor": "chain_mail"})
+	var ai: Image = thrower.action.get_image()
+	var bi: Image = unarmed.action.get_image()
+	check(ai.get_region(Rect2i(16 * 32, 0, 32, 32)).get_data() != bi.get_region(Rect2i(16 * 32, 0, 32, 32)).get_data()
+			and ai.get_region(Rect2i(17 * 32, 0, 32, 32)).get_data() != ai.get_region(Rect2i(1 * 32, 0, 32, 32)).get_data(),
+			"a handaxe has its own throw frames")
+	check(HeroLook.is_thrown("handaxe") and not HeroLook.is_thrown("longbow") and not HeroLook.is_thrown(""), "thrown vs shot ranged kinds")

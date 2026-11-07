@@ -30,7 +30,7 @@ level 1 to about 20. A module is one folder, `modules/<id>/`:
 - **Roster** (`scripts/game/roster.gd`, `user://parties/<id>.party`): finishing a module (victory
   screen → "Finish adventure") keeps the party: each hero's level, XP, equipment; the bag (minus keys
   + module items); party XP; the modules done. The start screen offers these parties for a new
-  adventure; they start it rested, with no quest. Save games (F5/F9) store the module id.
+  adventure; they start it rested, with no quest. Save games (F5 quick / F6 slots / F9 load) store the module id.
 - **Levels:** `Progression` covers 1-9 (MAX_LEVEL). A module past 9 needs it extended first (XP,
   slots, class features at 10+, 6th-level spells).
 - **Quests:** the main quest (module quest_*) + side quests (Quest.side, given by NPCs), story flags
@@ -70,7 +70,7 @@ level 1 to about 20. A module is one folder, `modules/<id>/`:
 | Story | Placeholder. One pitch exists (below), not chosen. |
 | Party level | The party starts at **level 1** in the woods and reaches **5** by the last floor (Phase 5). Data files hold level-1 stat blocks; `Progression` grows them. Each map has `start_level` for playing it on its own. |
 | XP | SRD thresholds (300 / 900 / 2700 / 6500 per hero); a fight's XP is split between the heroes who aren't dead; level-ups happen right after the fight (fixed average HP, "LEVEL UP!" box + fanfare). |
-| Campaign (module 1) | `modules/wraith_below/`: `surface.tscn` "The Harrow Woods" (first map, after the intro; L1→2) → mine entrance → 5 floors: Upper Halls (L2→3), Webbed Deep (L3, Eye Tyrant), Goblin Warrens (L3→4), Sunken Crypts (L4), Sealed Vault (L4→5, the **Wraith**). All built by `modules/wraith_below/build_maps.gd`; it prints each map's XP (total ~30,600 incl. disarmed traps + solved puzzles). |
+| Campaign (module 1) | `modules/wraith_below/`: `surface.tscn` "The Harrow Woods" (first map, after the intro; L1→2) → mine entrance → 5 floors: Upper Halls (L2→3), Webbed Deep (L3, Eye Tyrant), Goblin Warrens (L3→4), Sunken Crypts (L4), Sealed Vault (L4→5, the **Wraith**). All built by `modules/wraith_below/build_maps.gd`; it prints each map's XP (total ~31,200 incl. disarmed traps, solved puzzles + the ambushers). |
 | Combat start | A monster with **line of sight** to a hero within its sight range (~8 cells) starts combat; its whole `group_id` joins. Walls block sight. |
 | UI font | **Our own** generated bitmap pixel font (no third-party font). |
 | Monsters | Eye Tyrant + **Giant Spider** (SRD), Phase 2; **Skeleton** (SRD: shortsword/shortbow, vulnerable to bludgeoning) added with the first dungeon. |
@@ -78,12 +78,13 @@ level 1 to about 20. A module is one folder, `modules/<id>/`:
 | Monsters (Phase 5) | SRD: Giant Rat, Wolf, Goblin, Goblin Boss, Bandit, Zombie, Ghoul, Ghast, Hobgoblin, Bugbear, Ogre, Wight, Mummy, Specter, **Wraith** (final boss). Traits in `CreatureStats.traits`: pack_tactics, martial_advantage, undead_fortitude, resist_nonmagical, turn_resistance; attack riders can add conditions (wolf prone, ghoul paralyzed). Multiattack = `extra_attacks` for monsters too. |
 | Levels 6-9 (module 2) | XP 14000 / 23000 / 34000 / 48000; prof +3 (5-8), +4 (9); full-caster slots to 4/3/3/3/1. Fighter: ASI CON (6) + STR (8), Remarkable Athlete (7, half prof on untrained STR/DEX/CON checks + initiative), Indomitable (9, auto: reroll one failed save per long rest, `CombatManager.save_vs`). Rogue: Expertise athletics + thieves' tools (6), Evasion (7, area DEX saves: 0 / half), Sneak 4d6 / 5d6, Supreme Sneak (9, Hide with advantage). Cleric: Channel Divinity x2 + Blessed Healer (6), Death Ward (7, condition `death_ward`), Divine Strike 1d8 + Destroy Undead CR 1 (8), Mass Cure Wounds (9). Mage: Lightning Bolt (6), Ice Storm (7, 3x3, 2d8+4d6 counted as cold), Hold Person (8), Cone of Cold (9). Per-level uses: `Progression.uses_of`. |
 | Monsters (module 2) | SRD: Winter Wolf (cold breath, prone bite), Polar Bear, Ice Mephit (death burst, frost breath), Troll (`regeneration`: 10 HP a turn unless fire/acid hurt it), Young White Dragon (cold breath 10d8), Animated Armor, Flying Sword, Gargoyle, Flesh Golem (`immune_nonmagical`, `magic_resistance`: advantage on saves vs spells), Mage (Fire Bolt, a Fireball, a Hold Person), Mimic (a Chest with `mimic`: opening it wakes the monster; passive Perception DC 15 spots it). Our own boss: Morvaine the Rimecaller (built on the SRD Archmage). Monster damage powers (breaths, Fireball, Cone of Cold) are chosen by expected damage over everyone in the shape (`_damage_power_value`). |
-| Gear on heroes | Armour, main weapon, ranged weapon (shoot frames: bow or crossbow, any hero), shield and **cloak** show on the sprites; rings, amulets etc. don't. `HeroLook` (`scripts/actors/hero_look.gd`) builds each hero's walk + action sheets at runtime from `HeroDrawings` (the walk-sheet grids) + the gear, cached per outfit (~40 ms each); `Hero.refresh_stats()` rebuilds. Armour = the drawing's armour pixels restyled per part (torso / arms / legs: leather, studded, chain, scale (bronze), plate, lames; plate-type armour also covers the Fighter's tabard top + the Cleric's robe front); magic armour = recoloured per its description + a thin moving gleam. Each weapon kind has its own shape. Effects overlay (`scripts/fx/hero_fx.gdshader`, additive, its own sheet: R main weapon, G armour/shield glint, B ranged): +1 shimmer, +2 glow, Flame Tongue fire, Frost Brand mist, Mace of Disruption radiant; fire/frost/radiant also carry a PointLight2D. Preview: `tools/godot/preview_hero_looks.gd -- <png> fighter|others|catalog`. The static `<hero>_sheet.png` / `_actions.png` stay for the intro + tools. |
+| Gear on heroes | Armour, main weapon, ranged weapon (shoot frames: bow or crossbow, any hero; throw frames: a handaxe), shield and **cloak** show on the sprites; rings, amulets etc. don't. `HeroLook` (`scripts/actors/hero_look.gd`) builds each hero's walk + action sheets at runtime from `HeroDrawings` (the walk-sheet grids) + the gear, cached per outfit (~40 ms each); `Hero.refresh_stats()` rebuilds. Armour = the drawing's armour pixels restyled per part (torso / arms / legs: leather, studded, chain, scale (bronze), plate, lames; plate-type armour also covers the Fighter's tabard top + the Cleric's robe front); magic armour = recoloured per its description + a thin moving gleam. Each weapon kind has its own shape. Effects overlay (`scripts/fx/hero_fx.gdshader`, additive, its own sheet: R main weapon, G armour/shield glint, B ranged): +1 shimmer, +2 glow, Flame Tongue fire, Frost Brand mist, Mace of Disruption radiant; fire/frost/radiant also carry a PointLight2D. Preview: `tools/godot/preview_hero_looks.gd -- <png> fighter|others|catalog`. The intro shows the party in its gear too (HeroLook + the overlay). The static `<hero>_sheet.png` / `_actions.png` stay for the tools. |
+| Ambushes + lore (Phase 6) | `Trigger` marker (area like a RoomNote): the first time the party walks in, the MonsterSpawns whose `ambush` is its `link` appear (they don't exist or block anything before: `MonsterSpawn.lurking()`; `how` = step out / rise out of the floor / drop from above, `DungeonMap.wake_ambusher`) and the fight starts (or they join one); `seal` = the open portcullises with that link slam shut behind the party (then it waits until the **whole** party is inside) and rise again when every ambusher is dead (`Mechanisms.after_combat`). `LoreNote` (book on a lectern / stone tablet / a dead adventurer's pack, blocks its cell, twinkles until read): click = read it in the dialogue box (which grows to fit long text); kept in the **journal** (`Quest.lore`, saved with the story; quest log J 'Journal' page). Builder: room `ambush` / `lore`, link `{seal = name}`. Module 1: the Lords' Vault guardians (animated armour, the vault gate drops again), spiders dropping in the Silk Gallery, zombies rising in the Drowned Crypt, gargoyles on the sealed Treasure Vault, a mimic in the Forgotten Crypt, 9 lore notes (woods + every floor). |
 | Items (module 2) | WONDROUS kind in two **Worn** slots (`worn1`/`worn2`): Cloak of Protection, Amulet of Health / Gauntlets of Ogre Power / Headband of Intellect (`ability_set`: score raised to 19 before the level's maths), Bracers of Defense (`ac_unarmored`). Frost Brand (+1d6 cold, resist fire: a main-hand weapon's `resistances` count), +2 armour/weapons, rings of Warmth / fire / lightning resistance, Potion of Supreme Healing, scrolls up to 5th level, Rime Key, Star Key, the Sunfire Lantern (quest item, can't be sold). |
 | Doors (module 2) | `Door.Style.ICE`: a wall of magic ice (blocks moving + sight), melted only by its `link` (the beacons). Npc `show_flag` / `hide_flag` (story flags), `guard_monster` (hide only from that monster: Hilde and the dragon), `calls_party`. |
 | Doors | Click to walk up and open. Locked: Rogue picks (thieves' tools DEX vs `lock_dc`), else strongest hero forces (Athletics vs DC+2); retry allowed. In combat: open = free once a turn, pick = your action. Monsters don't open doors. |
 | Stairs / floors | `Stairs` marker -> `target_map` + `target_entry` (a PartyStart `entry_id`). Outside combat only. Party HP/slots/uses/hit dice carry over (`PartyState`); each map remembers open doors, dead monsters, opened chests (`MapState`; written to disk by save games). R after a wipe restarts the current floor as the party arrived. |
-| Save / load | **F5** = save, **F9** = load, **3 slots** (`user://saves/slot<N>.sav`, binary `store_var`, no objects). Name typed or left blank = `save001`, `save002`... (one more than the highest number in any slot). Saving: exploring only (not in combat, talking, or after a wipe). Loading: any time, also from the game-over screen. A save = PartyState + every map's MapState (current one as it is now) + each hero's cell/facing + view rotation; loading arrives with `MapState.next_entry = AT_SAVE`. Saving doesn't move the R-restart point; after a load, R restarts from the load. The screen pauses the game. |
+| Save / load | **F5** = quick save (straight to `user://saves/quick-save.sav`, overwritten each time, no screen; `SaveGame.QUICK` = slot 0), **F6** = save screen with **3 named slots** (`user://saves/slot<N>.sav`), **F9** = load (the quick save + the 3 slots; also the start screen's Load game). At most 4 files on disk. Binary `store_var`, no objects. Name typed or left blank = `save001`, `save002`... (one more than the highest number in any slot). Saving: exploring only (not in combat, talking, or after a wipe). Loading: any time, also from the game-over screen. A save = PartyState + every map's MapState (current one as it is now) + each hero's cell/facing + view rotation; loading arrives with `MapState.next_entry = AT_SAVE`. Saving doesn't move the R-restart point; after a load, R restarts from the load. The screen pauses the game. |
 | Fog of war | On by default (`DungeonMap.fog_of_war`). Unexplored = not drawn (black); explored but out of sight = dimmed, its monsters hidden (combatants in a fight stay visible). Sight = shadowcasting 12 cells from each conscious hero, walls + closed doors block. No pathing, moving or aiming into unexplored cells. Explored cells kept per map in MapState. |
 | Fireball area | **3×3** like the mock-up (simplified from the SRD 20-ft sphere); 8d6 fire, DEX save half. |
 | Reactions | **Prompt the player** (e.g. "Cast Shield?") when a reaction could change the outcome. |
@@ -121,7 +122,7 @@ level 1 to about 20. A module is one folder, `modules/<id>/`:
 assets/
   tiles/      floor_atlas.png, wall_atlas.png, dungeon_tileset.tres; outdoor_floor_atlas.png, cliff_atlas.png,
               forest_atlas.png, outdoor_tileset.tres (same layout: 0 ground, 1 cliffs, 2 forest)   (generated)
-  sprites/    heroes/ (walk sheets 16×24, action sheets 32×32, face portraits 32×32 `<hero>_portrait.png`), monsters/ (Eye Tyrant), npcs/ (trader_sheet 16x24: idle, idle, talk), props/ (chest, chest_open, bones, torch_sheet, web, stairs_up/down, barrel, crate, sarcophagus, rubble, cocoon, urn, brazier, stall, portal_sheet 8x24x40; Phase 6: trap_* (armed + sprung, flat 34x18 at (-17,-9)), plate(_down), lever_up/down (24x34 at (-12,-27)), block (28x34 at (-14,-27)), stone_face (28x44 at (-14,-36)))
+  sprites/    heroes/ (walk sheets 16×24, action sheets 32×32, face portraits 32×32 `<hero>_portrait.png`), monsters/ (Eye Tyrant), npcs/ (trader_sheet 16x24: idle, idle, talk), props/ (chest, chest_open, bones, torch_sheet, web, stairs_up/down, barrel, crate, sarcophagus, rubble, cocoon, urn, brazier, stall, portal_sheet 8x24x40; Phase 6: trap_* (armed + sprung, flat 34x18 at (-17,-9)), plate(_down), lever_up/down (24x34 at (-12,-27)), block (28x34 at (-14,-27)), stone_face (28x44 at (-14,-36)), lore_book / lore_tablet (24x34 at (-12,-27)), lore_remains (flat 34x18 at (-17,-9)))
   effects/    fireball_sheet.png (6×16px), explosion_sheet.png (7×32px)
   fonts/      herra_pixel.fnt/.png: our pixel font (use size 10; scale the Control 2x/3x for big text)
   sfx/        13 WAVs from the concept session (torch_ambience imports as a forward loop) + generated ones (gen_sfx.gd)
@@ -144,7 +145,8 @@ scripts/
   maps/mechanisms.gd    Mechanisms (map.mech, Phase 6): traps (spot / spring / disarm), Search, secret doors, levers,
                         plates, puzzles (fire(link) opens doors), pushable blocks, the riddle face, room notes; thing_under /
                         approach_cells / interact for PartyController + CombatManager; after_party_step / after_combat_step
-  markers/              ... + trap, lever, pressure_plate, puzzle (invisible rules), stone_face (riddle), room_note (area text);
+  markers/              ... + trap, lever, pressure_plate, puzzle (invisible rules), stone_face (riddle), room_note (area text),
+                        trigger (ambush: hidden monsters appear, a portcullis may seal the room), lore_note (something to read);
                         MapMarker.save_state() / load_state() = per-marker state kept by MapState (`marks`) and save games
   maps/map_picture.gd  MapPicture: the map as an Image, 1 px per cell (tile average colour, fog: transparent / dimmed / lit),
                         redrawn only where the fog changed; DungeonMap.map_picture, marked dirty by _refresh_fog_look
@@ -190,7 +192,7 @@ scripts/
   game/adventure_module.gd  AdventureModule (a module's definition); game/modules.gd Modules (registry, current);
                         game/roster.gd Roster (parties kept between modules)
   ui/victory_screen.gd  VictoryScreen: the win screen after Brannoc pays for the Wraith (DungeonMap.show_victory)
-  ui/save_screen.gd     SaveScreen (F5 / F9): own CanvasLayer 60, pauses the tree; slot rows, name LineEdit, Save/Overwrite/Load
+  ui/save_screen.gd     SaveScreen (F5 quick save, F6 / F9): own CanvasLayer 60, pauses the tree; slot rows, name LineEdit, Save/Overwrite/Load
 modules/      <id>/module.gd (AdventureModule), maps/*.tscn, build_maps.gd (map data for MapBuilder), story/*.gd (dialogue):
               wraith_below/ (module 1), frost_spire/ (module 2: frostfell + tower_1..5, hilde_talk.gd, tamsin_talk.gd)
 data/         heroes/*.tres (level 1; Progression grows them to 9), monsters/*.tres: CreatureStats + AttackData; spells/*.tres: SpellData
@@ -209,13 +211,14 @@ tools/
               gen_icons.gd (9x9 condition icons -> assets/ui/condition_icons.png; order = Condition.ICON_INDEX)
               gen_item_art.gd (open chest + item icons; weapons drawn along the diagonal from code)
               gen_trader_art.gd (Brannoc, his stall, the portal sheet), test_story.gd (trader, quest, shop, rune portal: PASS/FAIL; run without --headless), test_save.gd (save / load + the slot screen; writes user://test_saves only)
-              gen_puzzle_art.gd (traps armed/sprung, pressure plate up/down, lever up/down, pushable block, stone face),
+              gen_puzzle_art.gd (traps armed/sprung, pressure plate up/down, lever up/down, pushable block, stone face,
+              lectern, tablet, adventurer's remains),
               test_modules.gd (modules, start screen, Roster, saves with a module; writes user://test_parties + test_saves),
               test_frost.gd (module 2: beacons + ward, Hilde, side quests, rune binding, mimic, the tower's puzzles, levels 6-9 rules,
               troll regeneration, breath AI, the ending: PASS/FAIL; run without --headless, HERRA_AUTO_REACT=1, -t 200),
               gen_frost_art.gd (module 2: snow + tower tilesets by palette remapping, snow props, the spire, the ice ward,
               bookshelf / alchemy table / frost crystal, Hilde + Tamsin; run, --import, run again for the tilesets),
-              test_puzzles.gd (Phase 6: traps, Search, secret doors, levers, blocks, ring, riddle, notes, MapState: PASS/FAIL;
+              test_puzzles.gd (Phase 6: traps, Search, secret doors, levers, blocks, ring, riddle, notes, ambushes, lore, MapState: PASS/FAIL;
               run without --headless, HERRA_AUTO_REACT=1, -t 150),
               gen_dungeon_art.gd (stairs + props), gen_skeleton.gd (Skeleton sheet), map_builder.gd (MapBuilder: builds
               map scenes from a module's descriptions; see modules/wraith_below/build_maps.gd), gen_monsters.gd (the Phase 5 monsters: sheets + scenes;
@@ -283,11 +286,12 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
   16×24 figure cell sits at (8, 8); sprite offset (-16, -30)), 16 cols × 2 rows (front / back):
   attack 0-3 (wind-up, strike + swoosh, follow-through, recover), shoot 4-6 (Rogue bow; others copy
   the wind-up), cast 7-10 (raise + 3 looping glow frames), hurt 11-12, down 13-15 (kneel, slump,
-  lying). Built by `tools/godot/gen_hero_actions.gd` from the walk-sheet drawings: a per-hero rig
+  lying). HeroLook's runtime action sheets add throw 16-18 (wind-up with the handaxe, release, follow-through: 608×64).
+  Built by `tools/godot/gen_hero_actions.gd` from the walk-sheet drawings: a per-hero rig
   erases the weapon and redraws arm (sleeve line from the shoulder) + weapon + hand per pose, so
   changes to `gen_hero_sheets.gd` carry over (re-run both). Preview: `preview_hero_actions.gd` → GIF.
   `Hero.play_action()` swaps to the action sheet and back; `Hero.ACTION_ANIMS` must match the columns.
-  Combat: melee = attack, ranged = shoot (Rogue) / cast (Mage, crossbow) / attack (throw), spells +
+  Combat: melee = attack, ranged = shoot (any bow or crossbow) / throw (a handaxe, which tumbles to the target), spells +
   Second Wind = cast (held until the power resolves; Mage/Cleric spells leave from the raised gem /
   holy symbol, `Hero.CAST_POINTS`), Shove = attack, Shield reaction = a short cast, hurt on damage,
   down at 0 HP (stays lying, greyed; darker when dead).
@@ -423,7 +427,7 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
   7. Character sheet (C). DONE.
   8. Intro (Herrasoft splash, HerraDnD title, story pages) + the win screen after the reward. DONE.
   Phase 5 complete (playtested start to finish by the user).
-- [ ] **Phase 6 — Dungeon features + puzzles:** doors/locks/keys and level transitions were done early.
+- [x] **Phase 6 — Dungeon features + puzzles:** doors/locks/keys and level transitions were done early.
   Steps:
   1. Traps: `Trap` (5 kinds), passive Perception spotting, Search (F / button), springing on hidden
      traps (walk stops; exploring can't kill), known traps block paths + red edge + warning sign,
@@ -436,14 +440,15 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
      1, 2, 3; a lever + portcullis in the Warrens; traps on every floor and two in the woods; a name +
      description for every room and clearing. All built by the module's build_maps.gd (maps rebuilt: older
      saves' monster/chest names no longer match). DONE, waiting for the user's playtest.
-  4. Next: more monsters (e.g. SRD Mimic, Animated Armor, Gargoyle), triggers (ambushes: a gate slams
-     shut, monsters wake), lore notes (Phase 7 overlap).
+  4. Ambushes (`Trigger`: hidden monsters appear, sealing portcullises), lore notes + the journal, module 2's
+     monsters (animated armour, gargoyles, a mimic) in module 1; also the throw animation, gear on the intro's
+     heroes, tab icons that follow the outfit. DONE (module 1 maps rebuilt), waiting for the user's playtest.
 - [x] **Module 2 — The Frost Spire** (user request, after the module system): levels 6-9 rules, 12 new
   monsters, damage-power AI, Worn slots + new SRD items, side quests + story flags + stage XP, rune
   rebinding, mimics, the ice ward, snow + tower tilesets, Hilde + Tamsin, six maps. Waiting for the
   user's playtest. Possible next: a level 9-13 module (needs Progression past 9).
 - [ ] **Phase 7 — Story:** quests, NPCs, dialogue, lore notes.
-- [ ] **Phase 8 — Wrapper:** title screen + module select (DONE early: Modules, Roster, start screen), save/load (DONE early: F5/F9, 3 slots), settings, music, mixing, game over/victory.
+- [ ] **Phase 8 — Wrapper:** title screen + module select (DONE early: Modules, Roster, start screen), save/load (DONE early: F5 quick save, F6 3 slots, F9 load), settings, music, mixing, game over/victory.
 - [ ] **Phase 9 — Polish & release:** balance, bugs, juice, export builds (Windows/Mac/Linux, itch.io).
 - **First milestone (after phases 0–3):** one user-built dungeon, 4 heroes, 2–3 monster types,
   Fireball + healing + melee working, playable start to finish.
