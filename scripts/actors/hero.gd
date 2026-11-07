@@ -1,9 +1,11 @@
 class_name Hero
 extends Actor
-## One of the four party members. The class picks the stat block (data/heroes/) and the sprites:
-## the walk sheet <class>_sheet.png (16x24 cells: idle + walk, front/back) and the action sheet
-## <class>_actions.png (32x32 cells, tools/godot/gen_hero_actions.gd): attack, shoot, cast, hurt,
-## down. While an action plays the sprite switches to the action sheet, then back.
+## One of the four party members. The class picks the stat block (data/heroes/); the sprites are
+## built from what the hero wears and wields (HeroLook: armour, cloak, shield, main + ranged weapon):
+## a walk sheet (idle + walk, front/back) and an action sheet (attack, shoot, cast, hurt, down), both
+## 32x32 cells. While an action plays the sprite switches to the action sheet, then back. Magic gear
+## glows through an overlay sprite (hero_fx.gdshader) + a light for flaming / frost / holy weapons.
+## Without the class's sheets in assets/sprites/heroes/ it falls back to a single still sprite.
 
 signal action_finished(anim: String)
 
@@ -17,7 +19,7 @@ const STATS := {
 	HeroClass.CLERIC: "res://data/heroes/cleric.tres",
 	HeroClass.MAGE: "res://data/heroes/wizard.tres",
 }
-const WALK_OFFSET := Vector2(-8, -22)
+const WALK_OFFSET := Vector2(-16, -30)       ## HeroLook walk cells are 32x32 like the action cells
 const ACTION_OFFSET := Vector2(-16, -30)
 const ACTION_COLS := 16
 ## Action sheet animations: [first column, frame count, fps]. Must match gen_hero_actions.gd.
@@ -57,6 +59,13 @@ var level := 1
 var xp := 0
 var _walk_tex: Texture2D
 var _action_tex: Texture2D
+var _portrait_tex: Texture2D
+var _look := {}                   ## HeroLook.sheets() result for the current equipment
+var _fx: Sprite2D                 ## magic gear overlay (child of the sprite)
+var _fx_light: PointLight2D
+var _fx_light_base := 0.0
+const FX_SHADER := preload("res://scripts/fx/hero_fx.gdshader")
+static var _light_tex: Texture2D
 var _action := ""
 var _at := 0.0
 
@@ -77,6 +86,8 @@ func _apply_class() -> void:
 		walk_sheet = false
 	var act_path := SPRITE_DIR + key + "_actions.png"
 	_action_tex = load(act_path) if walk_sheet and ResourceLoader.exists(act_path) else null
+	var face_path := SPRITE_DIR + key + "_portrait.png"
+	_portrait_tex = load(face_path) if ResourceLoader.exists(face_path) else null
 	_use_walk_sheet()
 	sprite.frame = 0
 	base_stats = load(STATS[hero_class])
@@ -143,8 +154,13 @@ func end_action() -> void:
 
 
 func _process(delta: float) -> void:
+	_tick(delta)
+	_sync_fx()
+
+
+func _tick(delta: float) -> void:
 	if _action == "":
-		super(delta)
+		super._process(delta)
 		return
 	_at += delta
 	var a: Array = ACTION_ANIMS[_action]
@@ -273,6 +289,22 @@ func walk_texture() -> Texture2D:
 	return _walk_tex
 
 
+## The 32x32 face portrait (HUD cards, character sheet). Without one: the head of the front idle frame.
+func portrait() -> Texture2D:
+	if _portrait_tex:
+		return _portrait_tex
+	return head_icon()
+
+
+## Head and shoulders of the front idle frame (16x16), for small tabs.
+func head_icon() -> Texture2D:
+	var at := AtlasTexture.new()
+	at.atlas = _walk_tex
+	# HeroLook cells are 32x32 with the figure at (9, 9); the static fallback sheet is 16x24
+	at.region = Rect2(8, 8, 16, 16) if _walk_tex.get_height() == 64 else Rect2(0, 0, 16, 16)
+	return at
+
+
 ## The action sheet (32x32 cells, columns = ACTION_ANIMS), or null.
 func action_texture() -> Texture2D:
 	return _action_tex
@@ -283,6 +315,109 @@ func action_texture() -> Texture2D:
 ## Work `stats` out again from the base stat block + equipment (after equipping something).
 func refresh_stats() -> void:
 	stats = Equipment.build_stats(base_stats, equipment, level)
+	_refresh_look()
+
+
+## Rebuild the sprites when the equipment shows differently (HeroLook caches each outfit).
+func _refresh_look() -> void:
+	if sprite == null or not walk_sheet:
+		return
+	var s := HeroLook.sheets(HeroClass.keys()[hero_class].to_lower(), equipment)
+	if is_same(s, _look):
+		return
+	_look = s
+	_walk_tex = s.walk
+	_action_tex = s.action
+	var fr := sprite.frame
+	if _action == "":
+		_use_walk_sheet()
+	else:
+		sprite.texture = _action_tex
+	sprite.frame = fr
+	_setup_fx()
+
+
+## The overlay sprite + light for magic gear (none when nothing glows).
+func _setup_fx() -> void:
+	if _look.get("fx_walk") == null:
+		if _fx:
+			_fx.queue_free()
+			_fx = null
+		if _fx_light:
+			_fx_light.queue_free()
+			_fx_light = null
+		return
+	if _fx == null:
+		_fx = Sprite2D.new()
+		_fx.name = "GearFx"
+		var mat := ShaderMaterial.new()
+		mat.shader = FX_SHADER
+		mat.set_shader_parameter("phase", randf() * 10.0)
+		_fx.material = mat
+		sprite.add_child(_fx)
+	var m: ShaderMaterial = _fx.material
+	var mf: Dictionary = _look.main_fx
+	var rf: Dictionary = _look.ranged_fx
+	m.set_shader_parameter("main_mode", mf.mode)
+	m.set_shader_parameter("main_color", mf.color)
+	m.set_shader_parameter("ranged_mode", rf.mode)
+	m.set_shader_parameter("ranged_color", rf.color)
+	m.set_shader_parameter("glint", _look.glint.strength)
+	m.set_shader_parameter("glint_color", _look.glint.color)
+	var lc = mf.light
+	if lc == null:
+		if _fx_light:
+			_fx_light.queue_free()
+			_fx_light = null
+	else:
+		if _fx_light == null:
+			_fx_light = PointLight2D.new()
+			_fx_light.name = "GearLight"
+			_fx_light.texture = _gear_light_texture()
+			_fx_light.position = Vector2(0, -24)
+			add_child(_fx_light)
+		_fx_light.color = lc
+		_fx_light_base = 0.5 if mf.mode == HeroLook.Fx.FIRE else 0.3
+		_fx_light.energy = _fx_light_base
+		_fx_light.texture_scale = 0.9 if mf.mode == HeroLook.Fx.FIRE else 0.7
+	_sync_fx()
+
+
+## The overlay follows the sprite: same sheet layout, frame, mirroring.
+func _sync_fx() -> void:
+	if _fx == null:
+		return
+	var tex: Texture2D = _look.fx_action if sprite.texture == _action_tex else _look.fx_walk
+	if _fx.texture != tex:
+		_fx.texture = tex
+		(_fx.material as ShaderMaterial).set_shader_parameter("sheet_px", Vector2(tex.get_size()))
+	_fx.hframes = sprite.hframes
+	_fx.vframes = sprite.vframes
+	_fx.frame = sprite.frame
+	_fx.flip_h = sprite.flip_h
+	_fx.offset = sprite.offset
+	_fx.centered = sprite.centered
+	_fx.visible = not dead
+	if _fx_light:
+		_fx_light.visible = not dead
+		if _look.main_fx.mode == HeroLook.Fx.FIRE:
+			_fx_light.energy = _fx_light_base * (0.85 + 0.1 * sin(Time.get_ticks_msec() * 0.013) + randf() * 0.08)
+
+
+static func _gear_light_texture() -> Texture2D:
+	if _light_tex == null:
+		var g := Gradient.new()
+		g.offsets = PackedFloat32Array([0.0, 0.3, 0.65, 1.0])
+		g.colors = PackedColorArray([Color(1, 1, 1, 1), Color(0.55, 0.55, 0.55, 1), Color(0.15, 0.15, 0.15, 1), Color(0, 0, 0, 1)])
+		var t := GradientTexture2D.new()
+		t.gradient = g
+		t.width = 160
+		t.height = 100
+		t.fill = GradientTexture2D.FILL_RADIAL
+		t.fill_from = Vector2(0.5, 0.5)
+		t.fill_to = Vector2(1.0, 0.5)
+		_light_tex = t
+	return _light_tex
 
 
 ## Put item `item_id` in `slot`. Returns the item ids taken off to make room (they go back in the

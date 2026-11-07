@@ -282,10 +282,13 @@ func _build_panel(root: Control) -> void:
 		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card.add_child(frame)
 		var pic := TextureRect.new()
-		var at := AtlasTexture.new()
-		at.atlas = h.walk_texture() if h is Hero else h.sprite.texture
-		at.region = Rect2(0, 0, 16, 16)          # head and shoulders of the front idle frame
-		pic.texture = at
+		if h is Hero:
+			pic.texture = h.portrait()           # 32x32 face, shown 1:1
+		else:
+			var at := AtlasTexture.new()
+			at.atlas = h.sprite.texture
+			at.region = Rect2(0, 0, 16, 16)
+			pic.texture = at
 		pic.position = Vector2(2, 2)
 		pic.size = Vector2(32, 32)
 		pic.stretch_mode = TextureRect.STRETCH_SCALE

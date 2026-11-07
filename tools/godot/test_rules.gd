@@ -15,6 +15,7 @@ func _init() -> void:
 	_test_items()
 	_test_scrolls()
 	_test_progression()
+	_test_looks()
 	print("%d checks, %d failed" % [_checks, _fails])
 	print("PASS" if _fails == 0 else "FAIL")
 	quit(1 if _fails > 0 else 0)
@@ -581,3 +582,43 @@ func _test_levels_6_9(fb: CreatureStats, rb: CreatureStats, cb: CreatureStats, w
 	var fw: CreatureStats = load("res://data/monsters/frost_wizard.tres")
 	check("regeneration" in troll.traits and troll.extra_attacks == 2 and drag.powers[0].damage == "10d8" and fw.powers.size() == 4
 			and "magic_resistance" in fw.traits, "troll regenerates, dragon breath 10d8, the Rimecaller has four spells")
+
+
+## HeroLook: every weapon / armour / shield has a look, outfits differ, magic gear gets effects.
+func _test_looks() -> void:
+	var missing := []
+	var dir := DirAccess.open("res://data/items")
+	for fn in dir.get_files():
+		if not fn.ends_with(".tres"):
+			continue
+		var it: ItemData = load("res://data/items/" + fn)
+		match it.kind:
+			ItemData.Kind.WEAPON:
+				if not HeroLook.WEAPON_KIND.has(it.base_id()):
+					missing.append(it.id)
+			ItemData.Kind.ARMOR:
+				if not HeroLook.ARMOR.has(it.id):
+					missing.append(it.id)
+			ItemData.Kind.SHIELD:
+				if not HeroLook.SHIELDS.has(it.id):
+					missing.append(it.id)
+	check(missing.is_empty(), "every weapon, armour and shield has a look %s" % [missing])
+	var plain := HeroLook.sheets("fighter", {"main": "longsword", "off": "shield", "armor": "chain_mail"})
+	var plate := HeroLook.sheets("fighter", {"main": "longsword", "off": "shield", "armor": "plate_armor"})
+	var axe := HeroLook.sheets("fighter", {"main": "greataxe", "armor": "chain_mail"})
+	check(plain.walk.get_size() == Vector2(160, 64) and plain.action.get_size() == Vector2(512, 64), "sheets: walk 5x2, action 16x2 (32 px cells)")
+	check(plain.walk.get_image().get_data() != plate.walk.get_image().get_data(), "plate looks different from chain mail")
+	check(plain.action.get_image().get_data() != axe.action.get_image().get_data(), "a greataxe looks different from a longsword")
+	check(plain.fx_walk == null and plain.main_fx.mode == HeroLook.Fx.NONE, "plain gear: no effects overlay")
+	var flame := HeroLook.sheets("fighter", {"main": "flame_tongue", "armor": "plate_armor_plus2"})
+	check(flame.fx_walk != null and flame.main_fx.mode == HeroLook.Fx.FIRE and flame.main_fx.light != null, "Flame Tongue: flames + light")
+	check(flame.glint.strength > 0.0, "magic armour glints")
+	check(HeroLook.weapon_fx("mace_of_disruption").mode == HeroLook.Fx.RADIANT and HeroLook.weapon_fx("frost_brand").mode == HeroLook.Fx.FROST
+			and HeroLook.weapon_fx("dagger_plus1").mode == HeroLook.Fx.SHIMMER and HeroLook.weapon_fx("longbow_plus2").mode == HeroLook.Fx.GLOW,
+			"weapon effects: radiant, frost, +1 shimmer, +2 glow")
+	check(is_same(plain, HeroLook.sheets("fighter", {"main": "longsword", "off": "shield", "armor": "chain_mail"})), "outfits are cached")
+	var cloak := HeroLook.sheets("mage", {"main": "quarterstaff", "worn1": "cloak_protection"})
+	var robe := HeroLook.sheets("mage", {"main": "quarterstaff", "worn1": "amulet_health"})
+	var bare := HeroLook.sheets("mage", {"main": "quarterstaff"})
+	check(cloak.walk.get_image().get_data() != bare.walk.get_image().get_data() and is_same(robe, bare),
+			"a cloak shows; an amulet doesn't (same sheets as without it)")

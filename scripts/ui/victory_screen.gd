@@ -157,7 +157,7 @@ func _build_heroes(y: float) -> void:
 			at.region = Rect2(POSE_COL * 32, 0, 32, 32)
 		else:
 			at.atlas = h.walk_texture()
-			at.region = Rect2(-8, -8, 32, 32)
+			at.region = Rect2(0, 0, 32, 32)
 		pic.texture = at
 		pic.position = Vector2(x, y)
 		pic.size = Vector2(cell, cell)

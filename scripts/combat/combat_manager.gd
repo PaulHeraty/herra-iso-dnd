@@ -232,16 +232,14 @@ func attack_options_from(attacker: Actor, target: Actor, from: Vector2i) -> Arra
 	return out
 
 
-## Hero animation for a ranged weapon attack: the Rogue draws the bow, the Mage aims the staff
-## (crossbow bolt), the Fighter throws (attack swing). "" for monsters.
+## Hero animation for a ranged weapon attack: a bow or crossbow = shoot (the action sheet draws
+## the equipped one), a thrown weapon = the attack swing. "" for monsters.
 func _ranged_anim(attacker: Actor) -> String:
 	if not attacker is Hero:
 		return ""
-	match attacker.hero_class:
-		Hero.HeroClass.ROGUE:
-			return "shoot"
-		Hero.HeroClass.MAGE:
-			return "cast"
+	var r := ItemData.get_item(attacker.equipment.get("ranged", ""))
+	if r and HeroLook.WEAPON_KIND.get(r.base_id(), "") in ["shortbow", "longbow", "crossbow", "heavy_crossbow"]:
+		return "shoot"
 	return "attack"
 
 

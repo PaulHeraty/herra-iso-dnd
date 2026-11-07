@@ -80,7 +80,7 @@ var walk: Dictionary
 
 func _init() -> void:
 	palette = _parse_palette(FileAccess.get_file_as_string(PY_SOURCE))
-	walk = (load(WALK_GEN) as Script).get_script_constant_map()["HEROES"]
+	walk = HeroDrawings.HEROES
 	var only := OS.get_environment("HERO")
 	for hero: String in RIG:
 		if only != "" and hero != only:

@@ -78,6 +78,7 @@ level 1 to about 20. A module is one folder, `modules/<id>/`:
 | Monsters (Phase 5) | SRD: Giant Rat, Wolf, Goblin, Goblin Boss, Bandit, Zombie, Ghoul, Ghast, Hobgoblin, Bugbear, Ogre, Wight, Mummy, Specter, **Wraith** (final boss). Traits in `CreatureStats.traits`: pack_tactics, martial_advantage, undead_fortitude, resist_nonmagical, turn_resistance; attack riders can add conditions (wolf prone, ghoul paralyzed). Multiattack = `extra_attacks` for monsters too. |
 | Levels 6-9 (module 2) | XP 14000 / 23000 / 34000 / 48000; prof +3 (5-8), +4 (9); full-caster slots to 4/3/3/3/1. Fighter: ASI CON (6) + STR (8), Remarkable Athlete (7, half prof on untrained STR/DEX/CON checks + initiative), Indomitable (9, auto: reroll one failed save per long rest, `CombatManager.save_vs`). Rogue: Expertise athletics + thieves' tools (6), Evasion (7, area DEX saves: 0 / half), Sneak 4d6 / 5d6, Supreme Sneak (9, Hide with advantage). Cleric: Channel Divinity x2 + Blessed Healer (6), Death Ward (7, condition `death_ward`), Divine Strike 1d8 + Destroy Undead CR 1 (8), Mass Cure Wounds (9). Mage: Lightning Bolt (6), Ice Storm (7, 3x3, 2d8+4d6 counted as cold), Hold Person (8), Cone of Cold (9). Per-level uses: `Progression.uses_of`. |
 | Monsters (module 2) | SRD: Winter Wolf (cold breath, prone bite), Polar Bear, Ice Mephit (death burst, frost breath), Troll (`regeneration`: 10 HP a turn unless fire/acid hurt it), Young White Dragon (cold breath 10d8), Animated Armor, Flying Sword, Gargoyle, Flesh Golem (`immune_nonmagical`, `magic_resistance`: advantage on saves vs spells), Mage (Fire Bolt, a Fireball, a Hold Person), Mimic (a Chest with `mimic`: opening it wakes the monster; passive Perception DC 15 spots it). Our own boss: Morvaine the Rimecaller (built on the SRD Archmage). Monster damage powers (breaths, Fireball, Cone of Cold) are chosen by expected damage over everyone in the shape (`_damage_power_value`). |
+| Gear on heroes | Armour, main weapon, ranged weapon (shoot frames: bow or crossbow, any hero), shield and **cloak** show on the sprites; rings, amulets etc. don't. `HeroLook` (`scripts/actors/hero_look.gd`) builds each hero's walk + action sheets at runtime from `HeroDrawings` (the walk-sheet grids) + the gear, cached per outfit (~40 ms each); `Hero.refresh_stats()` rebuilds. Armour = the drawing's armour pixels restyled per part (torso / arms / legs: leather, studded, chain, scale (bronze), plate, lames; plate-type armour also covers the Fighter's tabard top + the Cleric's robe front); magic armour = recoloured per its description + a thin moving gleam. Each weapon kind has its own shape. Effects overlay (`scripts/fx/hero_fx.gdshader`, additive, its own sheet: R main weapon, G armour/shield glint, B ranged): +1 shimmer, +2 glow, Flame Tongue fire, Frost Brand mist, Mace of Disruption radiant; fire/frost/radiant also carry a PointLight2D. Preview: `tools/godot/preview_hero_looks.gd -- <png> fighter|others|catalog`. The static `<hero>_sheet.png` / `_actions.png` stay for the intro + tools. |
 | Items (module 2) | WONDROUS kind in two **Worn** slots (`worn1`/`worn2`): Cloak of Protection, Amulet of Health / Gauntlets of Ogre Power / Headband of Intellect (`ability_set`: score raised to 19 before the level's maths), Bracers of Defense (`ac_unarmored`). Frost Brand (+1d6 cold, resist fire: a main-hand weapon's `resistances` count), +2 armour/weapons, rings of Warmth / fire / lightning resistance, Potion of Supreme Healing, scrolls up to 5th level, Rime Key, Star Key, the Sunfire Lantern (quest item, can't be sold). |
 | Doors (module 2) | `Door.Style.ICE`: a wall of magic ice (blocks moving + sight), melted only by its `link` (the beacons). Npc `show_flag` / `hide_flag` (story flags), `guard_monster` (hide only from that monster: Hilde and the dragon), `calls_party`. |
 | Doors | Click to walk up and open. Locked: Rogue picks (thieves' tools DEX vs `lock_dc`), else strongest hero forces (Athletics vs DC+2); retry allowed. In combat: open = free once a turn, pick = your action. Monsters don't open doors. |
@@ -120,7 +121,7 @@ level 1 to about 20. A module is one folder, `modules/<id>/`:
 assets/
   tiles/      floor_atlas.png, wall_atlas.png, dungeon_tileset.tres; outdoor_floor_atlas.png, cliff_atlas.png,
               forest_atlas.png, outdoor_tileset.tres (same layout: 0 ground, 1 cliffs, 2 forest)   (generated)
-  sprites/    heroes/ (walk sheets 16×24, action sheets 32×32), monsters/ (Eye Tyrant), npcs/ (trader_sheet 16x24: idle, idle, talk), props/ (chest, chest_open, bones, torch_sheet, web, stairs_up/down, barrel, crate, sarcophagus, rubble, cocoon, urn, brazier, stall, portal_sheet 8x24x40; Phase 6: trap_* (armed + sprung, flat 34x18 at (-17,-9)), plate(_down), lever_up/down (24x34 at (-12,-27)), block (28x34 at (-14,-27)), stone_face (28x44 at (-14,-36)))
+  sprites/    heroes/ (walk sheets 16×24, action sheets 32×32, face portraits 32×32 `<hero>_portrait.png`), monsters/ (Eye Tyrant), npcs/ (trader_sheet 16x24: idle, idle, talk), props/ (chest, chest_open, bones, torch_sheet, web, stairs_up/down, barrel, crate, sarcophagus, rubble, cocoon, urn, brazier, stall, portal_sheet 8x24x40; Phase 6: trap_* (armed + sprung, flat 34x18 at (-17,-9)), plate(_down), lever_up/down (24x34 at (-12,-27)), block (28x34 at (-14,-27)), stone_face (28x44 at (-14,-36)))
   effects/    fireball_sheet.png (6×16px), explosion_sheet.png (7×32px)
   fonts/      herra_pixel.fnt/.png: our pixel font (use size 10; scale the Control 2x/3x for big text)
   sfx/        13 WAVs from the concept session (torch_ambience imports as a forward loop) + generated ones (gen_sfx.gd)
@@ -148,7 +149,9 @@ scripts/
   maps/map_picture.gd  MapPicture: the map as an Image, 1 px per cell (tile average colour, fog: transparent / dimmed / lit),
                         redrawn only where the fog changed; DungeonMap.map_picture, marked dirty by _refresh_fog_look
   markers/              MapMarker base + one script per marker
-  actors/               Actor base (grid cell, shadow, step tween) + Hero + Monster (stats, named sheet anims)
+  actors/               Actor base (grid cell, shadow, step tween) + Hero + Monster (stats, named sheet anims);
+                        hero_look.gd HeroLook (sheets built from the gear + the effects sheet), hero_drawings.gd HeroDrawings (hero pixel grids)
+  fx/hero_fx.gdshader   magic gear overlay on heroes (shimmer, glow, fire, frost, radiant, armour gleam)
   rules/progression.gd  Progression: levels 1-5 (XP table, HP, slots, ASI, powers by level, class numbers)
   rules/                Dice + DiceRoll (really random, seedable), CreatureStats + AttackData (stat-block Resources),
                         SpellData (spell/ability/monster power), Condition (blessed, prone, restrained, hidden,
@@ -195,8 +198,9 @@ data/         heroes/*.tres (level 1; Progression grows them to 9), monsters/*.t
               items/*.tres: ItemData — from tools/godot/build_items.gd
 tools/
   godot/      gen_art.gd -> build_tileset.gd -> build_test_room.gd   (run in that order, import between)
-              gen_hero_sheets.gd (hero walk sheets), gen_hero_actions.gd (hero action sheets, from the walk drawings),
-              preview_hero_walk.gd / preview_hero_actions.gd + gif_writer.gd (GIF previews)
+              gen_hero_sheets.gd (hero walk sheets), gen_portraits.gd (hero face portraits: HUD cards 1:1, character sheet 2x; `Hero.portrait()`),
+              gen_hero_actions.gd (hero action sheets, from the walk drawings),
+              preview_hero_walk.gd / preview_hero_actions.gd + gif_writer.gd (GIF previews), preview_hero_looks.gd (HeroLook outfits)
               build_items.gd (items -> data/items/; hero kits in build_data.gd refer to these ids)
               build_data.gd (stat blocks -> data/), test_rules.gd (headless rules tests: PASS/FAIL)
               gen_spider.gd (procedural Giant Spider sheet: 3D-ish model projected to iso)
@@ -274,6 +278,7 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
   standing legs; walk = alternate leg lifted 1px, robes: feet tuck under + hem sways). Preview:
   `tools/godot/preview_hero_walk.gd` → GIF. Walk feel may be revisited later (user: "fine for now").
   `Actor` keeps its facing in map cells and picks row/mirror for the current view rotation.
+- In the game the hero sheets come from `HeroLook` (same rig + poses as gen_hero_actions.gd, drawings from `HeroDrawings`, which gen_hero_sheets.gd also uses): walk sheet 160×64 with **32×32** cells (offset (-16, -30) like the action sheet), action sheet 512×64. The files below are the static default-kit versions.
 - Hero **action sheets** `assets/sprites/heroes/<hero>_actions.png` (512×64): **32×32** cells (the
   16×24 figure cell sits at (8, 8); sprite offset (-16, -30)), 16 cols × 2 rows (front / back):
   attack 0-3 (wind-up, strike + swoosh, follow-through, recover), shoot 4-6 (Rogue bow; others copy
@@ -341,7 +346,7 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
   Full dice-roll animation scene comes with Fireball in Phase 3.
   Done. Simplifications to revisit: downed heroes come to with 1 HP after a victory (no death saves
   yet), a hit always deals at least 1 damage (house rule), unlimited thrown weapons, Large spider takes 1 cell, Web/recharge/conditions not used,
-  slot pips not spent, portraits are walk-sprite crops. R restarts the map after a party wipe.
+  slot pips not spent. R restarts the map after a party wipe.
 - [x] **Phase 3 — Spells & abilities:** data-driven (Resources); targeting (single, 3×3, line, cone,
   self, ally); spell slots, rests. Mage: Fireball, Magic Missile, Shield. Cleric: Cure Wounds, Bless,
   Sacred Flame. Rogue: Sneak Attack, Hide. Fighter: Second Wind, Shove. VFX + SFX hooks.

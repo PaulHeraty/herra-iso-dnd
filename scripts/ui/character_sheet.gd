@@ -74,10 +74,7 @@ func _ready() -> void:
 		var h: Hero = combat.map.party[i]
 		var b := Button.new()
 		b.text = h.display_name()
-		var at := AtlasTexture.new()
-		at.atlas = h.walk_texture()
-		at.region = Rect2(0, 0, 16, 16)
-		b.icon = at
+		b.icon = h.head_icon()
 		b.focus_mode = Control.FOCUS_NONE
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.position = Vector2(8 + i * 72, 21)
@@ -177,17 +174,14 @@ func _build_identity() -> void:
 	var s := h.stats
 	var frame := Panel.new()
 	frame.position = Vector2(COL_A, 46)
-	frame.size = Vector2(54, 78)
+	frame.size = Vector2(68, 68)
 	frame.add_theme_stylebox_override("panel", CombatHud._box_static(Color8(16, 14, 20), CombatHud.COL_EDGE))
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_body.add_child(frame)
 	var pic := TextureRect.new()
-	var at := AtlasTexture.new()
-	at.atlas = h.walk_texture()
-	at.region = Rect2(0, 0, 16, 24)             # the whole front idle frame
-	pic.texture = at
-	pic.position = Vector2(3, 3)
-	pic.size = Vector2(48, 72)
+	pic.texture = h.portrait()                  # the 32x32 face at 2x
+	pic.position = Vector2(2, 2)
+	pic.size = Vector2(64, 64)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_SCALE
 	pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -197,8 +191,8 @@ func _build_identity() -> void:
 	elif h.hp <= 0:
 		pic.modulate = Color(0.6, 0.6, 0.7)
 	frame.add_child(pic)
-	var x := COL_A + 60
-	var w := 196.0 - 60
+	var x := COL_A + 72
+	var w := 196.0 - 72
 	var name_l := _label(_body, Vector2(x, 44), CombatHud.COL_TEXT)
 	name_l.text = h.display_name().to_upper()
 	name_l.scale = Vector2(2, 2)
@@ -208,14 +202,14 @@ func _build_identity() -> void:
 	lvl.text = "Level %d" % h.level
 	var nxt := Progression.xp_for_next(h.level)
 	var xp_l := _right_label(_body, Vector2(x, 78), w, CombatHud.COL_XP.lightened(0.25))
-	xp_l.text = "XP %d / %d" % [h.xp, nxt] if nxt > 0 else "XP %d (max)" % h.xp
+	xp_l.text = "XP %d/%d" % [h.xp, nxt] if nxt > 0 else "XP %d (max)" % h.xp
 	var frac := 1.0
 	if nxt > 0:
 		var base: int = Progression.XP_FOR_LEVEL[h.level - 1]
 		frac = clampf(float(h.xp - base) / float(nxt - base), 0.0, 1.0)
 	_bar(Vector2(x, 90), w, 2, frac, Color8(36, 28, 50), CombatHud.COL_XP)
 	var hp_l := _label(_body, Vector2(x, 95), CombatHud.COL_HP)
-	hp_l.text = "HP %d / %d" % [maxi(h.hp, 0), s.max_hp]
+	hp_l.text = "HP %d/%d" % [maxi(h.hp, 0), s.max_hp]
 	var die := s.hit_dice.substr(s.hit_dice.find("d"))
 	var hd := _right_label(_body, Vector2(x, 95), w, CombatHud.COL_DIM)
 	hd.text = "Hit dice %d/%d %s" % [h.hit_dice_left, h.level, die]

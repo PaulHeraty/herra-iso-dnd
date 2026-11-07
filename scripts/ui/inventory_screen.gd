@@ -669,8 +669,5 @@ func _icon_rect(parent: Control, pos: Vector2, k: int) -> TextureRect:
 
 
 ## The hero's head and shoulders (front idle frame), for the tabs.
-func _head(h: Hero) -> AtlasTexture:
-	var at := AtlasTexture.new()
-	at.atlas = h.walk_texture()
-	at.region = Rect2(0, 0, 16, 16)
-	return at
+func _head(h: Hero) -> Texture2D:
+	return h.head_icon()
