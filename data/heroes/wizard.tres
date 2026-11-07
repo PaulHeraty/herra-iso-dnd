@@ -1,18 +1,22 @@
 [gd_resource type="Resource" script_class="CreatureStats" format=3]
 
-[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_8h5gq"]
-[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_w4a7k"]
-[ext_resource type="Resource" path="res://data/spells/fire_bolt.tres" id="3_llyg4"]
-[ext_resource type="Resource" path="res://data/spells/magic_missile.tres" id="4_85bi8"]
-[ext_resource type="Resource" path="res://data/spells/burning_hands.tres" id="5_tayr7"]
-[ext_resource type="Resource" path="res://data/spells/shield.tres" id="6_px5s8"]
-[ext_resource type="Resource" path="res://data/spells/scorching_ray.tres" id="7_1vyib"]
-[ext_resource type="Resource" path="res://data/spells/fireball.tres" id="8_pghcy"]
-[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="9_ihj4l"]
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_tayr7"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_px5s8"]
+[ext_resource type="Resource" path="res://data/spells/fire_bolt.tres" id="3_1vyib"]
+[ext_resource type="Resource" path="res://data/spells/magic_missile.tres" id="4_pghcy"]
+[ext_resource type="Resource" path="res://data/spells/burning_hands.tres" id="5_ihj4l"]
+[ext_resource type="Resource" path="res://data/spells/shield.tres" id="6_3ct0c"]
+[ext_resource type="Resource" path="res://data/spells/scorching_ray.tres" id="7_6vqiu"]
+[ext_resource type="Resource" path="res://data/spells/fireball.tres" id="8_gtqbe"]
+[ext_resource type="Resource" path="res://data/spells/lightning_bolt.tres" id="9_icdga"]
+[ext_resource type="Resource" path="res://data/spells/ice_storm.tres" id="10_eghfl"]
+[ext_resource type="Resource" path="res://data/spells/hold_person.tres" id="11_r1j40"]
+[ext_resource type="Resource" path="res://data/spells/cone_of_cold.tres" id="12_71hnd"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="13_bo83o"]
 
 [resource]
 resource_name = "Mage"
-script = ExtResource("9_ihj4l")
+script = ExtResource("13_bo83o")
 id = "wizard"
 display_name = "Mage"
 class_id = "wizard"
@@ -25,7 +29,7 @@ wis_score = 12
 save_proficiencies = Array[String](["INT", "WIS"])
 max_hp = 7
 hit_dice = "1d6"
-powers = Array[ExtResource("2_w4a7k")]([ExtResource("3_llyg4"), ExtResource("4_85bi8"), ExtResource("5_tayr7"), ExtResource("6_px5s8"), ExtResource("7_1vyib"), ExtResource("8_pghcy")])
+powers = Array[ExtResource("2_px5s8")]([ExtResource("3_1vyib"), ExtResource("4_pghcy"), ExtResource("5_ihj4l"), ExtResource("6_3ct0c"), ExtResource("7_6vqiu"), ExtResource("8_gtqbe"), ExtResource("9_icdga"), ExtResource("10_eghfl"), ExtResource("11_r1j40"), ExtResource("12_71hnd")])
 skill_proficiencies = Array[String](["arcana", "investigation"])
 spell_ability = "INT"
 weapon_training = Array[String](["dagger", "dart", "sling", "quarterstaff", "light_crossbow"])

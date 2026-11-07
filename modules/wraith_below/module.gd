@@ -27,6 +27,7 @@ func _init() -> void:
 	quest_where = "at his stall by the old silver mine"
 	reward_gold = 3000
 	reward_item = "ring_protection"
+	quest_hint = "Someone in the Harrow Woods may need help: the old silver mine in the north is a good place to start asking."
 	quest_stages = [
 		{id = "mine", text = "Go down into the old silver mine.", map = MAPS + "dungeon_1.tscn"},
 		{id = "deep", text = "Find the way down from the Upper Halls.", map = MAPS + "dungeon_2.tscn"},
@@ -41,7 +42,7 @@ func _init() -> void:
 		{id = "reward", text = "Return to Brannoc for your reward.", claim = true},
 	]
 	portal_home_map = MAPS + "surface.tscn"
-	module_items = ["rune_of_return"]
+	module_items = []                     # the Rune of Return goes on with the party (rebind it in the next adventure)
 
 
 func npc_talk(map: DungeonMap, npc: Npc) -> bool:

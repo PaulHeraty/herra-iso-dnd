@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_mmu80"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_d0q5c"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="3_aws83"]
+
+[sub_resource type="Resource" id="Resource_cffi2"]
+resource_name = "Claws"
+script = ExtResource("1_mmu80")
+name = "Claws"
+ability = 1
+damage = "1d6+2"
+to_hit_override = 4
+
+[sub_resource type="Resource" id="Resource_dhjut"]
+resource_name = "Bite"
+script = ExtResource("1_mmu80")
+name = "Bite"
+ability = 1
+damage = "1d6+2"
+damage_type = "piercing"
+to_hit_override = 4
+
+[resource]
+resource_name = "Gargoyle"
+script = ExtResource("3_aws83")
+id = "gargoyle"
+display_name = "Gargoyle"
+challenge = 2.0
+xp = 450
+creature_type = "elemental"
+str_score = 15
+dex_score = 11
+con_score = 16
+int_score = 6
+wis_score = 11
+cha_score = 7
+max_hp = 52
+hit_dice = "7d8+21"
+armor_class = 15
+immunities = Array[String](["poison"])
+traits = Array[String](["resist_nonmagical"])
+fly = true
+sight_ft = 50
+attacks = Array[ExtResource("1_mmu80")]([SubResource("Resource_cffi2"), SubResource("Resource_dhjut")])
+extra_attacks = 1

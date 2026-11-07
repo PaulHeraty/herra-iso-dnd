@@ -295,7 +295,7 @@ func _refresh_overlay() -> void:
 		overlay.clear("destination")
 		overlay.set_cells("cursor", [chest.get_cell()], COL_CURSOR if not chest.locked else COL_LOCKED, 0.15, 0.7, true)
 		if map.hud:
-			map.hud.flash_hint(map.lock_hint(chest, "Chest") if chest.locked else "Chest: click to open.")
+			map.hud.flash_hint("That chest is breathing... a mimic! Click to fight it." if chest.mimic_spotted else (map.lock_hint(chest, "Chest") if chest.locked else "Chest: click to open."))
 		return
 	var door: Door = null if _walking else map.closed_door_under(map.get_local_mouse_position())
 	if door and not (map.hud and map.hud.mouse_over_ui()):

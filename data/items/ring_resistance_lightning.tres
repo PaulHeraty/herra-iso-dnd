@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_e60hj"]
+
+[resource]
+resource_name = "Ring of Resistance (lightning)"
+script = ExtResource("1_e60hj")
+id = "ring_resistance_lightning"
+display_name = "Ring of Resistance (lightning)"
+kind = 6
+description = "A silver ring set with a blue spark of a stone. Lightning does half damage to its wearer."
+value_gp = 500
+resistances = Array[String](["lightning"])

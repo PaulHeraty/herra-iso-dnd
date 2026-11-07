@@ -1,0 +1,56 @@
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_5i3oy"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_ew760"]
+[ext_resource type="Resource" path="res://data/spells/dragon_cold_breath.tres" id="3_20g1o"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="4_oif25"]
+
+[sub_resource type="Resource" id="Resource_lueoc"]
+resource_name = "Bite"
+script = ExtResource("1_5i3oy")
+name = "Bite"
+ability = 1
+damage = "2d10+4"
+damage_type = "piercing"
+to_hit_override = 7
+rider_damage = "1d8"
+rider_damage_type = "cold"
+
+[sub_resource type="Resource" id="Resource_ulufl"]
+resource_name = "Claw"
+script = ExtResource("1_5i3oy")
+name = "Claw"
+ability = 1
+damage = "2d6+4"
+to_hit_override = 7
+
+[resource]
+resource_name = "Young White Dragon"
+script = ExtResource("4_oif25")
+id = "young_white_dragon"
+display_name = "Young White Dragon"
+challenge = 6.0
+xp = 2300
+size = 3
+creature_type = "dragon"
+str_score = 18
+con_score = 18
+int_score = 6
+wis_score = 11
+cha_score = 12
+save_proficiencies = Array[String](["DEX", "CON", "WIS", "CHA"])
+max_hp = 133
+hit_dice = "14d10+56"
+armor_class = 17
+immunities = Array[String](["cold"])
+speed_ft = 40
+fly = true
+sight_ft = 70
+proficiency_bonus = 3
+attacks = Array[ExtResource("1_5i3oy")]([SubResource("Resource_lueoc"), SubResource("Resource_ulufl")])
+extra_attacks = 2
+powers = Array[ExtResource("2_ew760")]([ExtResource("3_20g1o")])
+skill_overrides = {
+"perception": 6,
+"stealth": 3
+}

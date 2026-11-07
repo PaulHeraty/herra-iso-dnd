@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_xv80b"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_q4ma7"]
+
+[sub_resource type="Resource" id="Resource_qiver"]
+script = ExtResource("1_xv80b")
+name = "Warhammer +2"
+damage = "1d8"
+damage_type = "bludgeoning"
+
+[resource]
+resource_name = "Warhammer +2"
+script = ExtResource("2_q4ma7")
+id = "warhammer_plus2"
+display_name = "Warhammer +2"
+kind = 0
+description = "A dwarf-lord's hammer. Runes of the forge glow along its haft.
+Magic: +2 to hit and damage."
+value_gp = 2015
+magic_bonus = 2
+attack = SubResource("Resource_qiver")
+category = "martial"

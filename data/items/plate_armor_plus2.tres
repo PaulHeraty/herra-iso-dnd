@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_v6iv4"]
+
+[resource]
+resource_name = "Plate Armour +2"
+script = ExtResource("1_v6iv4")
+id = "plate_armor_plus2"
+display_name = "Plate Armour +2"
+kind = 1
+description = "Plate enamelled white and silver. Frost never forms on it.
+Magic: +2 AC."
+value_gp = 5500
+magic_bonus = 2
+armor_type = "heavy"
+base_ac = 18
+dex_cap = 0
+str_required = 15
+stealth_disadvantage = true

@@ -422,6 +422,251 @@ var SPECS := {
 		"colors": {"r": Color8(92, 70, 58), "R": Color8(130, 102, 82), "e": Color8(255, 70, 60),
 			"n": Color8(220, 140, 150), "p": Color8(200, 130, 140), "t": Color8(196, 128, 140)},
 	},
+	# --- module 2: the Frostfell and the Rimecaller's tower ------------------------------------
+	"winter_wolf": {
+		"base": "wolf",
+		"colors_over": {"g": Color8(150, 164, 186), "G": Color8(214, 224, 236), "w": Color8(236, 242, 250),
+			"W": Color8(250, 252, 255), "e": Color8(110, 200, 255), "t": Color8(176, 190, 210), "k": Color8(120, 130, 150)},
+	},
+	"polar_bear": {
+		"kind": "beast", "cell": Vector2i(40, 28), "head_cols": 6, "legs_top": 9,
+		"grid": [
+			"....wWw...............",
+			"...wWWWw..............",
+			"..wWWWWWWwwwwwwww.....",
+			".eWWWWWWWWWWWWWWWWw...",
+			"nWWWWWWWWWWWWWWWWWWw..",
+			".wWWWWWWWWWWWWWWWWWWw.",
+			"..wWWWWWWWWWWWWWWWWWw.",
+			"...wWWWWWWWWWWWWWWWWw.",
+			"....wWWWWwwwwwwWWWWw..",
+			"....wWWw......wWWw....",
+			"....wWWw......wWWw....",
+			"....wWWw......wWWw....",
+			"...kkkkk.....kkkkk....",
+		],
+		"colors": {"w": Color8(188, 196, 208), "W": Color8(236, 240, 246), "e": Color8(30, 26, 30),
+			"n": Color8(20, 18, 22), "k": Color8(120, 124, 136)},
+	},
+	"ice_mephit": {
+		"kind": "float", "cell": Vector2i(24, 24), "weapon": "claws", "hand": Vector2i(9, 7), "head_rows": 5,
+		"grid": [
+			"..b......b..",
+			"..bB....Bb..",
+			"...BBBBBB...",
+			"..BBeBBeBB..",
+			"...BBmmBB...",
+			"w..cBBBBc..w",
+			"ww.cCCCCc.ww",
+			"wWwcCCCCcwWw",
+			".wWcCCCCcWw.",
+			"..wcCCCCcw..",
+			"...cCCCCc...",
+			"...cC..Cc...",
+			"...c....c...",
+		],
+		"colors": {"b": Color8(214, 236, 255), "B": Color8(150, 200, 240), "e": Color8(20, 40, 90),
+			"m": Color8(60, 90, 140), "c": Color8(110, 160, 210), "C": Color8(170, 215, 245),
+			"w": Color8(190, 225, 250), "W": Color8(236, 248, 255)},
+		"back_face": "B", "unshaded": true,
+	},
+	"troll": {
+		"base": "ogre", "weapon": "claws",
+		"colors_over": {"H": Color8(118, 146, 98), "h": Color8(78, 104, 66), "e": Color8(255, 190, 60),
+			"n": Color8(90, 112, 72), "m": Color8(40, 30, 26), "M": Color8(230, 220, 190),
+			"T": Color8(118, 146, 98), "t": Color8(78, 104, 66), "S": Color8(118, 146, 98), "s": Color8(78, 104, 66),
+			"K": Color8(138, 166, 110), "B": Color8(86, 70, 52), "b": Color8(130, 110, 80),
+			"L": Color8(108, 136, 90), "l": Color8(72, 96, 60), "f": Color8(78, 104, 66), "F": Color8(118, 146, 98)},
+	},
+	"flesh_golem": {
+		"base": "ogre", "weapon": "claws",
+		"colors_over": {"H": Color8(198, 170, 160), "h": Color8(150, 120, 112), "e": Color8(230, 236, 120),
+			"n": Color8(160, 120, 110), "m": Color8(90, 50, 50), "M": Color8(140, 60, 60),
+			"T": Color8(190, 160, 152), "t": Color8(132, 104, 98), "S": Color8(198, 170, 160), "s": Color8(140, 112, 106),
+			"K": Color8(210, 182, 172), "B": Color8(70, 60, 56), "b": Color8(160, 150, 130),
+			"L": Color8(90, 80, 76), "l": Color8(64, 56, 52), "f": Color8(150, 120, 112), "F": Color8(198, 170, 160)},
+	},
+	"young_white_dragon": {
+		"kind": "beast", "cell": Vector2i(56, 40), "head_cols": 10, "legs_top": 13,
+		"grid": [
+			"..........................wW.......",
+			".........................wWWw......",
+			"..hh....................wWWWWw.....",
+			".hHHh..................wWWWWWWw....",
+			"..hHHh...............wWWWWWWWWw....",
+			"...hHSSs............wWWWWWWWWWWw...",
+			"eSSSSSSSs.........wWwSSSSSSwwWw....",
+			"SSSSSSSSSs.......SSSSSSSSSSSSs.....",
+			"nSSSSssSSSs....sSSSSSSSSSSSSSSSs...",
+			".mmSs..sSSSSsSSSSSSSSSSSSSSSSSSSs..",
+			"..MM....sSSSSSSSSSSSSSSSSSSSSSSSSss",
+			".........sSSSSSSSSSSSSSSSSSSSSSs..t",
+			"..........sSSSuuuuuuuuuuuSSSSs....t",
+			"...........sSSs.......sSSSs........",
+			"...........sSSs.......sSSSs........",
+			"...........sSSs.......sSSSs........",
+			"..........kkkk.......kkkkk.........",
+		],
+		"colors": {"S": Color8(226, 232, 240), "s": Color8(160, 174, 196), "h": Color8(150, 170, 190),
+			"H": Color8(210, 220, 230), "e": Color8(100, 200, 255), "n": Color8(40, 50, 70), "m": Color8(60, 70, 90),
+			"M": Color8(250, 250, 255), "w": Color8(150, 176, 206), "W": Color8(200, 220, 240),
+			"u": Color8(190, 206, 224), "t": Color8(160, 174, 196), "k": Color8(100, 110, 130)},
+	},
+	"animated_armor": {
+		"kind": "humanoid", "template": "medium", "cell": Vector2i(32, 32), "weapon": "sword",
+		"colors": {"skin": Color8(24, 24, 34), "eye": Color8(110, 170, 255), "mouth": Color8(24, 24, 34),
+			"torso": Color8(168, 174, 190), "arm": Color8(140, 146, 162), "hand": Color8(120, 126, 142),
+			"belt": Color8(70, 60, 50), "legs": Color8(150, 156, 172), "feet": Color8(110, 116, 132)},
+		# a closed helm with a red plume (the visor slit shows the glow inside), pauldrons
+		"overlay": [
+			"....rrr.......",
+			"...SSSSSs.....",
+			"..SSSSSSSs....",
+			"..SSSSSSSs....",
+			"..s.......s...",
+			"..SSSSSSSs....",
+			"...SSSSSs.....",
+			"....sSs.......",
+			"..PP.....PP...",
+			".PPP.....PPP..",
+		],
+		"ocolors": {"S": Color8(176, 182, 198), "s": Color8(120, 126, 142), "r": Color8(180, 50, 40),
+			"P": Color8(200, 206, 220)},
+		"weapon_colors": [Color8(214, 220, 236), Color8(120, 126, 144), Color8(90, 70, 50)],
+		"death": "collapse",
+	},
+	"flying_sword": {
+		"kind": "float", "cell": Vector2i(24, 24), "weapon": "claws", "hand": Vector2i(5, 6), "head_rows": 4,
+		"grid": [
+			".....Y.....",
+			"....YyY....",
+			".....g.....",
+			".....g.....",
+			"..YYYYYYY..",
+			"....sWs....",
+			"....sWs....",
+			"....sWs....",
+			"....sWs....",
+			"....sWs....",
+			"....sWs....",
+			".....W.....",
+			".....s.....",
+		],
+		"colors": {"Y": Color8(220, 180, 70), "y": Color8(160, 120, 40), "g": Color8(90, 60, 40),
+			"s": Color8(150, 170, 200), "W": Color8(230, 240, 255)},
+		"back_face": "s",
+	},
+	"gargoyle": {
+		"kind": "humanoid", "template": "medium", "cell": Vector2i(32, 32), "weapon": "claws",
+		"colors": {"skin": Color8(128, 126, 132), "eye": Color8(255, 160, 40), "mouth": Color8(40, 36, 44),
+			"torso": Color8(118, 116, 124), "arm": Color8(108, 106, 114), "hand": Color8(128, 126, 132),
+			"belt": Color8(90, 88, 96), "legs": Color8(108, 106, 114), "feet": Color8(96, 94, 102)},
+		# horns, and stone wings folded behind the shoulders
+		"overlay": [
+			"..h.......h...",
+			"...h.....h....",
+			"..............",
+			"..............",
+			"..............",
+			"..............",
+			"..............",
+			"..............",
+			"w...........w.",
+			"ww.........ww.",
+			"wWw.......wWw.",
+			"wWw.......wWw.",
+			".w.........w..",
+		],
+		"ocolors": {"h": Color8(90, 88, 96), "w": Color8(80, 78, 90), "W": Color8(112, 110, 122)},
+		"death": "collapse",
+	},
+	"mage": {
+		"kind": "humanoid", "template": "medium", "cell": Vector2i(32, 32), "weapon": "staff",
+		"colors": {"skin": Color8(220, 180, 140), "eye": Color8(40, 30, 30), "mouth": Color8(140, 80, 70),
+			"torso": Color8(60, 90, 170), "arm": Color8(50, 76, 150), "hand": Color8(220, 180, 140),
+			"belt": Color8(200, 170, 80), "legs": Color8(56, 84, 160), "feet": Color8(40, 40, 60)},
+		# a deep hood and a robe to the ankles
+		"overlay": [
+			"...hhhhh......",
+			"..hHHHHHh.....",
+			".hH.....Hh....",
+			".hH.....Hh....",
+			".h.......h....",
+			".h.......h....",
+			"..h.....h.....",
+			"..............",
+			"..............",
+			"..............",
+			"..............",
+			"..............",
+			"..............",
+			"...RRRRRR.....",
+			"...RRRRRRR....",
+			"...RRRRRRR....",
+			"...RRRRRRR....",
+			"...RRRRRRR....",
+			"...RRRRRRR....",
+			"..RRRRRRRRR...",
+		],
+		"ocolors": {"H": Color8(50, 76, 150), "h": Color8(36, 56, 116), "R": Color8(56, 84, 160)},
+		"weapon_colors": [Color8(255, 130, 60), Color8(110, 80, 50), Color8(220, 180, 140)],
+	},
+	"frost_wizard": {
+		"kind": "humanoid", "template": "medium", "cell": Vector2i(32, 32), "weapon": "staff",
+		"colors": {"skin": Color8(200, 190, 200), "eye": Color8(120, 220, 255), "mouth": Color8(120, 100, 120),
+			"torso": Color8(210, 220, 236), "arm": Color8(180, 192, 214), "hand": Color8(200, 190, 200),
+			"belt": Color8(110, 170, 230), "legs": Color8(196, 208, 228), "feet": Color8(120, 130, 160)},
+		# a crown of ice spikes, a long white beard, a robe to the floor
+		"overlay": [
+			"..c.c.c.c.....",
+			"..CCCCCCC.....",
+			"..............",
+			"..............",
+			"..............",
+			"...bBBBBb.....",
+			"...bBBBBb.....",
+			"....bBBb......",
+			"....bBBb......",
+			"..............",
+			"..............",
+			"..............",
+			"..............",
+			"...RRRRRR.....",
+			"...RRRRRRR....",
+			"...RRRRRRR....",
+			"...RRRRRRR....",
+			"...RRRRRRR....",
+			"...RRRRRRR....",
+			"..RRRRRRRRR...",
+		],
+		"ocolors": {"c": Color8(160, 226, 255), "C": Color8(110, 180, 240), "B": Color8(236, 240, 248),
+			"b": Color8(190, 196, 210), "R": Color8(200, 214, 234)},
+		"weapon_colors": [Color8(160, 236, 255), Color8(200, 214, 234), Color8(200, 190, 200)],
+	},
+	"mimic": {
+		"kind": "grid", "cell": Vector2i(32, 32), "weapon": "claws", "hand": Vector2i(14, 9), "legs_top": 12,
+		"head_rows": 7,
+		"grid": [
+			"..LLLLLLLLLLLL..",
+			".LllllllllllllL.",
+			".LYLLLLLLLLLLYL.",
+			".MtMtMtMtMtMtMt.",
+			".kkkkkkkkkkkkkk.",
+			".kkRRRRRRRRRRkk.",
+			".tMtMtMtMtMtMtM.",
+			".BBBBBBBBBBBBBB.",
+			".BbYbbbbbbbbYbB.",
+			".BBBBBBeBBBBBBB.",
+			".BBBBBBBBBBBBBB.",
+			".BbbbbbbbbbbbbB.",
+			"..PP........PP..",
+			"..PP........PP..",
+		],
+		"colors": {"L": Color8(150, 104, 60), "l": Color8(110, 74, 42), "Y": Color8(220, 180, 70),
+			"M": Color8(240, 236, 220), "t": Color8(180, 170, 150), "k": Color8(40, 16, 20), "R": Color8(190, 60, 80),
+			"B": Color8(130, 88, 50), "b": Color8(96, 62, 36), "e": Color8(240, 200, 60), "P": Color8(150, 110, 90)},
+		"back_face": "B",
+	},
 }
 
 var _preview: Array[Image] = []
@@ -455,6 +700,10 @@ func _resolve(id: String) -> Dictionary:
 			b.colors[k] = s.colors_over[k]
 		for k in s.get("ocolors_over", {}):
 			b.ocolors[k] = s.ocolors_over[k]
+		# any other key overrides the base (a troll: the ogre's drawing, with claws)
+		for k in s:
+			if not k in ["base", "colors_over", "ocolors_over"]:
+				b[k] = s[k]
 		s = b
 	s.id = id
 	return s
@@ -677,6 +926,17 @@ func _draw_weapon(o: Dictionary, weapon: String, hand: Vector2i, dir: Vector2, w
 				o[c] = col
 				for k in w:
 					o[c + side * (k + 1)] = Color8(90, 62, 40)
+		"staff":
+			# a long pole through the hand, a glowing stone at the top
+			for i in range(-3, 12):
+				var p := Vector2(hand) + d * i
+				var c := Vector2i(roundi(p.x), roundi(p.y))
+				if c != hand:
+					o[c] = wc[1]
+			var tp := Vector2(hand) + d * 12
+			var tc := Vector2i(roundi(tp.x), roundi(tp.y))
+			for dd in [Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, -1), Vector2i(1, -1)]:
+				o[tc + dd] = wc[0]
 		"morningstar":
 			for i in range(1, 7):
 				var p := Vector2(hand) + d * i
@@ -966,5 +1226,6 @@ func _armed(spec: Dictionary, f: Dictionary, rig: Dictionary, d: Vector2i) -> Di
 		return f
 	var o := f.duplicate()
 	var wc: Array = spec.get("weapon_colors", [Color8(206, 212, 226), Color8(110, 116, 134), Color8(110, 70, 40)])
-	_draw_weapon(o, weapon, rig.hand + d, Vector2(-0.25, 1.0) if weapon != "club" else Vector2(0.35, 1.0), wc)
+	var rest := Vector2(0.15, -1.0) if weapon == "staff" else (Vector2(-0.25, 1.0) if weapon != "club" else Vector2(0.35, 1.0))
+	_draw_weapon(o, weapon, rig.hand + d, rest, wc)
 	return o

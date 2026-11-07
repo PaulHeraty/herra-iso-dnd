@@ -1,0 +1,61 @@
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_6m5cl"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_8yi4w"]
+[ext_resource type="Resource" path="res://data/spells/frost_wizard_cone.tres" id="3_kum4h"]
+[ext_resource type="Resource" path="res://data/spells/frost_wizard_ice_storm.tres" id="4_hjvdx"]
+[ext_resource type="Resource" path="res://data/spells/frost_wizard_lightning.tres" id="5_mr2i3"]
+[ext_resource type="Resource" path="res://data/spells/frost_wizard_hold.tres" id="6_gv2wx"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="7_kboik"]
+
+[sub_resource type="Resource" id="Resource_k8uu0"]
+resource_name = "Ray of Frost"
+script = ExtResource("1_6m5cl")
+name = "Ray of Frost"
+kind = 1
+ability = 1
+range_ft = 60
+long_range_ft = 60
+damage = "3d8"
+damage_type = "cold"
+to_hit_override = 9
+sfx = "ray_zap"
+
+[sub_resource type="Resource" id="Resource_dju4n"]
+resource_name = "Frost Staff"
+script = ExtResource("1_6m5cl")
+name = "Frost Staff"
+ability = 1
+damage = "1d6+2"
+damage_type = "bludgeoning"
+to_hit_override = 6
+rider_damage = "2d6"
+rider_damage_type = "cold"
+
+[resource]
+resource_name = "Morvaine the Rimecaller"
+script = ExtResource("7_kboik")
+id = "frost_wizard"
+display_name = "Morvaine the Rimecaller"
+challenge = 12.0
+xp = 8400
+dex_score = 14
+con_score = 14
+int_score = 20
+wis_score = 15
+cha_score = 16
+save_proficiencies = Array[String](["INT", "WIS"])
+max_hp = 130
+hit_dice = "20d8+40"
+armor_class = 15
+resistances = Array[String](["cold"])
+traits = Array[String](["magic_resistance"])
+sight_ft = 70
+proficiency_bonus = 3
+attacks = Array[ExtResource("1_6m5cl")]([SubResource("Resource_k8uu0"), SubResource("Resource_dju4n")])
+extra_attacks = 1
+powers = Array[ExtResource("2_8yi4w")]([ExtResource("3_kum4h"), ExtResource("4_hjvdx"), ExtResource("5_mr2i3"), ExtResource("6_gv2wx")])
+skill_overrides = {
+"perception": 6
+}
+spell_ability = "INT"

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_qs41s"]
+
+[resource]
+resource_name = "Star Key"
+script = ExtResource("1_qs41s")
+id = "star_key"
+display_name = "Star Key"
+kind = 5
+description = "A silver key whose bow is a seven-pointed star. It opens a lock somewhere in the dungeon."
+key_id = "star"

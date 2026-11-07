@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_554gd"]
+
+[resource]
+resource_name = "Ice Storm"
+script = ExtResource("1_554gd")
+id = "frost_wizard_ice_storm"
+display_name = "Ice Storm"
+description = "Twice per fight. Hail on a 3x3 area: 2d8 + 4d6 cold, DEX save (DC 17) for half."
+kind = 2
+target = 4
+range_ft = 150
+area_size = 3
+resolve = 1
+save_ability = "DEX"
+half_on_save = true
+dc_override = 17
+damage = "2d8+4d6"
+damage_type = "cold"
+uses = 2
+sfx = "hit_blunt"
+vfx = "ice_storm"
+big_moment = true

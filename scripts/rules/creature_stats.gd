@@ -72,6 +72,14 @@ var stealth_disadvantage := false
 var crit_range := 20
 var sneak_dice := 0
 var destroy_undead_cr := -1.0
+## Levels 6-9 (Progression.apply): Fighter Remarkable Athlete (7) + Indomitable (9), Rogue Evasion
+## (7) + Supreme Sneak (9), Cleric Divine Strike dice (8) + Blessed Healer (6).
+var remarkable_athlete := false
+var indomitable := false
+var evasion := false
+var supreme_sneak := false
+var divine_strike := ""
+var blessed_healer := false
 
 const FT_PER_CELL := 5
 
@@ -97,7 +105,7 @@ func mod(ability: String) -> int:
 
 
 func initiative_bonus() -> int:
-	return mod("DEX")
+	return mod("DEX") + (ceili(proficiency_bonus / 2.0) if remarkable_athlete else 0)
 
 
 func save_bonus(ability: String) -> int:
@@ -172,6 +180,8 @@ func skill_bonus(skill: String) -> int:
 		b += proficiency_bonus * 2
 	elif skill in skill_proficiencies:
 		b += proficiency_bonus
+	elif remarkable_athlete and SKILL_ABILITY.get(skill, "STR") in ["STR", "DEX", "CON"]:
+		b += ceili(proficiency_bonus / 2.0)
 	return b
 
 

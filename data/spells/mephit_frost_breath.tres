@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_dgejn"]
+
+[resource]
+resource_name = "Frost Breath"
+script = ExtResource("1_dgejn")
+id = "mephit_frost_breath"
+display_name = "Frost Breath"
+description = "Once per fight. A 15-ft cone of cold air: 2d4 cold, DEX save (DC 10) for half."
+kind = 2
+target = 6
+range_ft = 15
+resolve = 1
+save_ability = "DEX"
+half_on_save = true
+dc_override = 10
+damage = "2d4"
+damage_type = "cold"
+uses = 1
+sfx = "cast_whoosh"
+vfx = "frost_breath"

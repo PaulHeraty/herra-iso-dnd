@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_hepft"]
+
+[resource]
+resource_name = "Cloak of Protection"
+script = ExtResource("1_hepft")
+id = "cloak_protection"
+display_name = "Cloak of Protection"
+kind = 9
+description = "A cloak of deep blue wool with a silver clasp. Blows and spells alike seem to slide off it.
+Magic: +1 to AC and to every saving throw."
+value_gp = 3500
+icon = 43
+ac_bonus = 1
+save_bonus = 1

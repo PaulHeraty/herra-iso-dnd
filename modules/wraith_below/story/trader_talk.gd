@@ -57,6 +57,7 @@ static func _intro(map: DungeonMap, npc: Npc, page: int) -> void:
 			Quest.given = true
 			if not map.inventory.has("rune_of_return"):
 				map.inventory.add("rune_of_return")
+			RunePortal.bound = true
 			Sfx.play("quest_update", -6.0)
 			map.quest_check()
 			_say(map, npc, "Take this: a [color=#96aaff]Rune of Return[/color]. Use it anywhere below (it's in your bag) and a portal opens back to my stall. Step through it again and you're right back where you were. It never runs dry. And come and trade when you've gold to spend!",

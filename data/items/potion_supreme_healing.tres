@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_f4xul"]
+
+[resource]
+resource_name = "Potion of Supreme Healing"
+script = ExtResource("1_f4xul")
+id = "potion_supreme_healing"
+display_name = "Potion of Supreme Healing"
+kind = 3
+description = "A violet potion that shines like a star. Drink it to regain 10d4 + 20 hit points."
+value_gp = 1350
+stackable = true
+heal = "10d4+20"

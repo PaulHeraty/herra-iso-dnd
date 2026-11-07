@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_j4dxq"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_1p74x"]
+
+[sub_resource type="Resource" id="Resource_n2xp2"]
+script = ExtResource("1_j4dxq")
+name = "Longbow +2"
+kind = 1
+ability = 1
+range_ft = 150
+long_range_ft = 600
+damage = "1d8"
+damage_type = "piercing"
+
+[resource]
+resource_name = "Longbow +2"
+script = ExtResource("2_1p74x")
+id = "longbow_plus2"
+display_name = "Longbow +2"
+kind = 0
+description = "White ash and frost-giant sinew. It never loses its pull in the cold.
+Magic: +2 to hit and damage."
+value_gp = 2050
+magic_bonus = 2
+attack = SubResource("Resource_n2xp2")
+category = "martial"
+ranged_slot = true
+two_handed = true

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_4yjxt"]
+
+[resource]
+resource_name = "Mass Cure Wounds"
+script = ExtResource("1_4yjxt")
+id = "mass_cure_wounds"
+display_name = "Mass Cure Wounds"
+description = "A wave of healing: up to six allies within 60 ft each heal 3d8 + your spellcasting modifier. +1d8 per slot above 5th."
+level = 5
+classes = Array[String](["cleric"])
+target = 1
+range_ft = 60
+max_targets = 6
+resolve = 3
+add_ability_mod = true
+heal = "3d8"
+upcast_dice = "1d8"
+vfx = "heal"

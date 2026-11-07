@@ -201,6 +201,14 @@ func spot_check() -> void:
 			var h := _spotter(heroes, d.get_cell(), d.secret_dc)
 			if h:
 				_found_secret(d, "%s notices a thin draught through the stonework: a secret door!" % h.display_name())
+	for c: Chest in _all(Chest):
+		if c.mimic and not c.opened and not c.mimic_spotted:
+			var h := _spotter(heroes, c.get_cell(), 15)
+			if h:
+				c.mimic_spotted = true
+				_say("%s watches the chest... and sees its lid rise and fall. It's breathing. A mimic!" % h.display_name())
+				Sfx.play("discover")
+				FloatText.spawn(map, c.position + Vector2(0, -16), "!", COL_DANGER, 20)
 
 
 ## The hero whose passive Perception notices something at `cell` (in sight, close), or null.
@@ -352,8 +360,14 @@ func _trap_hit(t: Trap, victim: Actor, half: bool, dodge := "leaps clear", hurt_
 			FloatText.spawn(map, victim.body_position() + Vector2(0, -14), "MISS", Color8(200, 200, 210), 10)
 			return
 	else:
-		var s := map.combat.roll_save(victim, t.save_ability)
+		var s := map.combat.save_vs(victim, t.save_ability, t.save_dc, true)
 		var ok := s.total >= t.save_dc
+		# Evasion (Rogue 7): a DEX save for half does nothing on a success, half on a failure.
+		if half and t.save_ability == "DEX" and victim.stats.evasion:
+			if ok:
+				_say("%s twists clear (Evasion)." % victim.display_name())
+				return
+			dmg /= 2
 		map.combat._detail("  %s %s save %s vs DC %d" % [victim.display_name(), t.save_ability, s.describe(), t.save_dc])
 		if ok and not half:
 			_say("%s %s (%s save %d vs DC %d)." % [victim.display_name(), dodge, t.save_ability, s.total, t.save_dc])
@@ -619,6 +633,9 @@ func solve(p: Puzzle) -> void:
 	p.solved = true
 	Sfx.play("puzzle_solved")
 	_say(p.solved_text)
+	if p.flag != "":
+		Quest.set_flag(p.flag)
+		map.quest_check()
 	if not map.party.is_empty():
 		FloatText.spawn(map, map.party[0].body_position() + Vector2(0, -22), "SOLVED!", COL_FOUND, 12)
 	fire(p.opens, true)

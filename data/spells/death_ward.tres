@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_ngku4"]
+
+[resource]
+resource_name = "Death Ward"
+script = ExtResource("1_ngku4")
+id = "death_ward"
+display_name = "Death Ward"
+description = "Touch: the first time damage would drop the creature to 0 hit points, it drops to 1 instead. Lasts until it is used or you take a long rest."
+level = 4
+classes = Array[String](["cleric"])
+target = 1
+range_ft = 5
+needs_los = false
+condition = "death_ward"
+condition_rounds = -1
+sfx = "radiant"
+vfx = "bless"

@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_w31qt"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_edfgc"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="3_euojp"]
+
+[sub_resource type="Resource" id="Resource_qnrh0"]
+resource_name = "Longsword"
+script = ExtResource("1_w31qt")
+name = "Longsword"
+ability = 1
+damage = "1d8+1"
+to_hit_override = 3
+
+[resource]
+resource_name = "Flying Sword"
+script = ExtResource("3_euojp")
+id = "flying_sword"
+display_name = "Flying Sword"
+challenge = 0.25
+xp = 50
+size = 1
+creature_type = "construct"
+str_score = 12
+dex_score = 15
+con_score = 11
+int_score = 1
+wis_score = 5
+cha_score = 1
+max_hp = 17
+hit_dice = "5d6"
+armor_class = 17
+immunities = Array[String](["poison", "psychic"])
+condition_immunities = Array[String](["frightened", "paralyzed"])
+speed_ft = 50
+fly = true
+attacks = Array[ExtResource("1_w31qt")]([SubResource("Resource_qnrh0")])
+skill_overrides = {
+"perception": -3
+}

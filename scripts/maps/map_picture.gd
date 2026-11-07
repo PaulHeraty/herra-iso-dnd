@@ -99,6 +99,8 @@ func colour_of(cell: Vector2i) -> Color:
 	if d:
 		if d.is_hidden():
 			col = _hidden_wall_colour(cell)
+		elif d.style == Door.Style.ICE and not d.is_open:
+			col = Color8(150, 200, 240)
 		else:
 			col = COL_DOOR_OPEN if d.is_open else COL_DOOR
 	if not map.is_seen(cell):

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_anhr7"]
+
+[resource]
+resource_name = "Breastplate +2"
+script = ExtResource("1_anhr7")
+id = "breastplate_plus2"
+display_name = "Breastplate +2"
+kind = 1
+description = "A silvered cuirass etched with a snowflake crest.
+Magic: +2 AC."
+value_gp = 4400
+magic_bonus = 2
+armor_type = "medium"
+base_ac = 14
+dex_cap = 2

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_q1sg4"]
+
+[resource]
+resource_name = "Half Plate +2"
+script = ExtResource("1_q1sg4")
+id = "half_plate_plus2"
+display_name = "Half Plate +2"
+kind = 1
+description = "Knightly plates lined with white bearskin.
+Magic: +2 AC."
+value_gp = 4750
+magic_bonus = 2
+armor_type = "medium"
+base_ac = 15
+dex_cap = 2
+stealth_disadvantage = true

@@ -438,8 +438,9 @@ func _test_scrolls() -> void:
 ## Phase 5: levels 1-5 (Progression), XP, level-ups, class features, new monsters and spells.
 func _test_progression() -> void:
 	check(Progression.level_for_xp(0) == 1 and Progression.level_for_xp(299) == 1 and Progression.level_for_xp(300) == 2
-			and Progression.level_for_xp(2700) == 4 and Progression.level_for_xp(99999) == 5, "XP thresholds")
-	check(Progression.xp_for_next(1) == 300 and Progression.xp_for_next(5) == 0, "XP for next level")
+			and Progression.level_for_xp(2700) == 4 and Progression.level_for_xp(14000) == 6 and Progression.level_for_xp(47999) == 8
+			and Progression.level_for_xp(99999) == 9, "XP thresholds (to level 9)")
+	check(Progression.xp_for_next(1) == 300 and Progression.xp_for_next(5) == 14000 and Progression.xp_for_next(9) == 0, "XP for next level")
 	var fb: CreatureStats = load("res://data/heroes/fighter.tres")
 	var rb: CreatureStats = load("res://data/heroes/rogue.tres")
 	var cb: CreatureStats = load("res://data/heroes/cleric.tres")
@@ -487,7 +488,8 @@ func _test_progression() -> void:
 			"level 2: +5 max HP on top (3 -> 8), a 3rd slot (1 left -> 2), a hit die (%d HP, %s)" % [h.hp, str(h.slots_left)])
 	ups = h.add_xp(2400)
 	check(ups.size() == 2 and h.level == 4 and h.stats.int_score == 18 and Array(h.stats.spell_slots) == [4, 3], "two levels at once -> 4, INT 18")
-	check(h.add_xp(99999).size() == 1 and h.level == 5 and h.add_xp(10000).is_empty(), "top level is 5")
+	check(h.add_xp(99999).size() == 5 and h.level == 9 and h.add_xp(10000).is_empty(), "top level is 9 (four more levels at once)")
+	_test_levels_6_9(fb, rb, cb, wb)
 	h.free()
 	# XP is split between the heroes who aren't dead (DungeonMap.award_xp), level-ups returned.
 	# Arcane Recovery: a short rest gives back ceil(level/2) slot levels once a day.
@@ -524,3 +526,58 @@ func _test_progression() -> void:
 	check(bh.target == SpellData.Target.CONE and bh.damage_for(1, 2) == "3d6+1d6", "Burning Hands cone, upcast")
 	var sr: SpellData = load("res://data/spells/scorching_ray.tres")
 	check(sr.darts_for(2) == 3 and sr.darts_for(3) == 4 and sr.resolve == SpellData.Resolve.ATTACK, "Scorching Ray 3 rays (+1 per slot)")
+
+
+## Levels 6-9 (module 2): ASIs, the new class features, spells and slots; the new monsters.
+func _test_levels_6_9(fb: CreatureStats, rb: CreatureStats, cb: CreatureStats, wb: CreatureStats) -> void:
+	var f9 := Equipment.build_stats(fb, Equipment.starting(fb), 9)
+	check(f9.str_score == 20 and f9.con_score == 16 and f9.proficiency_bonus == 4 and f9.attacks_per_action() == 2
+			and f9.remarkable_athlete and f9.indomitable, "Fighter 9: STR 20, CON 16, prof 4, two attacks, Remarkable Athlete, Indomitable")
+	check(f9.skill_bonus("acrobatics") == f9.mod("DEX") + 2 and f9.initiative_bonus() == f9.mod("DEX") + 2, "Remarkable Athlete: +2 on untrained DEX checks and initiative")
+	check(Progression.hit_points("fighter", 3, 9) == 13 + 8 * 9, "Fighter 9 HP (CON 16): 85")
+	var r7 := Equipment.build_stats(rb, Equipment.starting(rb), 7)
+	var r9 := Equipment.build_stats(rb, Equipment.starting(rb), 9)
+	check(r7.sneak_dice == 4 and r9.sneak_dice == 5 and r7.evasion and not r7.supreme_sneak and r9.supreme_sneak and r9.dex_score == 20,
+			"Rogue: Sneak Attack 4d6 / 5d6, Evasion (7), Supreme Sneak (9), DEX 20")
+	check("athletics" in r9.skill_expertise and "thieves_tools" in r9.skill_expertise and not "athletics" in rb.skill_expertise,
+			"Rogue 6: Expertise in Athletics and thieves' tools (on the hero's copy only)")
+	var c6 := Equipment.build_stats(cb, Equipment.starting(cb), 6)
+	var c9 := Equipment.build_stats(cb, Equipment.starting(cb), 9)
+	var tu: SpellData = c6.powers.filter(func(p): return p.id == "turn_undead")[0]
+	check(Progression.uses_of(c6, tu) == 2 and c6.blessed_healer and c6.divine_strike == "", "Cleric 6: Channel Divinity x2, Blessed Healer")
+	check(Array(c9.spell_slots) == [4, 3, 3, 3, 1] and c9.divine_strike == "1d8" and c9.destroy_undead_cr == 1.0 and c9.wis_score == 20
+			and c9.powers.any(func(p): return p.id == "death_ward") and c9.powers.any(func(p): return p.id == "mass_cure_wounds"),
+			"Cleric 9: slots 4/3/3/3/1, Divine Strike, Destroy Undead CR 1, WIS 20, Death Ward, Mass Cure Wounds")
+	var w6 := Equipment.build_stats(wb, {}, 6)
+	var w9 := Equipment.build_stats(wb, {}, 9)
+	var wids: Array = w9.powers.map(func(p): return p.id)
+	check(w6.powers.any(func(p): return p.id == "lightning_bolt") and not w6.powers.any(func(p): return p.id == "ice_storm"),
+			"Mage 6: Lightning Bolt, no Ice Storm yet")
+	check("ice_storm" in wids and "cone_of_cold" in wids and "hold_person" in wids and w9.int_score == 20 and Array(w9.spell_slots) == [4, 3, 3, 3, 1],
+			"Mage 9: Ice Storm, Cone of Cold, Hold Person, INT 20, slots 4/3/3/3/1")
+	var cc: SpellData = load("res://data/spells/cone_of_cold.tres")
+	check(cc.level == 5 and cc.target == SpellData.Target.CONE and cc.damage == "8d8" and "wizard" in cc.classes, "Cone of Cold: 5th level, 60-ft cone, 8d8")
+	# A cleric reaching 6 gets the second Channel Divinity use at once.
+	var h: Hero = (load("res://scenes/actors/hero.tscn") as PackedScene).instantiate()
+	h.base_stats = cb
+	h.equipment = Equipment.starting(cb)
+	h.set_level(5)
+	h.refresh_stats()
+	h.reset_resources()
+	check(h.uses_left.get("turn_undead", 0) == 1, "Cleric 5: one Turn Undead")
+	h.add_xp(14000)
+	check(h.level == 6 and h.uses_left.get("turn_undead", 0) == 2, "Cleric 6 after a level-up: two Turn Undead")
+	h.free()
+	# The new monsters load with their powers and traits.
+	var ids := ["winter_wolf", "polar_bear", "ice_mephit", "troll", "young_white_dragon", "animated_armor", "flying_sword",
+		"gargoyle", "flesh_golem", "mage", "mimic", "frost_wizard"]
+	var ok := true
+	for id in ids:
+		var m: CreatureStats = load("res://data/monsters/%s.tres" % id)
+		ok = ok and m != null and m.max_hp > 0 and not m.attacks.is_empty()
+	check(ok, "the 12 new monsters load")
+	var troll: CreatureStats = load("res://data/monsters/troll.tres")
+	var drag: CreatureStats = load("res://data/monsters/young_white_dragon.tres")
+	var fw: CreatureStats = load("res://data/monsters/frost_wizard.tres")
+	check("regeneration" in troll.traits and troll.extra_attacks == 2 and drag.powers[0].damage == "10d8" and fw.powers.size() == 4
+			and "magic_resistance" in fw.traits, "troll regenerates, dragon breath 10d8, the Rimecaller has four spells")

@@ -1,0 +1,47 @@
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_6g3et"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_irve6"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="3_puxs4"]
+
+[sub_resource type="Resource" id="Resource_wmspa"]
+resource_name = "Bite"
+script = ExtResource("1_6g3et")
+name = "Bite"
+ability = 1
+damage = "1d8+5"
+damage_type = "piercing"
+to_hit_override = 7
+
+[sub_resource type="Resource" id="Resource_l6bws"]
+resource_name = "Claws"
+script = ExtResource("1_6g3et")
+name = "Claws"
+ability = 1
+damage = "2d6+5"
+to_hit_override = 7
+
+[resource]
+resource_name = "Polar Bear"
+script = ExtResource("3_puxs4")
+id = "polar_bear"
+display_name = "Polar Bear"
+challenge = 2.0
+xp = 450
+size = 3
+creature_type = "beast"
+str_score = 20
+con_score = 16
+int_score = 2
+wis_score = 13
+cha_score = 7
+max_hp = 42
+hit_dice = "5d10+15"
+armor_class = 12
+speed_ft = 40
+sight_ft = 50
+attacks = Array[ExtResource("1_6g3et")]([SubResource("Resource_wmspa"), SubResource("Resource_l6bws")])
+extra_attacks = 1
+skill_overrides = {
+"perception": 3
+}

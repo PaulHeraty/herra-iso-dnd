@@ -101,7 +101,7 @@ func _run() -> void:
 	_check(entry.level == 5 and entry.modules_done == ["wraith_below"], "kept in the Roster: level 5, finished The Wraith Below")
 	var bag: Dictionary = entry.party.bag
 	var ids: Array = bag.stacks.map(func(s): return s.id)
-	_check(not "rune_of_return" in ids and not "vault_key" in ids, "the rune and the keys stay behind")
+	_check("rune_of_return" in ids and not "vault_key" in ids, "the keys stay behind; the Rune of Return comes along (rebind it)")
 	_check(bag.gold >= 3000 and "potion_healing" in ids, "gold and ordinary items come along")
 	_check(entry.party.heroes[Hero.HeroClass.FIGHTER].equipment.values().has("flame_tongue"), "gear comes along")
 	var listed := Roster.parties()
@@ -120,6 +120,7 @@ func _run() -> void:
 	_card_button(intro, entry.name).pressed.emit()
 	await _frames(10)
 	_check(_card_button(intro, "The Wraith Below") == null, "a level 5 party can't start the level 1 adventure")
+	_check(_card_button(intro, "The Frost Spire") != null, "... but it can start The Frost Spire (levels 5-6)")
 	_button(intro, "Back (Esc)").pressed.emit()
 	await _frames(5)
 	_card_button(intro, "A new party").pressed.emit()
@@ -133,7 +134,8 @@ func _run() -> void:
 	var f := m.party[0]
 	_check(f.level == 5 and f.hp == f.stats.max_hp and f.stats.max_hp > 30, "the roster party arrives at level 5, rested (%d HP)" % f.hp)
 	_check(f.equipment.values().has("flame_tongue") and m.inventory.gold >= 3000, "with its gear and gold")
-	_check(not Quest.given and not RunePortal.active and not m.inventory.has("rune_of_return"), "no quest, no rune: a fresh story")
+	_check(not Quest.given and not RunePortal.active and not RunePortal.bound and m.inventory.has("rune_of_return"),
+			"a fresh story: no quest; the rune came along but isn't bound here")
 	_check(PartyState.roster.get("id", "") == entry.id, "it remembers which roster party it is")
 
 	# --- save games know their module -----------------------------------------------------------------

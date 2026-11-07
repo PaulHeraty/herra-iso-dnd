@@ -1,19 +1,21 @@
 [gd_resource type="Resource" script_class="CreatureStats" format=3]
 
-[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_qffdq"]
-[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_msbuf"]
-[ext_resource type="Resource" path="res://data/spells/sacred_flame.tres" id="3_ybcvv"]
-[ext_resource type="Resource" path="res://data/spells/cure_wounds.tres" id="4_e88dh"]
-[ext_resource type="Resource" path="res://data/spells/healing_word.tres" id="5_e1ply"]
-[ext_resource type="Resource" path="res://data/spells/bless.tres" id="6_wywou"]
-[ext_resource type="Resource" path="res://data/spells/turn_undead.tres" id="7_yr35r"]
-[ext_resource type="Resource" path="res://data/spells/hold_person.tres" id="8_pbpnm"]
-[ext_resource type="Resource" path="res://data/spells/mass_healing_word.tres" id="9_51j0r"]
-[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="10_1vfrw"]
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_ybcvv"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_e88dh"]
+[ext_resource type="Resource" path="res://data/spells/sacred_flame.tres" id="3_e1ply"]
+[ext_resource type="Resource" path="res://data/spells/cure_wounds.tres" id="4_wywou"]
+[ext_resource type="Resource" path="res://data/spells/healing_word.tres" id="5_yr35r"]
+[ext_resource type="Resource" path="res://data/spells/bless.tres" id="6_pbpnm"]
+[ext_resource type="Resource" path="res://data/spells/turn_undead.tres" id="7_51j0r"]
+[ext_resource type="Resource" path="res://data/spells/hold_person.tres" id="8_1vfrw"]
+[ext_resource type="Resource" path="res://data/spells/mass_healing_word.tres" id="9_grsaw"]
+[ext_resource type="Resource" path="res://data/spells/death_ward.tres" id="10_7xbko"]
+[ext_resource type="Resource" path="res://data/spells/mass_cure_wounds.tres" id="11_4p2od"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="12_1rdmi"]
 
 [resource]
 resource_name = "Cleric"
-script = ExtResource("10_1vfrw")
+script = ExtResource("12_1rdmi")
 id = "cleric"
 display_name = "Cleric"
 class_id = "cleric"
@@ -23,7 +25,7 @@ con_score = 14
 wis_score = 16
 cha_score = 12
 save_proficiencies = Array[String](["WIS", "CHA"])
-powers = Array[ExtResource("2_msbuf")]([ExtResource("3_ybcvv"), ExtResource("4_e88dh"), ExtResource("5_e1ply"), ExtResource("6_wywou"), ExtResource("7_yr35r"), ExtResource("8_pbpnm"), ExtResource("9_51j0r")])
+powers = Array[ExtResource("2_e88dh")]([ExtResource("3_e1ply"), ExtResource("4_wywou"), ExtResource("5_yr35r"), ExtResource("6_pbpnm"), ExtResource("7_51j0r"), ExtResource("8_1vfrw"), ExtResource("9_grsaw"), ExtResource("10_7xbko"), ExtResource("11_4p2od")])
 skill_proficiencies = Array[String](["insight", "medicine"])
 spell_ability = "WIS"
 armor_training = Array[String](["light", "medium", "heavy", "shield"])

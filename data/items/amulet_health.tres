@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_k7jh8"]
+
+[resource]
+resource_name = "Amulet of Health"
+script = ExtResource("1_k7jh8")
+id = "amulet_health"
+display_name = "Amulet of Health"
+kind = 9
+description = "A heart-shaped ruby on a gold chain. It beats, very faintly.
+Magic: your Constitution is 19 (more hit points)."
+value_gp = 8000
+icon = 44
+ability_set = {
+"CON": 19
+}

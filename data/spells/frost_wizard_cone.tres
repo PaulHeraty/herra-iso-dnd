@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_1si5t"]
+
+[resource]
+resource_name = "Cone of Cold"
+script = ExtResource("1_1si5t")
+id = "frost_wizard_cone"
+display_name = "Cone of Cold"
+description = "Recharge 5-6. A 60-ft cone of killing cold: 8d8 cold, CON save (DC 17) for half."
+kind = 2
+target = 6
+range_ft = 60
+resolve = 1
+save_ability = "CON"
+half_on_save = true
+dc_override = 17
+damage = "8d8"
+damage_type = "cold"
+recharge = 3
+sfx = "cast_whoosh"
+vfx = "cone_of_cold"
+big_moment = true

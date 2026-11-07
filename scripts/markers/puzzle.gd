@@ -20,6 +20,8 @@ enum Kind { SEQUENCE, ALL_ON, RING }
 ## SEQUENCE: dice that hit the hero who pulls a wrong lever ("" = none), and their damage type.
 @export var penalty := ""
 @export var penalty_type := "piercing"
+## A story flag (Quest) set when it is solved ("beacons_lit"...): quest stages can wait for it.
+@export var flag := ""
 ## XP when solved (shared like a fight's).
 @export var xp := 0
 ## Logged when it is solved.

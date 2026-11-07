@@ -12,13 +12,15 @@ extends MapMarker
 ##   SECRET      looks like the wall around it (it draws a wall block) until a hero finds it
 ##               (passive Perception vs secret_dc, or Search); then it is a stone door you open by
 ##               hand, or its `link` opens it.
+##   ICE         a wall of magic ice (the Rimecaller's ward, module 2): blocks the way and the view;
+##               only its `link` melts it.
 
 signal opened
 
 ## Which wall run the doorway is in: BACK_RIGHT = a wall row along +x (its face points down-left),
 ## BACK_LEFT = a wall column along +y (its face points down-right).
 enum WallRun { BACK_RIGHT, BACK_LEFT }
-enum Style { WOOD, PORTCULLIS, SECRET }
+enum Style { WOOD, PORTCULLIS, SECRET, ICE }
 
 @export var wall_run := WallRun.BACK_RIGHT:
 	set(v):
@@ -68,6 +70,7 @@ const BAR := Color8(70, 66, 72)
 const BAR_LIT := Color8(124, 118, 122)
 const SEAM := Color8(255, 214, 120)
 const WALL_TEX := preload("res://assets/tiles/wall_atlas.png")
+const ICE_TEX := preload("res://assets/sprites/props/ice_wall.png")
 
 
 func _init() -> void:
@@ -81,6 +84,8 @@ func _ready() -> void:
 		gizmo_label = "GATE"
 	elif style == Style.SECRET:
 		gizmo_label = "SECRET"
+	elif style == Style.ICE:
+		gizmo_label = "ICE"
 	set_process(style == Style.SECRET and not Engine.is_editor_hint())
 
 
@@ -135,6 +140,10 @@ func open() -> void:
 	elif style == Style.PORTCULLIS:
 		Sfx.play("gate_rise")
 		_animate_lift(1.0)
+	elif style == Style.ICE:
+		Sfx.play("flame_whoosh", 2.0, 0.7)
+		Sfx.play("stone_slide", -4.0, 1.3)
+		_animate_lift(1.0)
 	else:
 		Sfx.play("door_open")
 	opened.emit()
@@ -166,7 +175,7 @@ func _animate_lift(to: float) -> void:
 ## Screen box of the closed panel around the node (for clicks on the door itself, which stands
 ## taller than its cell).
 func panel_rect() -> Rect2:
-	if style == Style.SECRET:
+	if style == Style.SECRET or style == Style.ICE:
 		return Rect2(position + Vector2(-16, -48), Vector2(32, 56))
 	return Rect2(position + Vector2(-16, -HEIGHT - 1), Vector2(32, HEIGHT + 9))
 
@@ -174,6 +183,8 @@ func panel_rect() -> Rect2:
 func hint(map: DungeonMap) -> String:
 	if style == Style.PORTCULLIS:
 		return "A heavy portcullis. It won't lift by hand: there must be a mechanism."
+	if style == Style.ICE:
+		return "A wall of blue ice, humming with magic. Nothing you carry will cut it."
 	if locked:
 		return map.lock_hint(self, "Door")
 	if style == Style.SECRET:
@@ -207,6 +218,9 @@ func _draw() -> void:
 			_draw_portcullis()
 		Style.SECRET:
 			_draw_secret()
+		Style.ICE:
+			if _lift < 1.0:
+				draw_texture(ICE_TEX, Vector2(-16, -48), Color(1, 1, 1, 1.0 - _lift))
 		_:
 			_draw_wood()
 

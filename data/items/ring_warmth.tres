@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_rheyo"]
+
+[resource]
+resource_name = "Ring of Warmth"
+script = ExtResource("1_rheyo")
+id = "ring_warmth"
+display_name = "Ring of Warmth"
+kind = 6
+description = "A gold ring set with a stone that glows like a coal. Its wearer never feels the cold: cold does half damage to them."
+value_gp = 1000
+icon = 42
+resistances = Array[String](["cold"])

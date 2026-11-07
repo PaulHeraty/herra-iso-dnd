@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_4eoxf"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_jpsmn"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="3_r2fv3"]
+
+[sub_resource type="Resource" id="Resource_1o5lr"]
+resource_name = "Slam"
+script = ExtResource("1_4eoxf")
+name = "Slam"
+ability = 1
+damage = "2d8+4"
+damage_type = "bludgeoning"
+to_hit_override = 7
+
+[resource]
+resource_name = "Flesh Golem"
+script = ExtResource("3_r2fv3")
+id = "flesh_golem"
+display_name = "Flesh Golem"
+challenge = 5.0
+xp = 1800
+creature_type = "construct"
+str_score = 19
+dex_score = 9
+con_score = 18
+int_score = 6
+cha_score = 5
+max_hp = 93
+hit_dice = "11d8+44"
+armor_class = 9
+immunities = Array[String](["lightning", "poison"])
+condition_immunities = Array[String](["frightened", "paralyzed"])
+traits = Array[String](["immune_nonmagical", "magic_resistance"])
+proficiency_bonus = 3
+attacks = Array[ExtResource("1_4eoxf")]([SubResource("Resource_1o5lr")])
+extra_attacks = 1

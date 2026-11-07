@@ -13,6 +13,7 @@ extends RefCounted
 ##   paralyzed   loses its turns, auto-fails STR and DEX saves; attacks against have advantage and
 ##               hits from within 5 ft are critical (Hold Person, ghoul claws). Save at the end of each turn.
 ##   turned      (undead, Turn Undead) won't attack, moves away from the cleric; ends on damage.
+##   death_ward  (Death Ward) the first time damage would drop it to 0 HP it stays at 1 instead.
 
 var id := ""
 var rounds := 0          ## turns of the bearer left; ticks at the start of its turn. -1 = until removed
@@ -34,7 +35,7 @@ const NAMES := {
 	"blessed": "Blessed", "prone": "Prone", "restrained": "Restrained",
 	"hidden": "Hidden", "frightened": "Frightened", "shielded": "Shielded",
 	"concentrating": "Concentrating", "dying": "Dying", "stable": "Stable",
-	"paralyzed": "Paralyzed", "turned": "Turned",
+	"paralyzed": "Paralyzed", "turned": "Turned", "death_ward": "Death Ward",
 }
 
 
@@ -98,7 +99,7 @@ const ICONS := preload("res://assets/ui/condition_icons.png")
 const ICON_SIZE := 9
 const ICON_INDEX := {
 	"blessed": 0, "prone": 1, "restrained": 2, "hidden": 3, "frightened": 4, "shielded": 5,
-	"concentrating": 6, "dying": 7, "stable": 8, "paralyzed": 9, "turned": 10,
+	"concentrating": 6, "dying": 7, "stable": 8, "paralyzed": 9, "turned": 10, "death_ward": 11,
 }
 const EFFECTS := {
 	"blessed": "+1d4 to attack rolls and saving throws.",
@@ -112,6 +113,7 @@ const EFFECTS := {
 	"stable": "Unconscious but no longer dying. Healing brings you back.",
 	"paralyzed": "Can't move or act. Fails STR and DEX saves. Attacks against have advantage; hits from within 5 ft are critical. Saves again at the end of each turn.",
 	"turned": "Must move away from the cleric and can't attack. Ends if it takes damage.",
+	"death_ward": "The first time damage would drop you to 0 HP, you drop to 1 HP instead (then it ends).",
 }
 
 

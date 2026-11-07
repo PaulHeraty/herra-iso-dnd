@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_j4l1f"]
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="2_4bnj0"]
+
+[sub_resource type="Resource" id="Resource_d1h8m"]
+script = ExtResource("1_j4l1f")
+name = "Frost Brand"
+damage = "1d8"
+rider_damage = "1d6"
+rider_damage_type = "cold"
+
+[resource]
+resource_name = "Frost Brand"
+script = ExtResource("2_4bnj0")
+id = "frost_brand"
+display_name = "Frost Brand"
+kind = 0
+description = "A longsword rimed with frost that never melts. Cold mist pours from the blade.
+Magic: +1d6 cold damage on every hit, and its wielder resists fire."
+value_gp = 6000
+icon = 41
+wondrous = true
+base_item = "longsword"
+attack = SubResource("Resource_d1h8m")
+category = "martial"
+resistances = Array[String](["fire"])

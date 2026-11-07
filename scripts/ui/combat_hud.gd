@@ -1288,6 +1288,7 @@ func caption(title: String, text: String) -> void:
 		_caption.add_theme_stylebox_override("panel", _box(COL_BG, COL_GOLD.darkened(0.45)))
 		_caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_banner.get_parent().add_child(_caption)
+		_banner.get_parent().move_child(_caption, _log.get_index() + 1)     # under the screens (bag, quest log...)
 		_caption_title = _label(_caption, Vector2(6, 3), COL_BANNER)
 		_caption_text = _label(_caption, Vector2(6, 15), COL_TEXT)
 		_caption_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

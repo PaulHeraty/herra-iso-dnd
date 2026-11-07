@@ -1,6 +1,6 @@
 class_name InventoryScreen
 extends Panel
-## The inventory screen (I): the party bag (gold + a grid of item icons) and one hero's six
+## The inventory screen (I): the party bag (gold + a grid of item icons) and one hero's eight
 ## equipment slots, their stats (AC, attacks, saves) and a description box for whatever the
 ## mouse is over, with what equipping it would change. Equip: click an item in the bag (it goes
 ## on the hero shown) or drag it onto a slot or a hero tab; take off: click the slot or drag it
@@ -67,7 +67,7 @@ func _ready() -> void:
 	# equipment slots: weapons on the left, armour + rings on the right
 	for i in Equipment.SLOTS.size():
 		var slot: String = Equipment.SLOTS[i]
-		var pos := Vector2(8 + (i / 3) * 146, 47 + (i % 3) * 26)
+		var pos := Vector2(8 + (i / 4) * 146, 47 + (i % 4) * 26)
 		var box := _cell_box(pos)
 		var icon := _icon_rect(box, Vector2(3, 3), 1)
 		var l := _label(self, pos + Vector2(26, 0), CombatHud.COL_DIM)
@@ -80,7 +80,7 @@ func _ready() -> void:
 		box.mouse_exited.connect(_hover_none)
 		box.set_drag_forwarding(_drag_slot.bind(slot), _can_drop_on_slot.bind(slot), _drop_on_slot.bind(slot))
 		_slots[slot] = {box = box, icon = icon, name = n}
-	_stats = _rich(Vector2(8, 128), Vector2(286, 140))
+	_stats = _rich(Vector2(8, 152), Vector2(286, 116))
 	# the bag
 	var bag_t := _label(self, Vector2(BAG_POS.x, 21), CombatHud.COL_BANNER)
 	bag_t.text = "PARTY BAG"
@@ -557,7 +557,8 @@ func _refresh() -> void:
 			d.name.add_theme_color_override("font_color", COL_MAGIC if it.is_magic() else CombatHud.COL_TEXT)
 		else:
 			# a dark silhouette of what goes there
-			var ghost := {main = "longsword", off = "shield", ranged = "shortbow", armor = "leather_armor", ring1 = "ring", ring2 = "ring"}
+			var ghost := {main = "longsword", off = "shield", ranged = "shortbow", armor = "leather_armor", ring1 = "ring", ring2 = "ring",
+					worn1 = "cloak_protection", worn2 = "amulet_health"}
 			d.icon.texture = ItemData.icon_texture_at(ItemData.ICON_ORDER.find(ghost[slot]))
 			d.icon.modulate = Color(0.32, 0.3, 0.4, 0.75)
 			d.name.text = "-"

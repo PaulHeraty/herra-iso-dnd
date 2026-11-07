@@ -15,6 +15,9 @@ const HOME_ENTRY := "portal"
 ## MapState.next_entry for "arrive at RunePortal's cell" (no PartyStart marker for it).
 const ARRIVE := "@portal"
 
+## The rune is bound to this adventure's portal home (a trader binds it: Brannoc when he gives it,
+## Hilde in the Frostfell). A rune carried into a new adventure has to be rebound there first.
+static var bound := false
 static var active := false
 ## Where the far end is: the map and the (map) cell next to where the rune was used.
 static var map_path := ""
@@ -23,18 +26,20 @@ static var cell := Vector2i.ZERO
 
 static func reset() -> void:
 	active = false
+	bound = false
 	map_path = ""
 	cell = Vector2i.ZERO
 
 
 static func to_dict() -> Dictionary:
-	return {active = active, map_path = map_path, cell = cell}
+	return {active = active, map_path = map_path, cell = cell, bound = bound}
 
 
 static func from_dict(d: Dictionary) -> void:
 	active = d.get("active", false)
 	map_path = d.get("map_path", "")
 	cell = d.get("cell", Vector2i.ZERO)
+	bound = d.get("bound", true)              # saves from before rebinding: it was bound
 
 
 static func open_at(path: String, c: Vector2i) -> void:

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_m5bqu"]
+
+[resource]
+resource_name = "Ring of Resistance (fire)"
+script = ExtResource("1_m5bqu")
+id = "ring_resistance_fire"
+display_name = "Ring of Resistance (fire)"
+kind = 6
+description = "A copper ring set with a ruby. Fire does half damage to its wearer."
+value_gp = 500
+icon = 42
+resistances = Array[String](["fire"])

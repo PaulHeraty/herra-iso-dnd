@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_c1erb"]
+
+[resource]
+resource_name = "Ice Storm"
+script = ExtResource("1_c1erb")
+id = "ice_storm"
+display_name = "Ice Storm"
+description = "Hail as hard as rock pounds a 3x3 area: 2d8 bludgeoning + 4d6 cold (counted as cold), DEX save for half. +1d8 per slot above 4th."
+level = 4
+classes = Array[String](["wizard"])
+target = 4
+range_ft = 300
+area_size = 3
+resolve = 1
+save_ability = "DEX"
+half_on_save = true
+damage = "2d8+4d6"
+damage_type = "cold"
+upcast_dice = "1d8"
+sfx = "hit_blunt"
+vfx = "ice_storm"
+big_moment = true

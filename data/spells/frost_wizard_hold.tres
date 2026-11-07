@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_87typ"]
+
+[resource]
+resource_name = "Hold Person"
+script = ExtResource("1_87typ")
+id = "frost_wizard_hold"
+display_name = "Hold Person"
+description = "Once per fight. WIS save (DC 17) or paralyzed; it saves again at the end of each of its turns."
+kind = 2
+range_ft = 60
+resolve = 1
+save_ability = "WIS"
+dc_override = 17
+creature_types = Array[String](["humanoid"])
+condition = "paralyzed"
+condition_rounds = 10
+save_each_turn = true
+uses = 1
+sfx = "charge"
+vfx = "hold"

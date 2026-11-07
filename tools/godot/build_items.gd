@@ -168,6 +168,74 @@ func _init() -> void:
 			"A black iron ring set with a violet stone. The touch of the grave does half damage to its wearer.")
 	rn.resistances.assign(["necrotic"])
 	_save(rn)
+
+	# --- module 2 (the Frostfell, the Rimecaller's tower): SRD gear for levels 5-9 ---
+	var fbr: ItemData = ResourceLoader.load(DIR + "longsword.tres", "", ResourceLoader.CACHE_MODE_IGNORE).duplicate(true)
+	fbr.id = "frost_brand"
+	fbr.display_name = "Frost Brand"
+	fbr.resource_name = fbr.display_name
+	fbr.base_item = "longsword"
+	fbr.wondrous = true
+	fbr.icon = ItemData.ICON_ORDER.find("frost_brand")
+	fbr.value_gp = 6000
+	fbr.description = "A longsword rimed with frost that never melts. Cold mist pours from the blade.\nMagic: +1d6 cold damage on every hit, and its wielder resists fire."
+	fbr.attack.name = fbr.display_name
+	fbr.attack.rider_damage = "1d6"
+	fbr.attack.rider_damage_type = "cold"
+	fbr.resistances.assign(["fire"])
+	_save(fbr)
+	_plus("warhammer", 2, "A dwarf-lord's hammer. Runes of the forge glow along its haft.")
+	_plus("longbow", 2, "White ash and frost-giant sinew. It never loses its pull in the cold.")
+	_plus("dagger", 2, "A sliver of blue steel. It finds every gap.")
+	_plus("chain_mail", 2, "Mail of bright elven rings, light as cloth.")
+	_plus("plate_armor", 2, "Plate enamelled white and silver. Frost never forms on it.")
+	_plus("breastplate", 2, "A silvered cuirass etched with a snowflake crest.")
+	_plus("half_plate", 2, "Knightly plates lined with white bearskin.")
+	for rs in [["ring_warmth", "Ring of Warmth", "cold", "A gold ring set with a stone that glows like a coal. Its wearer never feels the cold: cold does half damage to them."],
+			["ring_resistance_fire", "Ring of Resistance (fire)", "fire", "A copper ring set with a ruby. Fire does half damage to its wearer."],
+			["ring_resistance_lightning", "Ring of Resistance (lightning)", "lightning", "A silver ring set with a blue spark of a stone. Lightning does half damage to its wearer."]]:
+		var rg := _item(rs[0], rs[1], ItemData.Kind.RING, 500 if rs[0] != "ring_warmth" else 1000, rs[3])
+		rg.resistances.assign([rs[2]])
+		if rs[0] != "ring_resistance_lightning":
+			rg.icon = ItemData.ICON_ORDER.find("ring_warmth")
+		_save(rg)
+	var cp := _wondrous("cloak_protection", "Cloak of Protection", 3500,
+			"A cloak of deep blue wool with a silver clasp. Blows and spells alike seem to slide off it.\nMagic: +1 to AC and to every saving throw.")
+	cp.ac_bonus = 1
+	cp.save_bonus = 1
+	_save(cp)
+	var ah := _wondrous("amulet_health", "Amulet of Health", 8000,
+			"A heart-shaped ruby on a gold chain. It beats, very faintly.\nMagic: your Constitution is 19 (more hit points).")
+	ah.ability_set = {"CON": 19}
+	_save(ah)
+	var go := _wondrous("gauntlets_ogre_power", "Gauntlets of Ogre Power", 8000,
+			"Heavy leather gauntlets studded with iron. Your grip could crush stone.\nMagic: your Strength is 19.")
+	go.ability_set = {"STR": 19}
+	_save(go)
+	var bd := _wondrous("bracers_defense", "Bracers of Defense", 6000,
+			"Bands of blued steel trimmed with gold. Blows turn aside from a wearer without armour.\nMagic: +2 AC while you wear no armour and carry no shield.")
+	bd.ac_unarmored = 2
+	_save(bd)
+	var hi := _wondrous("headband_intellect", "Headband of Intellect", 8000,
+			"A silver circlet with a single blue gem over the brow. Thoughts come clear and quick.\nMagic: your Intelligence is 19.")
+	hi.ability_set = {"INT": 19}
+	_save(hi)
+	var pss := _item("potion_supreme_healing", "Potion of Supreme Healing", ItemData.Kind.POTION, 1350,
+			"A violet potion that shines like a star. Drink it to regain 10d4 + 20 hit points.")
+	pss.heal = "10d4+20"
+	pss.stackable = true
+	_save(pss)
+	for sid in [["ice_storm", 1000, "The vellum is frozen stiff."], ["death_ward", 1000, "A prayer against the last breath."],
+			["cone_of_cold", 2000, "Frost creeps across your fingers as you unroll it."],
+			["mass_cure_wounds", 2000, "A hymn of healing, signed by six priests."]]:
+		_scroll(sid[0], sid[1], sid[2])
+	_key("rime_key", "Rime Key", "rime", "A key of blue ice that never melts. It aches with cold.")
+	_key("star_key", "Star Key", "star", "A silver key whose bow is a seven-pointed star.")
+	var lan := _item("sunfire_lantern", "Sunfire Lantern", ItemData.Kind.TREASURE, 0,
+			"A brass lantern whose flame never goes out, even in the deepest cold. Hilde's family heirloom: bring it back to her.")
+	lan.icon = ItemData.ICON_ORDER.find("lantern")
+	lan.wondrous = true
+	_save(lan)
 	print("%d items written" % _written.size())
 	quit()
 
@@ -282,3 +350,10 @@ func _plus(base_id: String, n: int, flavour: String) -> void:
 	if it.attack:
 		it.attack.name = it.display_name
 	_save(it)
+
+
+## A worn wondrous item (cloak, amulet, gauntlets...): its icon by id.
+func _wondrous(id: String, name: String, value: int, desc: String) -> ItemData:
+	var it := _item(id, name, ItemData.Kind.WONDROUS, value, desc)
+	it.icon = ItemData.ICON_ORDER.find(id)
+	return it

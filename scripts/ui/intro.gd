@@ -311,13 +311,17 @@ func _choose_module() -> void:
 	var y := 80.0
 	var done: Array = _party.get("modules_done", [])
 	for m in Modules.all():
-		var ok := m.fits_level(_party_level())
+		# a new party can also jump straight into a later adventure, at its level with its starter kit
+		var quick := _party.is_empty() and not m.fits_level(1) and not m.new_party_kit.is_empty()
+		var ok := m.fits_level(_party_level()) or quick
 		var status := ""
 		if m.id in done:
 			status = "  (finished)"
 		var lines: Array[String] = ["%s%s" % [m.title, status],
 			"%s, ends around level %d. %s" % [m.level_text(), m.level_end, m.tagline]]
-		if ok:
+		if quick:
+			lines.append("A new party starts this one at level %d, with gear to match. %s" % [m.level_min, m.description])
+		elif ok:
 			lines.append(m.description)
 		else:
 			lines.append("Your party is level %d: this adventure is for a party of %s." % [_party_level(), m.level_text().to_lower()])

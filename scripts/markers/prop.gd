@@ -5,7 +5,8 @@ extends MapMarker
 ## cocoon, urn. Blocks movement (not sight) unless `blocks` is off. Art from
 ## tools/godot/gen_dungeon_art.gd. Drop it under Entities; pick the kind in the inspector.
 
-enum Kind { BARREL, CRATE, SARCOPHAGUS, RUBBLE, COCOON, URN, TREE_OAK, TREE_PINE, BUSH, BOULDER, STUMP, LOG, TENT, GRAVE, STALL, BLOCK }
+enum Kind { BARREL, CRATE, SARCOPHAGUS, RUBBLE, COCOON, URN, TREE_OAK, TREE_PINE, BUSH, BOULDER, STUMP, LOG, TENT, GRAVE, STALL, BLOCK,
+	TREE_PINE_SNOW, TREE_OAK_SNOW, BUSH_SNOW, BOULDER_SNOW, STUMP_SNOW, BOOKSHELF, ALCHEMY_TABLE, FROST_CRYSTAL }
 
 ## texture, feet offset (top-left of the image relative to the cell centre), shadow radius
 const KINDS := {
@@ -28,6 +29,15 @@ const KINDS := {
 	Kind.STALL: ["stall", Vector2(-24, -48), 0.0],
 	# a carved stone block that can be pushed (tools/godot/gen_puzzle_art.gd)
 	Kind.BLOCK: ["block", Vector2(-14, -27), 0.0],
+	# module 2: the Frostfell and the Rimecaller's tower (tools/godot/gen_frost_art.gd)
+	Kind.TREE_PINE_SNOW: ["tree_pine_snow", Vector2(-16, -58), 8.0],
+	Kind.TREE_OAK_SNOW: ["tree_oak_snow", Vector2(-20, -54), 10.0],
+	Kind.BUSH_SNOW: ["bush_snow", Vector2(-11, -13), 7.0],
+	Kind.BOULDER_SNOW: ["boulder_snow", Vector2(-14, -19), 0.0],
+	Kind.STUMP_SNOW: ["stump_snow", Vector2(-8, -10), 5.0],
+	Kind.BOOKSHELF: ["bookshelf", Vector2(-17, -34), 0.0],
+	Kind.ALCHEMY_TABLE: ["alchemy_table", Vector2(-17, -21), 0.0],
+	Kind.FROST_CRYSTAL: ["frost_crystal", Vector2(-12, -28), 5.0],
 }
 
 @export var kind := Kind.BARREL:
@@ -50,9 +60,9 @@ const KINDS := {
 var start_cell := Vector2i.ZERO
 
 ## Kinds you can't see through (trees, boulders, tents): they block line of sight and fog sight.
-const SIGHT_BLOCKERS := [Kind.TREE_OAK, Kind.TREE_PINE, Kind.BOULDER, Kind.TENT]
+const SIGHT_BLOCKERS := [Kind.TREE_OAK, Kind.TREE_PINE, Kind.BOULDER, Kind.TENT, Kind.TREE_PINE_SNOW, Kind.TREE_OAK_SNOW, Kind.BOULDER_SNOW]
 ## Tall kinds fade when someone stands behind them (DungeonMap).
-const TALL := [Kind.TREE_OAK, Kind.TREE_PINE, Kind.TENT, Kind.STALL]
+const TALL := [Kind.TREE_OAK, Kind.TREE_PINE, Kind.TENT, Kind.STALL, Kind.TREE_PINE_SNOW, Kind.TREE_OAK_SNOW]
 
 
 func blocks_sight() -> bool:

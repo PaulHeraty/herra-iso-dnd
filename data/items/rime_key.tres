@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_xwbok"]
+
+[resource]
+resource_name = "Rime Key"
+script = ExtResource("1_xwbok")
+id = "rime_key"
+display_name = "Rime Key"
+kind = 5
+description = "A key of blue ice that never melts. It aches with cold. It opens a lock somewhere in the dungeon."
+key_id = "rime"

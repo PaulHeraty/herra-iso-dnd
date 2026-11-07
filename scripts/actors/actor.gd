@@ -244,11 +244,15 @@ func reset_resources() -> void:
 	hit_dice_left = maxi(1, stats.level)
 	uses_left.clear()
 	for p: SpellData in stats.powers:
-		if p.uses > 0:
-			uses_left[p.id] = p.uses
+		var n := Progression.uses_of(stats, p)
+		if n > 0:
+			uses_left[p.id] = n
 	# Arcane Recovery (Wizard): once a day, a short rest brings back some spell slots (Rest).
 	if stats.class_id == "wizard":
 		uses_left["arcane_recovery"] = 1
+	# Indomitable (Fighter 9): reroll one failed save per long rest.
+	if stats.indomitable:
+		uses_left["indomitable"] = 1
 
 
 ## Lowest slot level (>= the spell's level) with a slot left; 0 if none (cantrips return 0 too).

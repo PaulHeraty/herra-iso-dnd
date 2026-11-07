@@ -1,0 +1,47 @@
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_thrrs"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_4awn5"]
+[ext_resource type="Resource" path="res://data/spells/winter_wolf_breath.tres" id="3_wyyor"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="4_lo0dm"]
+
+[sub_resource type="Resource" id="Resource_g5hoe"]
+resource_name = "Bite"
+script = ExtResource("1_thrrs")
+name = "Bite"
+ability = 1
+damage = "2d6+4"
+damage_type = "piercing"
+to_hit_override = 6
+rider_save = "STR"
+rider_dc = 14
+rider_condition = "prone"
+
+[resource]
+resource_name = "Winter Wolf"
+script = ExtResource("4_lo0dm")
+id = "winter_wolf"
+display_name = "Winter Wolf"
+challenge = 3.0
+xp = 700
+size = 3
+creature_type = "monstrosity"
+str_score = 18
+dex_score = 13
+con_score = 14
+int_score = 7
+wis_score = 12
+cha_score = 8
+max_hp = 75
+hit_dice = "10d10+20"
+armor_class = 13
+immunities = Array[String](["cold"])
+traits = Array[String](["pack_tactics"])
+speed_ft = 50
+sight_ft = 60
+attacks = Array[ExtResource("1_thrrs")]([SubResource("Resource_g5hoe")])
+powers = Array[ExtResource("2_4awn5")]([ExtResource("3_wyyor")])
+skill_overrides = {
+"perception": 5,
+"stealth": 3
+}

@@ -6,8 +6,9 @@ extends Resource
 ##
 ## Rules content: 5e SRD 5.1 (CC-BY-4.0, see CREDITS.md).
 
-## RUNE: the Rune of Return (opens a portal back to the trader; never used up).
-enum Kind { WEAPON, ARMOR, SHIELD, POTION, SCROLL, KEY, RING, TREASURE, RUNE }
+## RUNE: the Rune of Return (opens a portal back to the trader; never used up). WONDROUS: worn magic
+## items (cloaks, amulets, gauntlets, bracers, headbands) in the two Worn slots.
+enum Kind { WEAPON, ARMOR, SHIELD, POTION, SCROLL, KEY, RING, TREASURE, RUNE, WONDROUS }
 
 const DIR := "res://data/items/"
 
@@ -40,6 +41,10 @@ const DIR := "res://data/items/"
 @export var save_bonus := 0             ## rings (Ring of Protection +1 to all saves)
 @export var resistances: Array[String] = []           ## rings: damage types halved (Ring of Resistance)
 @export var condition_immunities: Array[String] = []  ## rings: conditions blocked (Ring of Free Action)
+## Worn items: ability scores raised to at least this ({"STR": 19} Gauntlets of Ogre Power).
+@export var ability_set := {}
+## Worn items: extra AC while wearing no armour and no shield (Bracers of Defense +2).
+@export var ac_unarmored := 0
 @export_group("Use")
 @export var heal := ""                  ## potion: dice healed ("2d4+2")
 @export var spell: SpellData            ## scroll: the spell it casts
@@ -57,11 +62,13 @@ const ICON_ORDER := [
 	"scimitar", "battleaxe", "greataxe", "morningstar", "heavy_crossbow", "breastplate", "half_plate",
 	"potion_superior_healing", "flame_tongue", "mace_of_disruption", "ring_resistance_necrotic",
 	"rune_of_return",
+	"frost_brand", "ring_warmth", "cloak_protection", "amulet_health", "gauntlets_ogre_power", "bracers_defense",
+	"headband_intellect", "potion_supreme_healing", "lantern",
 ]
 const KIND_ICON := {
 	Kind.WEAPON: "longsword", Kind.ARMOR: "leather_armor", Kind.SHIELD: "shield",
 	Kind.POTION: "potion_healing", Kind.SCROLL: "scroll", Kind.KEY: "key", Kind.RING: "ring",
-	Kind.TREASURE: "gem", Kind.RUNE: "rune_of_return",
+	Kind.TREASURE: "gem", Kind.RUNE: "rune_of_return", Kind.WONDROUS: "cloak_protection",
 }
 const ICON_SIZE := 16
 const ICONS_PATH := "res://assets/ui/item_icons.png"
@@ -88,7 +95,7 @@ func base_id() -> String:
 ## Magic items: +N weapons / armour / shields and every ring. Their names show in the magic
 ## colour and their icons come from the sheet's second row (a blue glimmer around the picture).
 func is_magic() -> bool:
-	return magic_bonus > 0 or kind == Kind.RING or wondrous
+	return magic_bonus > 0 or kind == Kind.RING or kind == Kind.WONDROUS or wondrous
 
 
 ## A 16x16 texture of the icon (a fresh AtlasTexture on the icon sheet).
@@ -119,7 +126,7 @@ static func get_item(item_id: String) -> ItemData:
 
 
 func is_equipment() -> bool:
-	return kind in [Kind.WEAPON, Kind.ARMOR, Kind.SHIELD, Kind.RING]
+	return kind in [Kind.WEAPON, Kind.ARMOR, Kind.SHIELD, Kind.RING, Kind.WONDROUS]
 
 
 ## Proficiency tag used by the class training lists: "simple"/"martial" for weapons,
@@ -155,8 +162,12 @@ func summary() -> String:
 			return "AC %d%s, %s%s" % [base_ac + magic_bonus, cap, armor_type, ", stealth disadv." if stealth_disadvantage else ""]
 		Kind.SHIELD:
 			return "+%d AC" % (base_ac + magic_bonus)
-		Kind.RING:
+		Kind.RING, Kind.WONDROUS:
 			var parts := []
+			for ab in ability_set:
+				parts.append("%s %d" % [ab, ability_set[ab]])
+			if ac_unarmored:
+				parts.append("%+d AC without armour or shield" % ac_unarmored)
 			if ac_bonus:
 				parts.append("%+d AC" % ac_bonus)
 			if save_bonus:

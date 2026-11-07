@@ -92,7 +92,8 @@ var _placed := {}
 func _ready() -> void:
 	Modules.ensure_for(scene_file_path)      # a map run on its own: its module
 	# The quest and the rune's portal travel with the party (a new game starts them afresh).
-	if PartyState.has_state():
+	var fresh_story := PartyState.story.is_empty()
+	if PartyState.has_state() and not fresh_story:
 		Quest.from_dict(PartyState.story.get("quest", {}))
 		RunePortal.from_dict(PartyState.story.get("portal", {}))
 	else:
@@ -133,6 +134,10 @@ func _ready() -> void:
 	mech.update_plates(true)          # heroes may arrive standing on a plate
 	party_xp = PartyState.party_xp
 	inventory = Inventory.from_dict(PartyState.bag) if not PartyState.bag.is_empty() else Inventory.starting()
+	if not PartyState.has_state():
+		_new_party_kit()
+	if fresh_story and Modules.current:
+		Modules.current.on_start(self)            # e.g. the main quest is given at once
 	_compute_fog()
 	refresh_navigation()
 	map_picture = MapPicture.new(self)
@@ -274,6 +279,8 @@ func _static_cells() -> Dictionary:
 			elif n is Npc:
 				if n.present:
 					move[n.get_cell()] = true
+			elif n is Chest and n.mimic and n.opened:
+				pass                    # a woken mimic: the chest is gone
 			elif n is Chest or n is Brazier or n is Lever or n is StoneFace:
 				move[n.get_cell()] = true
 			elif n is Prop:
@@ -577,7 +584,7 @@ func chest_at(cell: Vector2i) -> Chest:
 ## An unopened, explored chest under a world point (its cell or its sprite), or null.
 func closed_chest_under(pos: Vector2) -> Chest:
 	var c := chest_at(IsoGrid.world_to_cell(pos))
-	if c and not c.opened and is_explored(c.get_cell()):
+	if c and not c.opened and c.visible and is_explored(c.get_cell()):
 		return c
 	for n in entities.get_children():
 		if n is Chest and not n.opened and is_explored(n.get_cell()) and n.sprite_rect().has_point(pos):
@@ -592,6 +599,9 @@ func try_open_chest(chest: Chest, by: Array[Hero]) -> bool:
 		return true
 	if combat.in_combat:
 		combat._say("No time for that now!")
+		return false
+	if chest.mimic:
+		_wake_mimic(chest, by)
 		return false
 	if chest.locked and not _try_lock(chest, "chest", by):
 		return false
@@ -653,6 +663,8 @@ func stairs_under(pos: Vector2) -> Stairs:
 		return s
 	for n in entities.get_children():
 		if n is Stairs and n.up and Rect2(n.position + Vector2(-16, -30), Vector2(32, 38)).has_point(pos):
+			return n
+		if n is Stairs and n.tower and Rect2(n.position + Vector2(-26, -150), Vector2(52, 156)).has_point(pos):
 			return n
 	return null
 
@@ -1097,7 +1109,7 @@ func _fade_tall_props(delta: float) -> void:
 		for n in entities.get_children():
 			if n is Prop and n.is_tall():
 				_tall_props.append(n)
-			elif n is Door and n.style == Door.Style.SECRET:
+			elif n is Door and n.style in [Door.Style.SECRET, Door.Style.ICE]:
 				_secret_doors.append(n)
 	if _tall_props.is_empty() and _secret_doors.is_empty():
 		return
@@ -1145,6 +1157,8 @@ func quest_check() -> void:
 		return
 	for s in newly:
 		combat._say("Quest: %s (done)" % s.text)
+		if s.has("xp") and mech:
+			mech.award(int(s.xp))
 	if hud:
 		hud.quest_toast(newly)
 
@@ -1162,10 +1176,13 @@ func _on_combat_ended() -> void:
 
 ## No living monster within the NPC's guard_radius (he only comes out once they're dead).
 func _npc_area_clear(n: Npc) -> bool:
+	if not n.story_wants():
+		return false
 	if n.guard_radius <= 0:
 		return true
 	for m in monsters:
-		if m.is_alive() and grid_distance(m.cell, n.get_cell()) <= n.guard_radius:
+		if m.is_alive() and grid_distance(m.cell, n.get_cell()) <= n.guard_radius \
+				and (n.guard_monster == "" or m.stats.id == n.guard_monster):
 			return false
 	return true
 
@@ -1183,6 +1200,11 @@ func _tick_npcs(delta: float) -> void:
 	for n in entities.get_children():
 		if not n is Npc:
 			continue
+		if n.present and not n.story_wants():
+			n.vanish()
+			invalidate_static()
+			refresh_navigation()
+			continue
 		if not n.present:
 			if _npc_area_clear(n):
 				n.appear()
@@ -1191,7 +1213,7 @@ func _tick_npcs(delta: float) -> void:
 				_refresh_fog_look()
 				_npc_t = 1.2                  # a moment before he speaks up
 			continue
-		if not Quest.met and is_seen(n.get_cell()) and hud and not hud.ui_busy() \
+		if n.calls_party and not Quest.has_met(n.npc_id) and is_seen(n.get_cell()) and hud and not hud.ui_busy() \
 				and not controller.is_walking() and controller.enabled:
 			talk_to(n)
 			return
@@ -1278,8 +1300,10 @@ static func map_title_of(path: String) -> String:
 func use_rune() -> String:
 	if combat.in_combat:
 		return "No time for that in the middle of a fight!"
+	if not RunePortal.bound or RunePortal.home_map() == "":
+		return "The rune glows faintly, but its other end is far away. A trader here could bind it anew."
 	if scene_file_path == RunePortal.home_map():
-		return "The rune stays dark: Brannoc's stall is here in the woods."
+		return "The rune stays dark: its portal comes out right here."
 	var c := _portal_cell()
 	if c == NO_CELL:
 		return "There's no room here for a portal."
@@ -1345,3 +1369,41 @@ func take_portal(p: Portal) -> void:
 func _arrival_notes() -> void:
 	if mech and combat and not combat.in_combat and not _leaving:
 		mech.check_notes()
+
+
+## A brand-new party starting a later module (Modules.current.new_party_kit): each hero puts on
+## the kit for their class; the party gets the module's starting gold.
+func _new_party_kit() -> void:
+	var m := Modules.current
+	if m == null or (m.new_party_kit.is_empty() and m.new_party_gold == 0):
+		return
+	for h in party:
+		for iid in m.new_party_kit.get(h.base_stats.class_id, []):
+			var it := ItemData.get_item(iid)
+			if it and it.is_equipment():
+				h.equip(Equipment.default_slot(it, h.equipment), iid)
+		h.hp = h.stats.max_hp
+	inventory.add_gold(m.new_party_gold)
+
+
+## Opening a mimic: the chest grows teeth and a Mimic fights the party (module 2).
+func _wake_mimic(chest: Chest, by: Array[Hero]) -> void:
+	var path := "res://scenes/actors/monsters/mimic.tscn"
+	if not ResourceLoader.exists(path):
+		push_warning("no mimic scene")
+		return
+	chest.opened = true                       # (the chest is gone: MapState remembers it)
+	chest.visible = false
+	invalidate_static()
+	var m: Monster = (load(path) as PackedScene).instantiate()
+	m.group_id = 900 + monsters.size()
+	entities.add_child(m)
+	m.place_at(chest.get_cell())
+	var who: Hero = by[0] if not by.is_empty() else party[0]
+	m.facing = (who.cell - m.cell).clampi(-1, 1)
+	monsters.append(m)
+	combat._say("The chest's lid splits into a mouth full of teeth: a mimic!")
+	Sfx.play("monster_hurt", 0.0, 0.7)
+	FloatText.spawn(self, m.body_position() + Vector2(0, -16), "MIMIC!", Color8(255, 90, 60), 12)
+	refresh_navigation()
+	combat.start_combat(m, who)

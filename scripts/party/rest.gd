@@ -33,8 +33,8 @@ static func short_rest(party: Array) -> PackedStringArray:
 			spent += 1
 			healed += h.heal(maxi(1, r))
 		for p: SpellData in h.stats.powers:
-			if p.recharge == SpellData.Recharge.SHORT_REST and p.uses > 0:
-				h.uses_left[p.id] = p.uses
+			if p.recharge == SpellData.Recharge.SHORT_REST and Progression.uses_of(h.stats, p) > 0:
+				h.uses_left[p.id] = Progression.uses_of(h.stats, p)
 		var rec := arcane_recovery(h)
 		if rec != "":
 			out.append(rec)

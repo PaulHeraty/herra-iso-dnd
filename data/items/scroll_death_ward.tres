@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_kphsm"]
+[ext_resource type="Resource" path="res://data/spells/death_ward.tres" id="2_qhjuw"]
+
+[resource]
+resource_name = "Scroll of Death Ward"
+script = ExtResource("1_kphsm")
+id = "scroll_death_ward"
+display_name = "Scroll of Death Ward"
+kind = 4
+description = "A prayer against the last breath.
+Death Ward (4th level): Touch: the first time damage would drop the creature to 0 hit points, it drops to 1 instead. Lasts until it is used or you take a long rest.
+Cleric only. Crumbles once read. DC 15, attack +7."
+value_gp = 1000
+stackable = true
+spell = ExtResource("2_qhjuw")

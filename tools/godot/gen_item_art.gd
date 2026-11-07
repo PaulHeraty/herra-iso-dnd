@@ -750,3 +750,136 @@ func _icon_rune_of_return(cv: Canvas) -> void:
 func _icon_ring_resistance_necrotic(cv: Canvas) -> void:
 	_ring(cv, "Y", "y", "o")
 	cv.rows([".V.", "VVx", ".x."], 5, 2)
+
+
+# --- module 2 items ---------------------------------------------------------------------------
+
+## Frost Brand: the longsword with an icy blade.
+func _icon_frost_brand(cv: Canvas) -> void:
+	_icon_longsword(cv)
+	for p: Vector2i in cv.px.keys():
+		match cv.px[p]:
+			"w": cv.px[p] = "w"
+			"S": cv.px[p] = "g"
+			"s": cv.px[p] = "B"
+			"m": cv.px[p] = "v"
+
+
+## Ring of Warmth: gold band, a glowing ember-red stone.
+func _icon_ring_warmth(cv: Canvas) -> void:
+	_ring(cv, "Y", "y", "o")
+	cv.rows([".R.", "RRr", ".r."], 5, 2)
+
+
+## Cloak of Protection: a deep blue cloak with a gold clasp.
+func _icon_cloak_protection(cv: Canvas) -> void:
+	cv.rows([
+		"....YyY.......",
+		"...vBYBv......",
+		"..vBBBBBv.....",
+		"..vBBvBBBv....",
+		".vBBBvBBBv....",
+		".vBBBvBBBBv...",
+		".vBBBvBBBBv...",
+		"vBBBBvBBBBBv..",
+		"vBBBBvBBBBBv..",
+		"vBBBBvBBBBBBv.",
+		"vBBBBvBBBBBBv.",
+		".vvvvvvvvvvv..",
+	], 0, 1)
+
+
+## Amulet of Health: a gold chain and a red heart-stone.
+func _icon_amulet_health(cv: Canvas) -> void:
+	cv.rows([
+		"..y.......y...",
+		"...y.....y....",
+		"...y.....y....",
+		"....y...y.....",
+		".....y.y......",
+		"......Y.......",
+		".....yYy......",
+		"....yRRRy.....",
+		"....RpRRR.....",
+		"....RRRRr.....",
+		".....RRr......",
+		"......r.......",
+	], 0, 1)
+
+
+## Gauntlets of Ogre Power: a pair of heavy leather and iron gloves.
+func _icon_gauntlets_ogre_power(cv: Canvas) -> void:
+	cv.rows([
+		".Ss.Ss........",
+		".Ss.SsSs......",
+		".SsSsSsSs.....",
+		".SSSSSSSs.....",
+		".SSSSSSSs..Ss.",
+		".sSSSSSSs.SSs.",
+		"..LLLLLLlSSs..",
+		"..LCCCCLl.s...",
+		"..LLLLLLl.....",
+		"..llllll......",
+	], 0, 2)
+
+
+## Bracers of Defense: two bands of blued steel with gold edges.
+func _icon_bracers_defense(cv: Canvas) -> void:
+	cv.rows([
+		"..YYYY........",
+		".YBBBBY.......",
+		".BgBBBB.......",
+		".BBBBBB.YYYY..",
+		".BBBBBBYBBBBY.",
+		".BBBBvBBgBBBB.",
+		".YBBBBYBBBBBB.",
+		"..YYYY.BBBBBB.",
+		".......BBBBvB.",
+		".......YBBBBY.",
+		"........YYYY..",
+	], 0, 1)
+
+
+## Headband of Intellect: a silver circlet with a blue gem.
+func _icon_headband_intellect(cv: Canvas) -> void:
+	cv.rows([
+		"..............",
+		"..............",
+		"......BB......",
+		".....BgBB.....",
+		"..SSSBBBvSSS..",
+		".SsssvBvvsssS.",
+		".S..........S.",
+		".s..........s.",
+		"..s........s..",
+		"...ss....ss...",
+		".....ssss.....",
+	], 0, 1)
+
+
+## Potion of Supreme Healing: the big potion, violet.
+func _icon_potion_supreme_healing(cv: Canvas) -> void:
+	cv.rows(POTION_GREATER)
+	for p: Vector2i in cv.px.keys():
+		match cv.px[p]:
+			"r": cv.px[p] = "x"
+			"R": cv.px[p] = "V"
+			"q": cv.px[p] = "x"
+			"p": cv.px[p] = "w"
+
+
+## A brass lantern with a warm glow (quest items).
+func _icon_lantern(cv: Canvas) -> void:
+	cv.rows([
+		".....yyy......",
+		"....y...y.....",
+		"....yyyyy.....",
+		"...yoooooy....",
+		"...yYYYYYy....",
+		"...yYwwwYy....",
+		"...yYwRwYy....",
+		"...yYwwwYy....",
+		"...yYYYYYy....",
+		"...yoooooy....",
+		"....yyyyy.....",
+	], 0, 1)

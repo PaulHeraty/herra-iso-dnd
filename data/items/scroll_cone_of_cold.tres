@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_4jxuv"]
+[ext_resource type="Resource" path="res://data/spells/cone_of_cold.tres" id="2_irql6"]
+
+[resource]
+resource_name = "Scroll of Cone of Cold"
+script = ExtResource("1_4jxuv")
+id = "scroll_cone_of_cold"
+display_name = "Scroll of Cone of Cold"
+kind = 4
+description = "Frost creeps across your fingers as you unroll it.
+Cone of Cold (5th level): A blast of cold air in a 60-ft cone: 8d8 cold, CON save for half.
+Mage only. Crumbles once read. DC 17, attack +9."
+value_gp = 2000
+stackable = true
+spell = ExtResource("2_irql6")

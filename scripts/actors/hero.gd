@@ -344,6 +344,9 @@ func gain_level() -> Array[String]:
 	var old_max := stats.max_hp
 	var old_slots := stats.spell_slots.duplicate()
 	var old_powers := stats.powers.map(func(p): return p.id)
+	var old_uses := {}
+	for p: SpellData in stats.powers:
+		old_uses[p.id] = Progression.uses_of(stats, p)
 	level += 1
 	refresh_stats()
 	var more := stats.max_hp - old_max
@@ -357,8 +360,12 @@ func gain_level() -> Array[String]:
 		slots_left[i] += maxi(0, stats.spell_slots[i] - was)
 	hit_dice_left += 1
 	for p: SpellData in stats.powers:
-		if not p.id in old_powers and p.uses > 0:
-			uses_left[p.id] = p.uses
+		var n := Progression.uses_of(stats, p)
+		if n > 0:
+			# a new power, or more uses of an old one (Channel Divinity x2 at cleric 6)
+			uses_left[p.id] = uses_left.get(p.id, 0) + n - int(old_uses.get(p.id, 0))
+	if stats.indomitable and not uses_left.has("indomitable"):
+		uses_left["indomitable"] = 1
 	out.append_array(Progression.gains(base_stats.class_id, level))
 	return out
 

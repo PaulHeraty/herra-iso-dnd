@@ -46,6 +46,8 @@ var attacks_left := 0
 var bonus_used := false
 ## Sneak Attack: once per turn.
 var sneak_used := false
+## Divine Strike already used this turn.
+var divine_used := false
 ## Free object interaction this turn (opening a door) used.
 var interact_used := false
 var moving := false
@@ -320,6 +322,21 @@ func perform_attack(attacker: Actor, target: Actor, opt: Dictionary) -> void:
 			sneak_used = true
 			parts += " + %d martial advantage (%s)" % [md, mr.describe()]
 			short += " (+martial advantage)"
+		# Divine Strike (Cleric 8): once on each of its turns, a weapon hit deals +1d8 radiant.
+		if st.divine_strike != "" and not divine_used and attacker == current:
+			var dsr := Dice.roll(Dice.crit(st.divine_strike) if crit else st.divine_strike)
+			var dsd := _adjust(dsr.total, "radiant", target)
+			dmg += dsd
+			divine_used = true
+			parts += " + %d radiant (Divine Strike, %s)" % [dsd, dsr.describe()]
+			short += " (+radiant)"
+			SpellFx.sparkles(map, target.body_position(), Color8(255, 236, 150), false)
+		# Flesh golems: immune to bludgeoning, piercing and slashing from nonmagical weapons.
+		if "immune_nonmagical" in target.stats.traits and not a.magical and a.magic_bonus == 0 and a.to_hit_override == -99 \
+				and a.damage_type in ["bludgeoning", "piercing", "slashing"]:
+			dmg = 0
+			parts += ", none (needs a magic weapon)"
+			short += " (immune: not magic)"
 		# Wights, wraiths...: resistant to bludgeoning, piercing and slashing from nonmagical weapons.
 		if "resist_nonmagical" in target.stats.traits and not a.magical and a.magic_bonus == 0 and a.to_hit_override == -99 \
 				and a.damage_type in ["bludgeoning", "piercing", "slashing"]:
@@ -331,7 +348,7 @@ func perform_attack(attacker: Actor, target: Actor, opt: Dictionary) -> void:
 		if a.rider_condition != "" and target.is_alive():
 			var resisted := false
 			if a.rider_save != "":
-				var cs := roll_save(target, a.rider_save)
+				var cs := save_vs(target, a.rider_save, a.rider_dc)
 				resisted = cs.total >= a.rider_dc
 				_detail("  %s %s save vs %s: %s - %s" % [target.display_name(), a.rider_save, a.rider_condition,
 						cs.describe(), "resisted" if resisted else "FAILED"])
@@ -347,7 +364,7 @@ func perform_attack(attacker: Actor, target: Actor, opt: Dictionary) -> void:
 			var rr := Dice.roll(rexpr)
 			var rd := rr.total
 			if a.rider_save != "" and a.rider_condition == "":
-				var save := roll_save(target, a.rider_save)
+				var save := save_vs(target, a.rider_save, a.rider_dc)
 				var saved := save.total >= a.rider_dc
 				if saved:
 					rd = rd / 2
@@ -415,9 +432,13 @@ func _add_bonus_dice(r: DiceRoll, who: Actor) -> String:
 	return " (bless +%d)" % b.total
 
 
-## A saving throw for `who` (proficiency, Bless, restrained DEX disadvantage).
-func roll_save(who: Actor, ability: String) -> DiceRoll:
-	var r := Dice.d20(who.stats.save_bonus(ability), Condition.save_advantage(who, ability))
+## A saving throw for `who` (proficiency, Bless, restrained DEX disadvantage). `vs_magic`: against a
+## spell or magical effect (Magic Resistance gives advantage).
+func roll_save(who: Actor, ability: String, vs_magic := false) -> DiceRoll:
+	var adv := Condition.save_advantage(who, ability)
+	if vs_magic and "magic_resistance" in who.stats.traits:
+		adv = combine_advantage(adv, 1)
+	var r := Dice.d20(who.stats.save_bonus(ability), adv)
 	_add_bonus_dice(r, who)
 	if Condition.auto_fails_save(who, ability):
 		r.total = 0              # paralyzed: STR and DEX saves fail
@@ -436,6 +457,15 @@ func _start_of_turn(a: Actor) -> void:
 				if r >= 5:
 					a.uses_left[p.id] = 1
 					_say("%s's %s recharges (%d)." % [a.display_name(), p.display_name, r])
+	# Regeneration (troll): 10 HP at the start of its turn, unless fire or acid hurt it since its last one.
+	if "regeneration" in a.stats.traits and a.is_alive():
+		if a.get_meta("regen_blocked", false):
+			a.set_meta("regen_blocked", false)
+			_say("%s's burns don't knit." % a.display_name())
+		elif a.hp < a.stats.max_hp:
+			var got := a.heal(10)
+			_say("%s regenerates %d HP." % [a.display_name(), got])
+			FloatText.spawn(map, a.body_position() + Vector2(0, -14), "+%d" % got, COL_ALLY, 10)
 	for cid in a.tick_conditions():
 		_say("%s is no longer %s." % [a.display_name(), Condition.display(cid).to_lower()])
 		if cid == "blessed":
@@ -667,6 +697,7 @@ func _next_turn() -> void:
 	action_used = false
 	bonus_used = false
 	sneak_used = false
+	divine_used = false
 	interact_used = false
 	attacks_left = current.stats.attacks_per_action()
 	chosen_attack = null
@@ -1245,20 +1276,22 @@ func valid_targets(caster: Actor, p: SpellData) -> Array[Actor]:
 	return out
 
 
-## Cells a shaped power would cover if aimed at `aim` (AREA: centred there; LINE/CONE: toward it).
-func shape_cells(caster: Actor, p: SpellData, aim: Vector2i) -> Array[Vector2i]:
+## Cells a shaped power would cover if aimed at `aim` (AREA: centred there; LINE/CONE: toward it),
+## cast from the caster's cell or from `origin` (the AI trying out cells it could move to).
+func shape_cells(caster: Actor, p: SpellData, aim: Vector2i, origin := Vector2i(-99999, -99999)) -> Array[Vector2i]:
+	var from := caster.cell if origin == Vector2i(-99999, -99999) else origin
 	match p.target:
 		SpellData.Target.AREA:
 			return Targeting.area_cells(aim, p.area_size)
 		SpellData.Target.LINE:
 			# A line stops at the first wall or closed door.
-			var line := Targeting.line_cells(caster.cell, aim, p.range_cells())
+			var line := Targeting.line_cells(from, aim, p.range_cells())
 			for i in line.size():
 				if map.blocks_sight(line[i]) or not map.has_floor(line[i]):
 					return line.slice(0, i)
 			return line
 		SpellData.Target.CONE:
-			return Targeting.cone_cells(caster.cell, aim, p.range_cells())
+			return Targeting.cone_cells(from, aim, p.range_cells())
 	var none: Array[Vector2i] = []
 	return none
 
@@ -1529,6 +1562,9 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 		elif p.vfx == "burning_hands":
 			_preroll(caster, p, slot, char_level, affected)
 			await _burning_hands_fx(caster, cells)
+		elif p.vfx in ["cone_of_cold", "frost_breath", "ice_storm"]:
+			_preroll(caster, p, slot, char_level, affected)
+			await _frost_fx(caster, cells, p.vfx == "ice_storm")
 		elif p.vfx == "lightning":
 			_preroll(caster, p, slot, char_level, affected)
 			var end := IsoGrid.cell_to_world(cells[-1]) + Vector2(0, -8) if not cells.is_empty() else IsoGrid.cell_to_world(aim)
@@ -1597,6 +1633,11 @@ func resolve_power(caster: Actor, p: SpellData, slot: int, targets: Array[Actor]
 				Sfx.play("heal_chime")
 				var was_down := not a.is_alive()
 				var got := a.heal(amount)
+				# Blessed Healer (Life Cleric 6): healing someone else with a spell heals the cleric too.
+				if caster.stats.blessed_healer and p.uses_slot() and slot >= 1 and a != caster and caster.is_alive():
+					var bh := caster.heal(2 + slot)
+					if bh > 0:
+						_detail("  Blessed Healer: %s heals %d" % [caster.display_name(), bh])
 				_detail("  heal %s: %s -> %d" % [a.display_name(), r.describe(), amount])
 				_say("%s regains %d HP%s" % [a.display_name(), got, " and gets back up!" if was_down else ""])
 				FloatText.spawn(map, a.body_position() + Vector2(0, -10), "+%d" % got, COL_ALLY, 10)
@@ -1649,15 +1690,25 @@ func _spell_save(caster: Actor, p: SpellData, target: Actor, dmg_roll: DiceRoll,
 	if not target.is_alive():
 		return
 	var dc := p.dc_for(caster.stats)
-	var s := pre if pre else roll_save(target, p.save_ability)
+	var s := pre if pre else roll_save(target, p.save_ability, true)
 	var saved := s.total >= dc
+	if not saved:
+		var again := _indomitable(target, p.save_ability, dc, true)
+		if again:
+			s = again
+			saved = s.total >= dc
 	_detail("  %s %s save: %s vs DC %d - %s" % [target.display_name(), p.save_ability, s.describe(), dc, "success" if saved else "FAILED"])
 	if p.vfx == "sacred_flame" and not saved:
 		SpellFx.sparkles(map, target.body_position(), Color8(255, 236, 150))
 	if dmg_roll:
 		var dmg := dmg_roll.total
+		# Evasion (Rogue 7): an area DEX save for half: nothing on a success, half on a failure.
+		var evade := target.stats.evasion and p.half_on_save and p.save_ability == "DEX" and _is_shaped(p)
 		if saved:
-			dmg = dmg / 2 if p.half_on_save else 0
+			dmg = 0 if evade else (dmg / 2 if p.half_on_save else 0)
+		elif evade:
+			dmg = dmg / 2
+			_say("  %s twists aside (Evasion): half damage." % target.display_name())
 		if dmg > 0:
 			_deal(caster, target, dmg, p.damage_type, false, " (half, saved)" if saved else "", p.display_name)
 		else:
@@ -1680,8 +1731,10 @@ func _contest(caster: Actor, p: SpellData, target: Actor) -> void:
 	if p.id == "escape":
 		_escape(caster)
 		return
-	var mine := Dice.d20(caster.stats.skill_bonus(p.contest_skill),
-			-1 if p.contest_skill == "stealth" and caster.stats.stealth_disadvantage else 0)
+	var sadv := -1 if p.contest_skill == "stealth" and caster.stats.stealth_disadvantage else 0
+	if p.id == "hide" and caster.stats.supreme_sneak:
+		sadv = combine_advantage(sadv, 1)            # Supreme Sneak (Rogue 9)
+	var mine := Dice.d20(caster.stats.skill_bonus(p.contest_skill), sadv)
 	if p.id == "hide":
 		var best := 0
 		for a in order:
@@ -1747,6 +1800,7 @@ func _spell_colour(p: SpellData) -> Color:
 		"force": return Color8(150, 170, 255)
 		"necrotic": return Color8(200, 90, 210)
 		"lightning": return Color8(160, 200, 255)
+		"cold": return Color8(150, 220, 255)
 	return Color8(220, 220, 230)
 
 
@@ -1811,7 +1865,18 @@ func apply_damage(target: Actor, dmg: int, dtype := "", crit := false) -> void:
 			FloatText.spawn(map, target.body_position() + Vector2(0, -22), "UNDEAD FORTITUDE", COL_MAGIC, 10)
 	if dmg > 0 and target.has_condition("turned"):
 		target.remove_condition("turned")
+	# Death Ward: the first drop to 0 HP is a drop to 1 instead.
+	if dmg >= target.hp and dmg > 0 and target.has_condition("death_ward"):
+		target.remove_condition("death_ward")
+		dmg = target.hp - 1
+		_say("%s's Death Ward flares: still standing at 1 HP!" % target.display_name())
+		FloatText.spawn(map, target.body_position() + Vector2(0, -22), "DEATH WARD", COL_ALLY, 10)
+	# Regeneration (troll): fire or acid stops it on the creature's next turn.
+	if dmg > 0 and dtype in ["fire", "acid"] and "regeneration" in target.stats.traits:
+		target.set_meta("regen_blocked", true)
 	target.take_damage(dmg)
+	if not target.is_alive() and target is Monster and "death_burst" in target.stats.traits:
+		_death_burst(target)
 	if target.concentrating:
 		if not target.is_alive():
 			end_concentration(target)
@@ -2080,7 +2145,7 @@ func _preroll(caster: Actor, p: SpellData, slot: int, char_level: int, affected:
 		_pre_dmg = Dice.roll(p.damage_for(char_level, slot))
 	for a in affected:
 		if a.is_alive():
-			_pre_saves[a] = roll_save(a, p.save_ability)
+			_pre_saves[a] = roll_save(a, p.save_ability, true)
 
 
 const ABILITY_WORDS := {"STR": "STRENGTH", "DEX": "DEXTERITY", "CON": "CONSTITUTION", "INT": "INTELLIGENCE", "WIS": "WISDOM", "CHA": "CHARISMA"}
@@ -2134,6 +2199,8 @@ const AI_JITTER := 1.5
 
 
 func _power_value(m: Actor, p: SpellData, h: Actor, c: Vector2i) -> float:
+	if p.kind == SpellData.Kind.MONSTER and p.damage != "" and m.can_use(p):
+		return _damage_power_value(m, p, h, c)
 	if p.kind != SpellData.Kind.MONSTER or p.condition == "" or not m.can_use(p) or h.has_condition(p.condition) \
 			or p.condition in h.stats.condition_immunities:
 		return 0.0
@@ -2479,3 +2546,95 @@ func _use_thing(thing: MapMarker) -> void:
 	if in_combat and not _check_end():
 		_check_join()
 		_show_range()
+
+
+# --- levels 6-9 and new monster traits ---------------------------------------------------------
+
+## A save against `dc`, with Indomitable (Fighter 9) rerolling a failure once per long rest.
+func save_vs(who: Actor, ability: String, dc: int, vs_magic := false) -> DiceRoll:
+	var r := roll_save(who, ability, vs_magic)
+	if r.total < dc:
+		var again := _indomitable(who, ability, dc, vs_magic)
+		if again:
+			return again
+	return r
+
+
+## Indomitable: if `who` has it left, reroll the failed save (logged). Returns the new roll or null.
+func _indomitable(who: Actor, ability: String, dc: int, vs_magic: bool) -> DiceRoll:
+	if not who.stats.indomitable or who.uses_left.get("indomitable", 0) <= 0:
+		return null
+	who.uses_left["indomitable"] -= 1
+	var r := roll_save(who, ability, vs_magic)
+	_say("%s refuses to give in (Indomitable): %s save again, %d vs DC %d." % [who.display_name(), ability, r.total, dc])
+	FloatText.spawn(map, who.body_position() + Vector2(0, -22), "INDOMITABLE", COL_ACTIVE, 10)
+	return r
+
+
+## Death Burst (ice mephit): it shatters into shards; everyone next to it makes a DEX save (DC 10)
+## or takes 1d8 slashing (half on a success).
+func _death_burst(m: Actor) -> void:
+	_say("%s bursts into a spray of ice shards!" % m.display_name())
+	SpellFx.burst(map, m.body_position(), 0.7, 0.8)
+	Sfx.play("hit_slash", -4.0, 1.4)
+	for a in order.duplicate():
+		if a == m or not a.is_alive() or DungeonMap.grid_distance(a.cell, m.cell) > 1:
+			continue
+		var dmg := Dice.roll("1d8").total
+		var s := save_vs(a, "DEX", 10)
+		if s.total >= 10:
+			dmg /= 2
+		if dmg > 0:
+			_deal(m, a, dmg, "slashing", false, " (ice shards%s)" % (", half" if s.total >= 10 else ""))
+
+
+## How much a monster wants to use damaging power `p` aimed at hero `h` from cell `c`: the expected
+## damage to every hero it would catch (an area / cone / line can catch several), minus most of what
+## it would do to its own side. Breath weapons, a mage's Fireball, the Frost Wizard's spells.
+func _damage_power_value(m: Actor, p: SpellData, h: Actor, c: Vector2i) -> float:
+	var dist := DungeonMap.grid_distance(c, h.cell)
+	if dist > maxi(1, p.range_cells()) or (p.needs_los and not map.has_line_of_sight(c, h.cell)):
+		return 0.0
+	var avg := Dice.average(p.damage)
+	if not _is_shaped(p):
+		match p.resolve:
+			SpellData.Resolve.ATTACK:
+				return hit_chance(p.attack_bonus_for(m.stats), h.stats.armor_class) * avg
+			SpellData.Resolve.SAVE:
+				return _save_damage_value(m, p, h, avg)
+		return avg
+	var cells := shape_cells(m, p, h.cell, c)
+	var total := 0.0
+	for a in order:
+		if not a.is_alive() or a == m or not a.cell in cells:
+			continue
+		var v := _save_damage_value(m, p, a, avg) if p.resolve == SpellData.Resolve.SAVE else avg
+		if a is Hero:
+			total += v
+		elif p.hits_allies:
+			total -= v * 0.8
+	return total
+
+
+## Expected damage of a save-for-half (or none) power on one creature.
+func _save_damage_value(m: Actor, p: SpellData, who: Actor, avg: float) -> float:
+	var fail := clampf((p.dc_for(m.stats) - who.stats.save_bonus(p.save_ability) - 1) / 20.0, 0.05, 0.95)
+	return avg * (fail + ((1.0 - fail) * 0.5 if p.half_on_save else 0.0))
+
+
+## Cone of Cold / a breath of frost: icy bursts sweeping out from the caster; Ice Storm: hail
+## falling over the area. Then a blue-white floor flash.
+func _frost_fx(caster: Actor, cells: Array[Vector2i], storm: bool) -> void:
+	var sorted := cells.duplicate()
+	if storm:
+		sorted.shuffle()
+	else:
+		sorted.sort_custom(func(x, y): return DungeonMap.grid_distance(caster.cell, x) < DungeonMap.grid_distance(caster.cell, y))
+	for c: Vector2i in sorted:
+		var at := IsoGrid.cell_to_world(c)
+		if storm:
+			SpellFx.dart(map, at + Vector2(randf_range(-10, 10), -60), at, 0.0)
+		SpellFx.sparkles(map, at + Vector2(0, -6), Color8(190, 236, 255), false).duration = 0.4
+		await get_tree().create_timer(0.025 if not storm else 0.05).timeout
+	_floor_flash(cells, Color8(236, 248, 255), Color8(110, 170, 240))
+	await get_tree().create_timer(0.35).timeout

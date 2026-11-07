@@ -1,0 +1,45 @@
+[gd_resource type="Resource" script_class="CreatureStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/attack_data.gd" id="1_hcca2"]
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="2_ij3b6"]
+[ext_resource type="Resource" path="res://data/spells/mephit_frost_breath.tres" id="3_jougm"]
+[ext_resource type="Script" path="res://scripts/rules/creature_stats.gd" id="4_wwkpo"]
+
+[sub_resource type="Resource" id="Resource_aiqtk"]
+resource_name = "Claws"
+script = ExtResource("1_hcca2")
+name = "Claws"
+ability = 1
+damage = "1d4+1"
+to_hit_override = 3
+rider_damage = "1d4"
+rider_damage_type = "cold"
+
+[resource]
+resource_name = "Ice Mephit"
+script = ExtResource("4_wwkpo")
+id = "ice_mephit"
+display_name = "Ice Mephit"
+challenge = 0.5
+xp = 100
+size = 1
+creature_type = "elemental"
+str_score = 7
+dex_score = 13
+int_score = 9
+wis_score = 11
+cha_score = 12
+max_hp = 21
+hit_dice = "6d6"
+armor_class = 11
+vulnerabilities = Array[String](["bludgeoning", "fire"])
+immunities = Array[String](["cold", "poison"])
+traits = Array[String](["death_burst"])
+fly = true
+sight_ft = 50
+attacks = Array[ExtResource("1_hcca2")]([SubResource("Resource_aiqtk")])
+powers = Array[ExtResource("2_ij3b6")]([ExtResource("3_jougm")])
+skill_overrides = {
+"perception": 2,
+"stealth": 3
+}

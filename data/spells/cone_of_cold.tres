@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_4hvuf"]
+
+[resource]
+resource_name = "Cone of Cold"
+script = ExtResource("1_4hvuf")
+id = "cone_of_cold"
+display_name = "Cone of Cold"
+description = "A blast of cold air in a 60-ft cone: 8d8 cold, CON save for half. +1d8 per slot above 5th."
+level = 5
+classes = Array[String](["wizard"])
+target = 6
+range_ft = 60
+resolve = 1
+save_ability = "CON"
+half_on_save = true
+damage = "8d8"
+damage_type = "cold"
+upcast_dice = "1d8"
+sfx = "cast_whoosh"
+vfx = "cone_of_cold"
+big_moment = true

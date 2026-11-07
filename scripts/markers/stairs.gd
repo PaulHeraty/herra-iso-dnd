@@ -19,6 +19,12 @@ extends MapMarker
 		cave = v
 		_tex = null
 		queue_redraw()
+## "tower": the Rimecaller's spire (module 2) - its door is the way in.
+@export var tower := false:
+	set(v):
+		tower = v
+		_tex = null
+		queue_redraw()
 
 var _tex: Texture2D
 
@@ -26,6 +32,7 @@ var _tex: Texture2D
 const UP_OFFSET := Vector2(-17, -36)
 const DOWN_OFFSET := Vector2(-17, -9)
 const CAVE_OFFSET := Vector2(-24, -41)
+const TOWER_OFFSET := Vector2(-32, -162)
 
 
 func _init() -> void:
@@ -44,8 +51,8 @@ func apply_view() -> void:
 
 func _draw() -> void:
 	if _tex == null:
-		_tex = load("res://assets/sprites/props/%s.png" % ("cave_entrance" if cave else ("stairs_up" if up else "stairs_down")))
-	draw_texture(_tex, CAVE_OFFSET if cave else (UP_OFFSET if up else DOWN_OFFSET))
+		_tex = load("res://assets/sprites/props/%s.png" % ("tower_entrance" if tower else ("cave_entrance" if cave else ("stairs_up" if up else "stairs_down"))))
+	draw_texture(_tex, TOWER_OFFSET if tower else (CAVE_OFFSET if cave else (UP_OFFSET if up else DOWN_OFFSET)))
 	if Engine.is_editor_hint():
 		gizmo_label = ("UP " if up else "DOWN ") + target_map.get_file().get_basename()
 		_draw_gizmo()
@@ -64,5 +71,5 @@ func hint() -> String:
 		for i in st.get_node_property_count(0):
 			if st.get_node_property_name(0, i) == "map_title":
 				where = " to " + str(st.get_node_property_value(0, i))
-	_hint = ("A mine entrance%s (click to go in)" % where) if cave else "Stairs %s%s (click to take them)" % ["up" if up else "down", where]
+	_hint = ("The door of the tower%s (click to go in)" % where) if tower else ("A mine entrance%s (click to go in)" % where) if cave else "Stairs %s%s (click to take them)" % ["up" if up else "down", where]
 	return _hint

@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_j15ud"]
+
+[resource]
+resource_name = "Lightning Bolt"
+script = ExtResource("1_j15ud")
+id = "frost_wizard_lightning"
+display_name = "Lightning Bolt"
+description = "Once per fight. A 100-ft line: 8d6 lightning, DEX save (DC 17) for half."
+kind = 2
+target = 5
+range_ft = 100
+resolve = 1
+save_ability = "DEX"
+half_on_save = true
+dc_override = 17
+damage = "8d6"
+damage_type = "lightning"
+uses = 1
+sfx = "lightning_crack"
+vfx = "lightning"
+big_moment = true

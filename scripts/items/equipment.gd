@@ -8,10 +8,11 @@ class_name Equipment
 ## main-hand weapon + one ranged weapon (bow, crossbow or thrown handaxe) carried at once, the
 ## off hand holds a shield only (no two-weapon fighting yet), two ring slots, no attunement.
 
-const SLOTS := ["main", "off", "ranged", "armor", "ring1", "ring2"]
+## Left column of the inventory screen, then the right one (4 each).
+const SLOTS := ["main", "off", "ranged", "worn1", "armor", "ring1", "ring2", "worn2"]
 const SLOT_NAMES := {
 	main = "Main hand", off = "Off hand", ranged = "Ranged", armor = "Armour",
-	ring1 = "Ring", ring2 = "Ring",
+	ring1 = "Ring", ring2 = "Ring", worn1 = "Worn", worn2 = "Worn",
 }
 
 
@@ -22,6 +23,7 @@ static func default_slot(item: ItemData, eq := {}) -> String:
 		ItemData.Kind.SHIELD: return "off"
 		ItemData.Kind.ARMOR: return "armor"
 		ItemData.Kind.RING: return "ring2" if eq.has("ring1") and not eq.has("ring2") else "ring1"
+		ItemData.Kind.WONDROUS: return "worn2" if eq.has("worn1") and not eq.has("worn2") else "worn1"
 	return ""
 
 
@@ -32,6 +34,7 @@ static func slot_accepts(slot: String, item: ItemData) -> bool:
 		"off": return item.kind == ItemData.Kind.SHIELD
 		"armor": return item.kind == ItemData.Kind.ARMOR
 		"ring1", "ring2": return item.kind == ItemData.Kind.RING
+		"worn1", "worn2": return item.kind == ItemData.Kind.WONDROUS
 	return false
 
 
@@ -97,6 +100,13 @@ static func starting(base: CreatureStats) -> Dictionary:
 ## armor_class, attacks, speed and the save bonus are worked out from the equipment.
 static func build_stats(base: CreatureStats, eq: Dictionary, level := 0) -> CreatureStats:
 	var s: CreatureStats = base.duplicate()
+	# Worn items that set an ability score (Gauntlets of Ogre Power: STR 19) count before the
+	# level's ASIs and hit points are worked out.
+	for slot in ["worn1", "worn2"]:
+		var w := _item(eq, slot)
+		if w:
+			for ab: String in w.ability_set:
+				_raise(s, ab, int(w.ability_set[ab]))
 	# Heroes: the level-1 stat block grown to `level` (0 = the level written in the file).
 	if base.class_id != "":
 		Progression.apply(s, level if level > 0 else maxi(1, base.level))
@@ -128,10 +138,13 @@ static func build_stats(base: CreatureStats, eq: Dictionary, level := 0) -> Crea
 	# own copies of the lists (a duplicate() may share them with the base stat block)
 	var resist: Array[String] = base.resistances.duplicate()
 	var cimm: Array[String] = base.condition_immunities.duplicate()
-	for slot in ["ring1", "ring2"]:
+	for slot in ["ring1", "ring2", "worn1", "worn2", "main"]:
 		var r := _item(eq, slot)
 		if r:
-			ac += r.ac_bonus
+			if slot != "main":
+				ac += r.ac_bonus
+				if r.ac_unarmored and armor == null and shield == null:
+					ac += r.ac_unarmored
 			save_b += r.save_bonus
 			for t in r.resistances:
 				if t not in resist:
@@ -167,3 +180,14 @@ static func _unarmed() -> AttackData:
 	a.damage = "1"
 	a.damage_type = "bludgeoning"
 	return a
+
+
+## Raise an ability score to at least `v` (Amulet of Health: CON 19).
+static func _raise(s: CreatureStats, ab: String, v: int) -> void:
+	match ab:
+		"STR": s.str_score = maxi(s.str_score, v)
+		"DEX": s.dex_score = maxi(s.dex_score, v)
+		"CON": s.con_score = maxi(s.con_score, v)
+		"INT": s.int_score = maxi(s.int_score, v)
+		"WIS": s.wis_score = maxi(s.wis_score, v)
+		"CHA": s.cha_score = maxi(s.cha_score, v)

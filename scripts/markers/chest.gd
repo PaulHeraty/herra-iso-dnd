@@ -17,6 +17,12 @@ const OPEN_OFFSET := Vector2(-8, -13)       # 3px taller (the lid stands up), sa
 @export var key_id := ""             ## key item that opens it ("" = none)
 @export var gold := 0
 @export var items: Array[String] = []   ## item ids (data/items/), e.g. "potion_healing"
+## A mimic (module 2): opening it wakes a Mimic monster in its place (DungeonMap.try_open_chest).
+## Passive Perception (DC 15) can notice it first.
+@export var mimic := false
+
+## The party has noticed it is a mimic.
+var mimic_spotted := false
 
 var opened := false:
 	set(v):
@@ -74,3 +80,17 @@ func _draw() -> void:
 	draw_set_transform(Vector2(0, 2), 0, Vector2(1, 0.45))   # soft floor shadow
 	draw_circle(Vector2.ZERO, 9, Color(0, 0, 0, 0.45))
 	draw_set_transform(Vector2.ZERO)
+
+
+## A woken mimic's chest is gone (the monster stands there instead).
+func is_shown() -> bool:
+	return not (mimic and opened)
+
+
+func save_state() -> Variant:
+	return {m = true} if mimic_spotted else null
+
+
+func load_state(s: Variant) -> void:
+	if s is Dictionary:
+		mimic_spotted = s.get("m", false)

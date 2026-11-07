@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_ww1b1"]
+
+[resource]
+resource_name = "Headband of Intellect"
+script = ExtResource("1_ww1b1")
+id = "headband_intellect"
+display_name = "Headband of Intellect"
+kind = 9
+description = "A silver circlet with a single blue gem over the brow. Thoughts come clear and quick.
+Magic: your Intelligence is 19."
+value_gp = 8000
+icon = 47
+ability_set = {
+"INT": 19
+}

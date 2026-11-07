@@ -43,6 +43,10 @@ const MONSTERS := {
 	"r": "giant_rat", "w": "wolf", "g": "goblin", "G": "goblin_boss", "b": "bandit", "z": "zombie",
 	"k": "skeleton", "u": "ghoul", "U": "ghast", "h": "hobgoblin", "B": "bugbear", "O": "ogre",
 	"W": "wight", "M": "mummy", "p": "specter", "X": "wraith", "S": "giant_spider", "E": "eye_tyrant",
+	# module 2
+	"f": "winter_wolf", "P": "polar_bear", "i": "ice_mephit", "T": "troll", "D": "young_white_dragon",
+	"a": "animated_armor", "s": "flying_sword", "y": "gargoyle", "F": "flesh_golem", "m": "mage", "c": "mimic",
+	"R": "frost_wizard",
 }
 const PROPS := {
 	"barrel": Prop.Kind.BARREL, "crate": Prop.Kind.CRATE, "sarcophagus": Prop.Kind.SARCOPHAGUS,
@@ -50,6 +54,9 @@ const PROPS := {
 	"oak": Prop.Kind.TREE_OAK, "pine": Prop.Kind.TREE_PINE, "bush": Prop.Kind.BUSH,
 	"boulder": Prop.Kind.BOULDER, "stump": Prop.Kind.STUMP, "log": Prop.Kind.LOG,
 	"tent": Prop.Kind.TENT, "grave": Prop.Kind.GRAVE, "stall": Prop.Kind.STALL,
+	"pine_snow": Prop.Kind.TREE_PINE_SNOW, "oak_snow": Prop.Kind.TREE_OAK_SNOW, "bush_snow": Prop.Kind.BUSH_SNOW,
+	"boulder_snow": Prop.Kind.BOULDER_SNOW, "stump_snow": Prop.Kind.STUMP_SNOW, "bookshelf": Prop.Kind.BOOKSHELF,
+	"alchemy": Prop.Kind.ALCHEMY_TABLE, "crystal": Prop.Kind.FROST_CRYSTAL,
 }
 ## theme -> what furnishes a room: wall props (along the walls), mid props (in the middle, on a
 ## grid), bones, web, braziers (corners), pillars.
@@ -68,6 +75,14 @@ const THEMES := {
 	"tomb": {"mid": ["sarcophagus", "sarcophagus"], "wall": ["urn", "urn", "urn"], "braziers": 2, "web": true},
 	"flooded": {"wall": ["rubble", "rubble", "urn"], "bones": 2, "web": true},
 	"vault": {"pillars": true, "braziers": 4, "wall": ["urn", "urn"], "mid": ["sarcophagus"]},
+	# module 2: the Rimecaller's tower
+	"library": {"wall": ["bookshelf", "bookshelf", "bookshelf", "bookshelf", "bookshelf"], "braziers": 2},
+	"study": {"wall": ["bookshelf", "bookshelf", "alchemy", "crystal"], "braziers": 2},
+	"lab": {"wall": ["alchemy", "alchemy", "alchemy", "crystal", "barrel"], "bones": 1, "braziers": 2},
+	"armory": {"wall": ["crate", "barrel", "crate", "rubble"], "braziers": 2},
+	"frozen": {"wall": ["crystal", "crystal", "rubble", "crystal"], "bones": 2, "braziers": 1},
+	"observatory": {"pillars": true, "braziers": 4, "wall": ["crystal", "bookshelf", "crystal"]},
+	"cells": {"wall": ["rubble", "rubble"], "bones": 3, "braziers": 1},
 	"bare": {},
 }
 
@@ -185,7 +200,7 @@ func build_floor(d: Dictionary, root_name: String, path: String) -> bool:
 				if not floor_cells.has(n):
 					walls[n] = true
 
-	var root := _make_root(root_name, d.title, "res://assets/tiles/dungeon_tileset.tres", Color(0.34, 0.36, 0.50), d.start_level)
+	var root := _make_root(root_name, d.title, d.get("tileset", "res://assets/tiles/dungeon_tileset.tres"), d.get("ambient", Color(0.34, 0.36, 0.50)), d.start_level)
 	var floor: TileMapLayer = root.get_node("Floor")
 	var wall_layer: TileMapLayer = root.get_node("World/Walls")
 	var entities: Node2D = root.get_node("World/Entities")
@@ -277,6 +292,14 @@ func build_floor(d: Dictionary, root_name: String, path: String) -> bool:
 			_trap(tspec, tc, entities, root, "Trap_%s_%d_%d" % [rn, tc.x, tc.y])
 			used[tc] = true
 		_note(room, r, entities, root, rn)
+		for nd in room.get("npcs", []):
+			var nc: Vector2i = o + nd.at
+			if keep.has(nc) or used.has(nc):
+				push_error("%s: NPC %s in %s at %s is in the way" % [root_name, nd.id, rn, nd.at])
+				_ok = false
+			_npc(nd, nc, entities, root)
+			used[nc] = true
+			blocked[nc] = true
 		# braziers in the corners
 		var corners :=[Vector2i(0, 0), Vector2i(r.size.x - 1, r.size.y - 1), Vector2i(r.size.x - 1, 0), Vector2i(0, r.size.y - 1)]
 		var nb: int = theme.get("braziers", 0)
@@ -299,6 +322,11 @@ func build_floor(d: Dictionary, root_name: String, path: String) -> bool:
 			if ch.size() > 2 and ch[2] > 0:
 				chest.locked = true
 				chest.lock_dc = ch[2]
+			if ch.size() > 3 and ch[3] != "":
+				chest.locked = true
+				chest.key_id = ch[3]
+			if ch.size() > 4 and ch[4]:
+				chest.mimic = true
 			used[cc] = true
 			blocked[cc] = true
 		# props in the middle (sarcophagi) and along the walls
@@ -481,6 +509,7 @@ func _puzzle(pz: Dictionary, r: Rect2i, rn: String, keep: Dictionary, used: Dict
 		p.solution = pz.get("solution", "")
 		p.penalty = pz.get("penalty", "")
 		p.xp = pz.get("xp", 0)
+		p.flag = pz.get("flag", "")
 		if pz.has("solved_text"):
 			p.solved_text = pz.solved_text
 
@@ -655,7 +684,7 @@ func build_surface(d: Dictionary, root_name: String, path: String) -> bool:
 			if cr.has_point(c):
 				cliff_cells[c] = true
 
-	var root := _make_root(root_name, d.title, "res://assets/tiles/outdoor_tileset.tres", Color(0.56, 0.56, 0.7), d.start_level)
+	var root := _make_root(root_name, d.title, d.get("tileset", "res://assets/tiles/outdoor_tileset.tres"), d.get("ambient", Color(0.56, 0.56, 0.7)), d.start_level)
 	var floor: TileMapLayer = root.get_node("Floor")
 	var wall_layer: TileMapLayer = root.get_node("World/Walls")
 	var entities: Node2D = root.get_node("World/Entities")
@@ -704,10 +733,14 @@ func build_surface(d: Dictionary, root_name: String, path: String) -> bool:
 		if cl.has("trader"):
 			var tr: Dictionary = cl.trader
 			_prop("stall", o + tr.stall, entities, root, cn)
-			var npc := _inst("npc", entities, root, o + tr.npc, "Npc_Brannoc")
-			npc.npc_id = "brannoc"
-			npc.display_name = "Brannoc"
-			npc.guard_radius = 12
+			var nid: String = tr.get("id", "brannoc")
+			var npc := _inst("npc", entities, root, o + tr.npc, "Npc_" + nid.capitalize())
+			npc.npc_id = nid
+			npc.display_name = tr.get("name", "Brannoc")
+			npc.guard_radius = tr.get("guard", 12)
+			npc.guard_monster = tr.get("guard_monster", "")
+			if tr.has("sheet"):
+				npc.sheet = load(tr.sheet)
 			var pt := _inst("portal", entities, root, o + tr.portal, "Portal_Home")
 			pt.home = true
 			var ps := _inst("party_start", entities, root, o + tr.arrive, "PartyStart_portal")
@@ -717,6 +750,18 @@ func build_surface(d: Dictionary, root_name: String, path: String) -> bool:
 				used[o + c] = true
 			blocked[o + tr.stall] = true
 			blocked[o + tr.npc] = true
+		# beacons and other linked braziers: [cell, link, lit]
+		for b in cl.get("braziers", []):
+			var bc: Vector2i = o + b[0]
+			var br := _inst("brazier", entities, root, bc, "Brazier_%s_%d_%d" % [cn, bc.x, bc.y])
+			br.link = b[1]
+			br.lit = b[2]
+			used[bc] = true
+			blocked[bc] = true
+		for nd in cl.get("npcs", []):
+			_npc(nd, o + nd.at, entities, root)
+			used[o + nd.at] = true
+			blocked[o + nd.at] = true
 		var entry_cells: Array = []
 		if cl.has("start"):
 			var ps := _inst("party_start", entities, root, o + cl.start[0], "PartyStart")
@@ -724,8 +769,9 @@ func build_surface(d: Dictionary, root_name: String, path: String) -> bool:
 			start_cell = o + cl.start[0]
 		if cl.has("stairs"):
 			var s: Array = cl.stairs
-			var st := _inst("stairs", entities, root, o + s[0], "Stairs_Mine")
-			st.cave = true
+			var st := _inst("stairs", entities, root, o + s[0], "Stairs_Tower" if cl.get("tower", false) else "Stairs_Mine")
+			st.cave = not cl.get("tower", false)
+			st.tower = cl.get("tower", false)
 			st.target_map = s[1]
 			st.target_entry = s[2]
 			used[o + s[0]] = true
@@ -740,7 +786,8 @@ func build_surface(d: Dictionary, root_name: String, path: String) -> bool:
 		# a few trees and bushes round the edge of the glade (not on the paths)
 		for c: Vector2i in _edge_cells(r):
 			if floor_cells.has(c) and not used.has(c) and not _crowded(c, used) and rnd.randf() < 0.22:
-				var kind: String = ["pine", "oak", "bush", "pine"][rnd.randi_range(0, 3)]
+				var trees: Array = d.get("edge_trees", ["pine", "oak", "bush", "pine"])
+				var kind: String = trees[rnd.randi_range(0, trees.size() - 1)]
 				_prop(kind, c, entities, root, cn)
 				used[c] = true
 				blocked[c] = true
@@ -775,6 +822,24 @@ func build_surface(d: Dictionary, root_name: String, path: String) -> bool:
 				sp.facing = _facing_toward(mc, entry_cells)
 				_set_preview(sp, id)
 			group += 1
+	# the ward: walls of magic ice across a path (Door ICE), melted by the puzzle that opens `link`
+	for w in d.get("wards", []):
+		var wc: Vector2i = w[0]
+		if not floor_cells.has(wc):
+			push_error("%s: ward at %s is not on open ground" % [root_name, wc])
+			_ok = false
+		var wd := _inst("door", entities, root, wc, "Ward_%d_%d" % [wc.x, wc.y])
+		wd.style = Door.Style.ICE
+		wd.link = w[1]
+	for pz in d.get("puzzles", []):
+		var p := _inst("puzzle", entities, root, start_cell, "Puzzle_" + String(pz.link))
+		p.link = pz.link
+		p.kind = {"all_on": Puzzle.Kind.ALL_ON, "ring": Puzzle.Kind.RING, "sequence": Puzzle.Kind.SEQUENCE}[pz.kind]
+		p.opens = pz.get("opens", "")
+		p.flag = pz.get("flag", "")
+		p.xp = pz.get("xp", 0)
+		if pz.has("solved_text"):
+			p.solved_text = pz.solved_text
 	# lone trees along the paths outside the clearings make the paths read as forest tracks
 	(root.get_node("Camera") as Camera2D).position = IsoGrid.view_cell_to_world(start_cell)
 	ok = _check(root_name, floor_cells, blocked, start_cell, rects) and ok and _ok
@@ -946,3 +1011,17 @@ func _save(root: Node, path: String) -> void:
 		err = ResourceSaver.save(ps, path)
 	print("map_builder: ", path, " ", "ok" if err == OK else "ERROR %d" % err)
 	root.free()
+
+
+## An NPC from a description: {id, name, at, sheet, guard, show (flag), hide (flag), calls, face_right}.
+func _npc(nd: Dictionary, c: Vector2i, entities: Node2D, root: Node) -> void:
+	var npc := _inst("npc", entities, root, c, "Npc_" + String(nd.id).capitalize())
+	npc.npc_id = nd.id
+	npc.display_name = nd.name
+	npc.guard_radius = nd.get("guard", 0)
+	if nd.has("sheet"):
+		npc.sheet = load(nd.sheet)
+	npc.show_flag = nd.get("show", "")
+	npc.hide_flag = nd.get("hide", "")
+	npc.calls_party = nd.get("calls", true)
+	npc.face_right = nd.get("face_right", false)

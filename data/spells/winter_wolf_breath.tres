@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_aaudw"]
+
+[resource]
+resource_name = "Cold Breath"
+script = ExtResource("1_aaudw")
+id = "winter_wolf_breath"
+display_name = "Cold Breath"
+description = "Recharge 5-6. A 15-ft cone of freezing breath: 4d8 cold, DEX save (DC 12) for half."
+kind = 2
+target = 6
+range_ft = 15
+resolve = 1
+save_ability = "DEX"
+half_on_save = true
+dc_override = 12
+damage = "4d8"
+damage_type = "cold"
+recharge = 3
+sfx = "cast_whoosh"
+vfx = "frost_breath"

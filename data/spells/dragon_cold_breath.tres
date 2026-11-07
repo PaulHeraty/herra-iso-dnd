@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="SpellData" format=3]
+
+[ext_resource type="Script" path="res://scripts/rules/spell_data.gd" id="1_818me"]
+
+[resource]
+resource_name = "Cold Breath"
+script = ExtResource("1_818me")
+id = "dragon_cold_breath"
+display_name = "Cold Breath"
+description = "Recharge 5-6. A 30-ft cone of icy breath: 10d8 cold, CON save (DC 15) for half."
+kind = 2
+target = 6
+resolve = 1
+save_ability = "CON"
+half_on_save = true
+dc_override = 15
+damage = "10d8"
+damage_type = "cold"
+recharge = 3
+sfx = "fireball_boom"
+vfx = "frost_breath"
+big_moment = true

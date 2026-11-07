@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_m56oe"]
+[ext_resource type="Resource" path="res://data/spells/mass_cure_wounds.tres" id="2_xyi82"]
+
+[resource]
+resource_name = "Scroll of Mass Cure Wounds"
+script = ExtResource("1_m56oe")
+id = "scroll_mass_cure_wounds"
+display_name = "Scroll of Mass Cure Wounds"
+kind = 4
+description = "A hymn of healing, signed by six priests.
+Mass Cure Wounds (5th level): A wave of healing: up to six allies within 60 ft each heal 3d8 + your spellcasting modifier.
+Cleric only. Crumbles once read. DC 17, attack +9."
+value_gp = 2000
+stackable = true
+spell = ExtResource("2_xyi82")

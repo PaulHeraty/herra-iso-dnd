@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_yv51k"]
+
+[resource]
+resource_name = "Chain Mail +2"
+script = ExtResource("1_yv51k")
+id = "chain_mail_plus2"
+display_name = "Chain Mail +2"
+kind = 1
+description = "Mail of bright elven rings, light as cloth.
+Magic: +2 AC."
+value_gp = 4075
+magic_bonus = 2
+armor_type = "heavy"
+base_ac = 16
+dex_cap = 0
+str_required = 13
+stealth_disadvantage = true

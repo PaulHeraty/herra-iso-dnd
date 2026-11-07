@@ -14,10 +14,18 @@ extends MapMarker
 @export var sheet: Texture2D = preload("res://assets/sprites/npcs/trader_sheet.png")
 ## Hidden while a living monster is this close (cells, 5e grid distance). 0 = always there.
 @export var guard_radius := 14
+## Only hides from this monster (id; "" = from any monster within guard_radius). Hilde: the dragon.
+@export var guard_monster := ""
 @export var face_right := false:
 	set(v):
 		face_right = v
 		queue_redraw()
+## Story flags (Quest): only there once `show_flag` is set, gone once `hide_flag` is set (an
+## apprentice who leaves her cell when freed and turns up at the camp). "" = no condition.
+@export var show_flag := ""
+@export var hide_flag := ""
+## Calls the party over the first time they see each other (Brannoc, Hilde).
+@export var calls_party := true
 
 const SPRITE_OFFSET := Vector2(-8, -22)
 const SIZE := Vector2(16, 24)
@@ -50,6 +58,19 @@ func _process(delta: float) -> void:
 
 func is_shown() -> bool:
 	return present
+
+
+## Does the story want this NPC here now? (show_flag / hide_flag)
+func story_wants() -> bool:
+	return (show_flag == "" or Quest.has_flag(show_flag)) and (hide_flag == "" or not Quest.has_flag(hide_flag))
+
+
+## Gone (a story flag): fade out.
+func vanish() -> void:
+	present = false
+	var tw := create_tween()
+	tw.tween_property(self, "modulate:a", 0.0, 0.6)
+	tw.tween_callback(func(): visible = false)
 
 
 ## The cells to talk to him from: the 8 around him.

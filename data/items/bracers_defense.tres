@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_b7pff"]
+
+[resource]
+resource_name = "Bracers of Defense"
+script = ExtResource("1_b7pff")
+id = "bracers_defense"
+display_name = "Bracers of Defense"
+kind = 9
+description = "Bands of blued steel trimmed with gold. Blows turn aside from a wearer without armour.
+Magic: +2 AC while you wear no armour and carry no shield."
+value_gp = 6000
+icon = 46
+ac_unarmored = 2

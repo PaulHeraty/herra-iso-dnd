@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_8qihe"]
+
+[resource]
+resource_name = "Gauntlets of Ogre Power"
+script = ExtResource("1_8qihe")
+id = "gauntlets_ogre_power"
+display_name = "Gauntlets of Ogre Power"
+kind = 9
+description = "Heavy leather gauntlets studded with iron. Your grip could crush stone.
+Magic: your Strength is 19."
+value_gp = 8000
+icon = 45
+ability_set = {
+"STR": 19
+}
