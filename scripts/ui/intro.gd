@@ -50,6 +50,7 @@ var _module: AdventureModule
 func _ready() -> void:
 	size = SCREEN
 	Settings.apply()
+	Music.stop(1.0)                          # (a title tune comes later)
 	theme = CombatHud.make_theme()
 	var bg := ColorRect.new()
 	bg.size = SCREEN

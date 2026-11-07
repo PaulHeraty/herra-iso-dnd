@@ -7,6 +7,7 @@ extends Node
 
 const DIR := "res://assets/sfx/"
 const VOICES := 8
+const BUS := "SFX"                       ## its volume: Settings / the pause menu
 ## Per-sound level trim in dB (balances the generated sounds; tune by ear).
 const TRIM := {
 	"ray_zap": -5.0,
@@ -53,8 +54,11 @@ static func play(sound: String, db := 0.0, pitch := 1.0) -> void:
 
 
 func _init() -> void:
+	Settings.load_settings()                    # the bus volumes, before the first sound
+	Settings.bus_index(BUS)
 	for i in VOICES:
 		var p := AudioStreamPlayer.new()
+		p.bus = BUS
 		add_child(p)
 		_players.append(p)
 

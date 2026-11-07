@@ -27,6 +27,9 @@ extends Node2D
 ## The party's level when this map is the first one played (a fresh party, no PartyState):
 ## lets each floor be played on its own at the level it is meant for.
 @export_range(1, 5) var start_level := 1
+## Music while exploring (assets/music/<name>.wav); "" = by the floor's tileset: woods, frost,
+## tower, else dungeon (see explore_track). Fights play "combat" ("boss" with a Music.BOSSES monster).
+@export var music := ""
 
 const HERO_SCENE := preload("res://scenes/actors/hero.tscn")
 const PARTY_ORDER := [Hero.HeroClass.FIGHTER, Hero.HeroClass.ROGUE, Hero.HeroClass.CLERIC, Hero.HeroClass.MAGE]
@@ -185,6 +188,11 @@ func _ready() -> void:
 	_place_portals(false)
 	inventory.changed.connect(quest_check)
 	combat.combat_ended.connect(_on_combat_ended)
+	combat.combat_started.connect(_fight_music)
+	combat.turn_started.connect(func(_a): _fight_music())        # a boss may join mid-fight
+	combat.victory.connect(func(_xp): Music.stop(0.8))           # the sting; exploring music after
+	combat.defeat.connect(func(): Music.stop(2.5))
+	Music.play(explore_track(), 2.0)
 	if MapState.next_entry == MapState.AT_SAVE:
 		IsoGrid.rotation = posmod(MapState.arrive_rotation, 4)     # the view as it was saved
 	_apply_view()
@@ -1218,6 +1226,32 @@ func show_victory() -> void:
 		victory_screen.map = self
 		add_child(victory_screen)
 	victory_screen.open()
+	Music.stop(1.0)
+
+
+## This map's exploring music: `music`, else by its floor tileset.
+func explore_track() -> String:
+	if music != "":
+		return music
+	var path := floor_layer.tile_set.resource_path if floor_layer and floor_layer.tile_set else ""
+	if "outdoor" in path:
+		return "woods"
+	if "snow" in path:
+		return "frost"
+	if "tower" in path:
+		return "tower"
+	return "dungeon"
+
+
+## Combat music: "boss" when a boss monster is in the fight, else "combat".
+func _fight_music() -> void:
+	if not combat.in_combat or combat.game_over:
+		return
+	var track := "combat"
+	for a in combat.order:
+		if a is Monster and a.is_alive() and a.monster_id in Music.BOSSES:
+			track = "boss"
+	Music.play(track, 0.6)
 
 
 ## Tick off quest stages that have happened (map reached, key found, monster killed) and tell the
@@ -1242,6 +1276,8 @@ func _on_combat_ended() -> void:
 			if m.stats:
 				Quest.note_kill(m.stats.id)
 	quest_check()
+	if not combat.game_over:
+		Music.play(explore_track(), 2.5)
 	if mech:
 		mech.after_combat()
 	_npc_t = 0.6

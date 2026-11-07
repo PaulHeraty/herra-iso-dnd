@@ -1,7 +1,7 @@
 class_name PauseMenu
 extends CanvasLayer
 ## The Esc menu (in every map): Resume, Quick save, Save game, Load game, Help, the settings
-## (fullscreen, dice scene, help tips), Main menu, Quit. Esc opens it when nothing else wants the
+## (fullscreen, dice scene, help tips), volumes (master, effects, music), Main menu, Quit. Esc opens it when nothing else wants the
 ## key (an open screen, a popup, targeting, a talk: those close first). The game is paused while it
 ## is open; the save / load screen opens on top of it and comes back to it. Main menu and Quit ask
 ## first (unsaved progress is lost). F11 / Alt+Enter toggles fullscreen anywhere in a map.
@@ -19,6 +19,7 @@ var _played: Label
 var _rows_end := 0.0
 var _msg: Label
 var _buttons := {}                         ## id -> Button
+var _bars := {}                            ## bus -> volume bar Control
 var _confirm: Panel
 var _confirm_text: Label
 var _confirm_yes: Button
@@ -68,6 +69,10 @@ func _ready() -> void:
 		HelpBox.set_enabled(not HelpBox.enabled)
 		_refresh())
 	y = _add("help", "Help topics...", "F1", y, _open_help)
+	y = _rule(y)
+	y = _add_volume("Master", "Volume", y)
+	y = _add_volume("SFX", "Effects", y)
+	y = _add_volume("Music", "Music", y)
 	y = _rule(y)
 	y = _add("title", "Main menu", "", y, _ask.bind(
 			"Leave for the main menu? Unsaved progress will be lost.", "Main menu", _to_title))
@@ -119,6 +124,58 @@ func _add(id: String, text: String, key: String, y: float, call: Callable) -> fl
 		k.position.x = W - 16 - 6 - CombatHud.FONT.get_string_size(key, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
 	_buttons[id] = b
 	return y + ROW
+
+
+## A volume row: name, "-", a bar of Settings.VOL_STEPS pips (click a pip = that step, wheel = +/-),
+## "+". Changes apply at once (the Effects / Volume rows play a click at the new level) and are saved.
+func _add_volume(bus: String, text: String, y: float) -> float:
+	var l := _label(_panel, Vector2(12, y + 1), CombatHud.COL_TEXT)
+	l.text = text
+	const PIP := 8.0
+	var bar_w := PIP * Settings.VOL_STEPS
+	var plus_x := W - 8.0 - 14.0
+	var bar_x := plus_x - 4.0 - bar_w
+	var minus_x := bar_x - 4.0 - 14.0
+	var bar := Control.new()
+	bar.position = Vector2(bar_x, y + 2)
+	bar.size = Vector2(bar_w, ROW - 6)
+	bar.mouse_filter = Control.MOUSE_FILTER_STOP
+	bar.tooltip_text = "%s volume" % text
+	bar.draw.connect(func():
+		var step := Settings.get_volume(bus)
+		for i in Settings.VOL_STEPS:
+			var r := Rect2(i * PIP + 1, 1, PIP - 2, bar.size.y - 2)
+			bar.draw_rect(r, CombatHud.COL_ACTIVE if i < step else CombatHud.COL_EDGE))
+	bar.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton and ev.pressed:
+			if ev.button_index == MOUSE_BUTTON_LEFT:
+				_set_volume(bus, clampi(int(ev.position.x / PIP) + 1, 1, Settings.VOL_STEPS))
+			elif ev.button_index == MOUSE_BUTTON_WHEEL_UP:
+				_set_volume(bus, Settings.get_volume(bus) + 1)
+			elif ev.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+				_set_volume(bus, Settings.get_volume(bus) - 1)
+			bar.accept_event())
+	_panel.add_child(bar)
+	for side in [-1, 1]:
+		var b := Button.new()
+		b.text = "-" if side < 0 else "+"
+		b.focus_mode = Control.FOCUS_NONE
+		b.position = Vector2(minus_x if side < 0 else plus_x, y)
+		b.set_deferred("size", Vector2(14, ROW - 2))
+		b.pressed.connect(func(): _set_volume(bus, Settings.get_volume(bus) + side))
+		_panel.add_child(b)
+	_bars[bus] = bar
+	return y + ROW
+
+
+func _set_volume(bus: String, step: int) -> void:
+	step = clampi(step, 0, Settings.VOL_STEPS)
+	if step == Settings.get_volume(bus):
+		return
+	Settings.set_volume(bus, step)
+	_bars[bus].queue_redraw()
+	if bus != "Music":
+		Sfx.play("ui_select", -4.0)            # hear the new level
 
 
 func _build_confirm() -> void:
