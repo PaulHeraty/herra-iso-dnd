@@ -84,3 +84,9 @@ func on_start(_map: DungeonMap) -> void:
 ## Hook: talk to an NPC (DungeonMap.talk_to). Return true if the module handled it.
 func npc_talk(_map: DungeonMap, _npc: Npc) -> bool:
 	return false
+
+
+## The epilogue as the victory screen shows it: `epilogue`, plus whatever the module adds for the
+## story the party made (side quests done, people saved: Quest.flags / Quest.side).
+func epilogue_text() -> String:
+	return epilogue

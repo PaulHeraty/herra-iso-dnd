@@ -16,6 +16,7 @@ extends SceneTree
 
 const F = PartyStart.Facing
 const OUT := "res://modules/wraith_below/maps/"
+const NPCS := "res://assets/sprites/npcs/"
 
 # --- the dungeon floors ---------------------------------------------------------------------------
 
@@ -27,8 +28,8 @@ var DUNGEON_1 := {
 			"stairs": [true, "res://modules/wraith_below/maps/surface.tscn", "from_below"], "arrive": "from_above",
 			"start": true, "name": "Entrance Hall",
 			"desc": "Steps climb back up to daylight. The air smells of dust and old smoke, and somewhere a cold draught seeps through the stonework.",
-			"lore": [{"kind": "remains", "at": Vector2i(1, 4), "title": "A Miner's Last Letter",
-				"text": "To my Hanna, if this finds you. We broke through into old halls under the silver seam: carved stone, older than Harrowmere. Foreman Grell called it luck. Then the cold came up the stair, and the lamps went blue, and the dead in the crypts began to knock. I hear the others below, walking. They don't answer to their names. Tell the boy his father was not afraid. That is a lie, but tell him anyway."}]},
+			"lore": [{"kind": "remains", "at": Vector2i(1, 4), "title": "A Miner's Last Letter", "flag": "tobin_letter",
+				"text": "To my Hanna, if this finds you. We broke through into old halls under the silver seam: carved stone, older than Harrowmere. Foreman Grell called it luck. Then the cold came up the stair, and the lamps went blue, and the dead in the crypts began to knock. I hear the others below, walking. They don't answer to their names. Tell the boy his father was not afraid. That is a lie, but tell him anyway.\nYour Tobin."}]},
 		"B": {"slot": Vector2i(0, 1), "size": Vector2i(10, 7), "theme": "guard", "spawn": "kkk",
 			"chests": [[30, ["mace_plus1", "potion_healing"]]], "name": "Guardroom",
 			"desc": "Rusted weapon racks and an overturned table. The guards who kept watch here never left their posts."},
@@ -175,7 +176,7 @@ var DUNGEON_3 := {
 		# the war room: locked (the Chief's Key, or pick DC 15)
 		"I": {"slot": Vector2i(2, 2), "size": Vector2i(10, 8), "theme": "barracks", "spawn": "Ohh",
 			"name": "War Room", "desc": "Maps of the woods pinned to the wall with daggers. The goblins were planning a raid.",
-			"lore": [{"kind": "book", "title": "Goblin War Orders",
+			"lore": [{"kind": "book", "title": "Goblin War Orders", "flag": "war_orders",
 				"text": "(Scrawled in Goblin, with drawings.) CHIEF SAYS: The Cold King under the crypts gives us the woods if we bring him warm ones. Take the farm. Take the road. Bring the warm ones down the stair, alive, tied. Do not look at the Cold King. Do not go past the drowned crypt. Those who went past came back cold, and Chief had to burn them."}]},
 		"J": {"slot": Vector2i(3, 2), "size": Vector2i(11, 9), "theme": "throne", "spawn": "GBBhh",
 			"chests": [[250, ["longsword_plus2", "potion_superior_healing", "scroll_hold_person"]]],
@@ -189,12 +190,16 @@ var DUNGEON_3 := {
 		"L": {"slot": Vector2i(3, 0), "size": Vector2i(7, 5), "theme": "bare",
 			"chests": [[120, ["potion_greater_healing", "scroll_lightning_bolt", "ring_resistance"]]],
 			"name": "Chief's Stash", "desc": "A cubby behind the barracks wall, where someone hid the best of the loot from the rest of the tribe."},
+		# Phase 7: the goblins' holding pen: old Pell, waiting to be sold to the Cold King (side quest "The Taken")
+		"M": {"slot": Vector2i(1, 3), "size": Vector2i(8, 7), "theme": "kennel", "spawn": "gg",
+			"npcs": [{"id": "pell", "name": "Pell", "at": Vector2i(2, 2), "sheet": NPCS + "pell_sheet.png", "hide": "pell_left"}],
+			"name": "Holding Pen", "desc": "Chains bolted to the walls, filthy straw, a water trough. The goblins keep their prisoners here. Only one is left."},
 	},
 	"links": [["A", "B", {"trap": {"t": "alarm", "detect": 13, "disarm": 12, "xp": 25}}], ["A", "C"], ["B", "D"], ["B", "E"],
 		["C", "E"], ["D", "F"], ["E", "F"], ["C", "G", {"trap": {"t": "alarm", "detect": 15, "disarm": 12, "xp": 25}}],
 		["E", "H", {"trap": {"t": "alarm", "detect": 16, "disarm": 13, "xp": 30}}], ["G", "H"],
 		["H", "I", {"locked": 15, "key": "warren"}], ["I", "J"], ["F", "K", {"gate": "d3_hoard"}],
-		["L", "D", {"secret": true, "sdc": 14}]],
+		["L", "D", {"secret": true, "sdc": 14}], ["H", "M", {"locked": 14, "key": "warren"}]],
 }
 
 var DUNGEON_4 := {
@@ -212,7 +217,10 @@ var DUNGEON_4 := {
 			"chests": [[120, ["ring_resistance_necrotic", "potion_greater_healing"]]],
 			"name": "Tomb of the Knight", "desc": "A sealed sarcophagus, and a chill in the air that is more than cold.",
 			"lore": [{"kind": "tablet", "title": "Sir Aldric's Epitaph",
-				"text": "SIR ALDRIC OF THE SUN, LAST KNIGHT OF THE ORDER.\nHe went down to the Vault when the king would not die, and he sealed the king in with the Sun Key, and he came back up grey and cold and did not live the winter. Let no one wake what he sealed. Plain steel did not harm it. Only fire, and faith, and blades with the old magic in them."}]},
+				"text": "SIR ALDRIC OF THE SUN, LAST KNIGHT OF THE ORDER.\nHe went down to the Vault when the king would not die, and he sealed the king in with the Sun Key, and he came back up grey and cold and did not live the winter. Let no one wake what he sealed. Plain steel did not harm it. Only fire, and faith, and blades with the old magic in them."}],
+			# Phase 7: Sir Aldric's ghost shows himself once his tomb's dead are destroyed (side quest "The King's Crown")
+			"npcs": [{"id": "aldric", "name": "Sir Aldric", "at": Vector2i(3, 2), "sheet": NPCS + "aldric_sheet.png", "guard": 7,
+				"ghost": true, "hide": "aldric_rests"}]},
 		"E": {"slot": Vector2i(1, 1), "size": Vector2i(9, 8), "theme": "crypt", "spawn": "pp",
 			"name": "Chapel of Whispers", "desc": "Faint voices whisper just out of hearing."},
 		"F": {"slot": Vector2i(2, 1), "size": Vector2i(10, 8), "theme": "flooded", "spawn": "Uuu",
@@ -286,7 +294,7 @@ var DUNGEON_5 := {
 				"text": "TURN BACK. THE KING WHO WOULD NOT DIE SITS BEYOND.\nHe feeds on the warmth of the living. Bring light, bring holy fire, bring blades of old magic. Do not let him touch you twice."}]},
 		# the Wraith's vault: only the Sun Key opens it
 		"J": {"slot": Vector2i(3, 2), "size": Vector2i(11, 9), "theme": "vault", "spawn": "Xp",
-			"chests": [[1000, ["ring_protection", "shield_plus2", "potion_superior_healing", "scroll_mass_healing_word"]]],
+			"chests": [[1000, ["ring_protection", "shield_plus2", "potion_superior_healing", "scroll_mass_healing_word", "crown_ostric"]]],
 			"name": "The Wraith's Vault", "desc": "A crown on a throne of black stone. The air itself grows hungry."},
 		# Phase 6: the speaking stone - the right answer opens a secret door to the kings' hoard
 		"K": {"slot": Vector2i(3, 1), "size": Vector2i(9, 8), "theme": "hall", "name": "Hall of the Speaking Stone",
@@ -358,6 +366,9 @@ var SURFACE := {
 			# Brannoc the trader (Npc) at his stall; he hides until the goblins here are dead. The Rune of
 			# Return's portal opens beside the stall, the party arriving next to it.
 			"trader": {"stall": Vector2i(11, 6), "npc": Vector2i(11, 7), "portal": Vector2i(8, 8), "arrive": Vector2i(8, 9)},
+			# Phase 7: Hanna waits by the fire (she hid with Brannoc); Pell turns up once freed from the Warrens
+			"npcs": [{"id": "hanna", "name": "Hanna", "at": Vector2i(5, 8), "sheet": NPCS + "hanna_sheet.png", "guard": 12, "calls": false},
+				{"id": "pell", "name": "Pell", "at": Vector2i(3, 6), "sheet": NPCS + "pell_sheet.png", "show": "pell_left", "calls": false, "face_right": true}],
 			"name": "The Mine Entrance", "desc": "Timbers frame a black mouth in the hillside: the old silver mine."},
 	},
 	# dirt paths (2 wide): [from, to] cells, drawn as an L (x first, then y)

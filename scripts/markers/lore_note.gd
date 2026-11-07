@@ -24,6 +24,8 @@ const SPARK := {Kind.BOOK: Vector2(-1, -20), Kind.TABLET: Vector2(2, -24), Kind.
 		queue_redraw()
 @export var title := ""
 @export_multiline var text := ""
+## Story flag set the first time it is read (Quest.set_flag: a side quest may wait for it).
+@export var flag := ""
 
 var read := false:
 	set(v):

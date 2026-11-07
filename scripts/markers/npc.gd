@@ -26,6 +26,8 @@ extends MapMarker
 @export var hide_flag := ""
 ## Calls the party over the first time they see each other (Brannoc, Hilde).
 @export var calls_party := true
+## A ghost (Sir Aldric): drawn unshaded (glows in the dark), see-through, gently floating and fading.
+@export var ghostly := false
 
 const SPRITE_OFFSET := Vector2(-8, -22)
 const SIZE := Vector2(16, 24)
@@ -45,11 +47,17 @@ func _ready() -> void:
 	super()
 	gizmo_label = display_name
 	set_process(not Engine.is_editor_hint())
+	if ghostly and not Engine.is_editor_hint():
+		var mat := CanvasItemMaterial.new()
+		mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+		material = mat
 
 
 func _process(delta: float) -> void:
 	_t += delta
 	_talk_t = maxf(0.0, _talk_t - delta)
+	if ghostly and present:
+		self_modulate.a = 0.78 + 0.16 * sin(_t * 1.7)
 	var f := 2 if _talk_t > 0.0 else (1 if fmod(_t, 2.2) > 1.7 else 0)
 	if f != _frame:
 		_frame = f
@@ -102,8 +110,12 @@ func greet(toward: Vector2) -> void:
 
 
 func _draw() -> void:
-	draw_set_transform(Vector2(0, 1), 0, Vector2(1, 0.45))      # soft floor shadow
-	draw_circle(Vector2.ZERO, 6, Color(0, 0, 0, 0.45))
+	if ghostly:                                                    # a faint cold glow on the floor, no shadow
+		draw_set_transform(Vector2(0, 1), 0, Vector2(1, 0.45))
+		draw_circle(Vector2.ZERO, 7, Color(0.55, 0.75, 1.0, 0.18))
+	else:
+		draw_set_transform(Vector2(0, 1), 0, Vector2(1, 0.45))      # soft floor shadow
+		draw_circle(Vector2.ZERO, 6, Color(0, 0, 0, 0.45))
 	draw_set_transform(Vector2.ZERO, 0, Vector2(-1, 1) if face_right else Vector2.ONE)
 	if sheet:
 		draw_texture_rect_region(sheet, Rect2(SPRITE_OFFSET, SIZE), Rect2(_frame * SIZE.x, 0, SIZE.x, SIZE.y))

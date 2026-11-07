@@ -900,6 +900,9 @@ func read_lore(n: LoreNote) -> void:
 	var first := not n.read
 	n.read = true
 	Quest.add_lore(n.lore_id(), n.title, n.text)
+	if n.flag != "" and not Quest.has_flag(n.flag):
+		Quest.set_flag(n.flag)
+		map.quest_check()
 	if first:
 		_say("Read: %s (kept in the journal, J)." % n.title)
 		Sfx.play("scroll_read", -6.0)

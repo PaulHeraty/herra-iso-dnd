@@ -64,6 +64,7 @@ const ICON_ORDER := [
 	"rune_of_return",
 	"frost_brand", "ring_warmth", "cloak_protection", "amulet_health", "gauntlets_ogre_power", "bracers_defense",
 	"headband_intellect", "potion_supreme_healing", "lantern",
+	"crown",
 ]
 const KIND_ICON := {
 	Kind.WEAPON: "longsword", Kind.ARMOR: "leather_armor", Kind.SHIELD: "shield",

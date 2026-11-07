@@ -1,9 +1,10 @@
 class_name TraderTalk
 ## What Brannoc the trader says (the Npc by the mine; DungeonMap.talk_to). The first time the
 ## party sees him after the goblins are dead he calls them over: thanks, the story of the mine,
-## the quest (Quest) and the Rune of Return. After that: trade (ShopScreen), ask about the quest,
-## and once the Wraith is destroyed, the reward.
-## Story text is placeholder-level, like the rest of the campaign's story (Phase 7).
+## the quest (Quest), the Rune of Return, and a side quest: old Pell, whom the goblins carried off
+## from his farm ("The Taken"). He points the party to Hanna (HannaTalk), who waits at his camp.
+## After that: trade (ShopScreen), "Ask about..." (what's next, the mine, the goblins), handing in
+## Pell, and once the Wraith is destroyed, the reward. His greeting follows the party's progress.
 
 ## What he sells (ids in data/items/; prices = ItemData.value_gp). Plain gear for the early
 ## levels, potions and scrolls, and magic gear to save up for. Not the quest's reward ring.
@@ -17,6 +18,10 @@ const STOCK := [
 	"studded_leather_plus1", "chain_mail_plus1", "ring_resistance_necrotic", "plate_armor_plus1",
 	"longsword_plus2", "flame_tongue",
 ]
+const GOLD := "[color=#ffd75a]%s[/color]"
+const MAGIC := "[color=#96aaff]%s[/color]"
+const NOTE := "[color=#ffdc78]%s[/color]"
+const MAPS := "res://modules/wraith_below/maps/"
 
 
 static func start(map: DungeonMap, npc: Npc) -> void:
@@ -47,11 +52,11 @@ static func _intro(map: DungeonMap, npc: Npc, page: int) -> void:
 			_say(map, npc, "Easy there, friends, I'm no goblin! Name's Brannoc. I trade with the miners up here... or I did. That lot had me hiding behind my stall for two days. You have my thanks.",
 					[{text = "Continue", call = next}])
 		1:
-			_say(map, npc, "Something woke in the old silver mine. The miners dug into a sealed vault five levels down, and a [color=#c8d8ff]wraith[/color] came out of it. Now the dead walk the tunnels, and nobody who goes down comes back up.",
+			_say(map, npc, "Something woke in the old silver mine. Foreman Grell's crew dug into a sealed vault five levels down, and a [color=#c8d8ff]wraith[/color] came out of it. Now the dead walk the tunnels, and nobody who goes down comes back up.",
 					[{text = "Continue", call = next}])
 		2:
 			var ring := ItemData.get_item(Quest.reward_item())
-			_say(map, npc, "You look like you can handle yourselves. Go down there and destroy that wraith, and I'll pay you [color=#ffd75a]%d gold[/color] and give you the best thing in my stock: a [color=#96aaff]%s[/color]." % [Quest.reward_gold(), ring.display_name],
+			_say(map, npc, ("You look like you can handle yourselves. Go down there and destroy that wraith, and I'll pay you " + GOLD + " and give you the best thing in my stock: a " + MAGIC + ".") % ["%d gold" % Quest.reward_gold(), ring.display_name],
 					[{text = "We'll do it.", call = next}])
 		3:
 			Quest.given = true
@@ -60,7 +65,16 @@ static func _intro(map: DungeonMap, npc: Npc, page: int) -> void:
 			RunePortal.bound = true
 			Sfx.play("quest_update", -6.0)
 			map.quest_check()
-			_say(map, npc, "Take this: a [color=#96aaff]Rune of Return[/color]. Use it anywhere below (it's in your bag) and a portal opens back to my stall. Step through it again and you're right back where you were. It never runs dry. And come and trade when you've gold to spend!",
+			_say(map, npc, ("Take this: a " + MAGIC + ". Use it anywhere below (it's in your bag) and a portal opens back to my stall. Step through it again and you're right back where you were. It never runs dry.") % "Rune of Return",
+					[{text = "Thank you.", call = next}])
+		4:
+			Quest.give_side("taken")
+			Sfx.play("quest_update", -6.0)
+			map.quest_check()
+			_say(map, npc, ("One more thing. The goblins burned old " + NOTE + "'s farm on the woods road and dragged him off alive. They're taking people, not just goods. If he's still breathing down there, bring him out, and I'll make it worth your while.") % "Pell",
+					[{text = "We'll look for him.", call = next}])
+		5:
+			_say(map, npc, ("And that's " + NOTE + " by the fire. Her husband Tobin went down with Grell's crew. She's been waiting here a week for news. Have a word with her, if you've a moment. Now: come and trade when you've gold to spend!") % "Hanna",
 					[{text = "Trade", call = func(): _trade(map, npc)}, {text = "Goodbye", call = func(): _bye(map), bye = true}])
 
 
@@ -72,16 +86,57 @@ static func _hub(map: DungeonMap, npc: Npc, line: String) -> void:
 			line = "You did it! I felt the cold lift off the mine the moment that thing fell. The miners will sing about you for years."
 		choices.append({text = "Our reward", call = func(): _reward(map, npc)})
 	elif line == "":
-		if Quest.claimed:
-			line = "The heroes of the Harrow Woods! What can I do for you?"
-		else:
-			line = ["Back already? Good, the rune works. What do you need?",
-					"Still in one piece, I see. Need supplies?",
-					"Welcome back. Anything catch your eye?"][randi() % 3]
+		line = _greeting()
+	if Quest.side_reward_due("taken"):
+		choices.append({text = "Pell is safe", call = func(): _pell_back(map, npc)})
 	choices.append({text = "Trade", call = func(): _trade(map, npc)})
-	if Quest.given and not Quest.claimed and not Quest.reward_due():
-		choices.append({text = "The wraith", call = func(): _about(map, npc)})
+	choices.append({text = "Ask about...", call = func(): _ask(map, npc, "")})
 	choices.append({text = "Goodbye", call = func(): _bye(map), bye = true})
+	_say(map, npc, line, _fit(choices))
+
+
+## The dialogue box takes four choices: keep Goodbye, drop "Ask about..." first.
+static func _fit(choices: Array) -> Array:
+	while choices.size() > 4:
+		choices.remove_at(choices.find_custom(func(c): return c.text == "Ask about..."))
+	return choices
+
+
+## A greeting that knows how far down the party has got.
+static func _greeting() -> String:
+	if Quest.claimed:
+		return "The heroes of the Harrow Woods! What can I do for you?"
+	var lines: Array[String] = ["Back already? Good, the rune works. What do you need?",
+			"Still in one piece, I see. Need supplies?", "Welcome back. Anything catch your eye?"]
+	if Quest.kills.get("wraith", 0) > 0:
+		lines = ["You did it! Come, sit by the fire."]
+	elif Quest.visited.has(MAPS + "dungeon_5.tscn"):
+		lines = ["You've been to the Sealed Vault? You've frost in your hair. What do you need?",
+				"The bottom of the mine... I didn't think anyone would get that far. Stock up while you can."]
+	elif Quest.visited.has(MAPS + "dungeon_4.tscn"):
+		lines = ["The crypts? Gods. You smell of the grave, friends. What do you need?",
+				"Down among the dead, are you? Then you'll want potions. Lots of potions."]
+	elif Quest.is_done("chief_key"):
+		lines = ["Word is the goblin chief is dead. The road will be safer for it. What can I get you?"]
+	elif Quest.kills.get("eye_tyrant", 0) > 0:
+		lines = ["You killed the Eye? Hah! I'd have paid to see that. What do you need?",
+				"The one-eyed horror of the Webbed Deep, dead. I'll drink to that. Anything you need?"]
+	if Quest.side_claimed("taken"):
+		lines.append("Pell's been chopping my firewood all morning. Says it beats a goblin cage. What do you need?")
+	return lines[randi() % lines.size()]
+
+
+# --- ask about... ------------------------------------------------------------------------------
+
+static func _ask(map: DungeonMap, npc: Npc, line: String) -> void:
+	if line == "":
+		line = "Ask away. I know the woods and the mine as well as anyone still breathing."
+	var choices: Array = []
+	if not Quest.claimed and not Quest.reward_due():
+		choices.append({text = "What next?", call = func(): _about(map, npc)})
+	choices.append({text = "The mine", call = func(): _mine(map, npc)})
+	choices.append({text = "The goblins", call = func(): _goblins(map, npc)})
+	choices.append({text = "Back", call = func(): _hub(map, npc, "Anything else?"), bye = true})
 	_say(map, npc, line, choices)
 
 
@@ -100,7 +155,35 @@ static func _about(map: DungeonMap, npc: Npc) -> void:
 		"sun_key": "The vault was sealed with a gold key, they say. Someone down there has it.",
 		"wraith": "Magic or silver hurts it most. Don't let it touch you; it drains the life right out of you.",
 	}.get(Quest.stages()[cur].id if cur >= 0 else "", "")
-	_hub(map, npc, ("Next: [color=#ffdc78]%s[/color] %s" % [s, tip]).strip_edges())
+	_ask(map, npc, (("Next: " + NOTE + " %s") % [s, tip]).strip_edges())
+
+
+static func _mine(map: DungeonMap, npc: Npc) -> void:
+	var line := "The Harrow mine gave good silver for forty years. Then Grell's crew broke into old halls under the seam: carved stone, older than Harrowmere. Grell called it luck. A month later the reeve shut the mine and buried what came up of the crew."
+	if Quest.has_flag("tobin_letter"):
+		line = "Grell broke into those old halls, and the cold came up the stair after him. You've seen it yourself now. Poor Tobin. Poor all of them."
+	_ask(map, npc, line)
+
+
+static func _goblins(map: DungeonMap, npc: Npc) -> void:
+	var line := "Goblins have always raided the woods road, but never like this. More every week, and bolder. And they take people. Alive. Why would a goblin want a prisoner it doesn't eat?"
+	if Quest.has_flag("war_orders"):
+		line = "A 'Cold King' under the crypts, trading the woods for living prisoners? That's your wraith, or I'm a dwarf. It wants the warmth of the living, and the goblins have been feeding it."
+	elif Quest.is_done("chief_key"):
+		line = "With their chief dead the rest are scattering. Good riddance. I still wonder what they wanted with all those prisoners."
+	_ask(map, npc, line)
+
+
+# --- rewards ---------------------------------------------------------------------------------------
+
+static func _pell_back(map: DungeonMap, npc: Npc) -> void:
+	Quest.claim_side("taken", map.inventory)
+	var q := Quest.side_def("taken")
+	Sfx.play("coins")
+	FloatText.spawn(map, npc.position + Vector2(0, -28), "+%d gold" % q.reward_gold, Color8(255, 215, 90))
+	map.quest_check()
+	var it := ItemData.get_item(q.reward_item)
+	_hub(map, npc, ("Pell turned up at my fire last night, thin as a rake and swearing like a goblin. I owe you. Here: " + GOLD + " and a " + MAGIC + ". You'll need it more than I do.") % ["%d gold" % q.reward_gold, it.display_name])
 
 
 static func _reward(map: DungeonMap, npc: Npc) -> void:
@@ -111,7 +194,7 @@ static func _reward(map: DungeonMap, npc: Npc) -> void:
 	SpellFx.sparkles(map, npc.position + Vector2(0, -14), Color8(255, 220, 120), false)
 	map.quest_check()
 	# Then the win screen (VictoryScreen); after it the game goes on (he still trades).
-	_say(map, npc, "As promised: [color=#ffd75a]%d gold[/color], and my [color=#96aaff]%s[/color]. Wear it well. You've earned it." % [Quest.reward_gold(), ring.display_name],
+	_say(map, npc, ("As promised: " + GOLD + ", and my " + MAGIC + ". Wear it well. You've earned it.") % ["%d gold" % Quest.reward_gold(), ring.display_name],
 			[{text = "Farewell, Brannoc.", call = func(): _bye(map); map.show_victory(), bye = true}])
 	# the quest's own update (the last stage) shows too
 	if map.hud:

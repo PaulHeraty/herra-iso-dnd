@@ -481,6 +481,7 @@ func _lore(spec: Dictionary, c: Vector2i, entities: Node2D, root: Node, node_nam
 	n.kind = LORE_KINDS[spec.get("kind", "book")]
 	n.title = spec.get("title", "")
 	n.text = spec.get("text", "")
+	n.flag = spec.get("flag", "")
 	if n.kind == LoreNote.Kind.REMAINS:
 		n.position = IsoGrid.view_cell_to_world(c) + LoreNote.SORT_UP
 
@@ -1121,3 +1122,4 @@ func _npc(nd: Dictionary, c: Vector2i, entities: Node2D, root: Node) -> void:
 	npc.hide_flag = nd.get("hide", "")
 	npc.calls_party = nd.get("calls", true)
 	npc.face_right = nd.get("face_right", false)
+	npc.ghostly = nd.get("ghost", false)

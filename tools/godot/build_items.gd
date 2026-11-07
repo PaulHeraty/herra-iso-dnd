@@ -236,6 +236,11 @@ func _init() -> void:
 	lan.icon = ItemData.ICON_ORDER.find("lantern")
 	lan.wondrous = true
 	_save(lan)
+	var crown := _item("crown_ostric", "Crown of Ostric", ItemData.Kind.TREASURE, 0,
+			"A black iron crown set with dull grey stones, cold as a winter grave. It kept King Ostric bound to his throne for an age. Sir Aldric's ghost wants it laid in his tomb.")
+	crown.icon = ItemData.ICON_ORDER.find("crown")
+	crown.wondrous = true
+	_save(crown)
 	print("%d items written" % _written.size())
 	quit()
 

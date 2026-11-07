@@ -883,3 +883,17 @@ func _icon_lantern(cv: Canvas) -> void:
 		"...yoooooy....",
 		"....yyyyy.....",
 	], 0, 1)
+
+
+## The Crown of Ostric: black iron with dull grey stones and a cold blue glint (module 1's quest item).
+func _icon_crown(cv: Canvas) -> void:
+	cv.rows([
+		"..m...m...m...",
+		".mGm.mBm.mGm..",
+		".msm.msm.msm..",
+		".mssmsssmssm..",
+		".msssssssssm..",
+		".mgGsgBgsGgm..",
+		".mssssssssssm.",
+		"..mmmmmmmmmm..",
+	], 0, 3)

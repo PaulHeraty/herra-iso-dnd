@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_oajor"]
+
+[resource]
+resource_name = "Crown of Ostric"
+script = ExtResource("1_oajor")
+id = "crown_ostric"
+display_name = "Crown of Ostric"
+description = "A black iron crown set with dull grey stones, cold as a winter grave. It kept King Ostric bound to his throne for an age. Sir Aldric's ghost wants it laid in his tomb."
+icon = 50
+wondrous = true

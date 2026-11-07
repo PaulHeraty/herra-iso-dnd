@@ -39,7 +39,7 @@ func _run() -> void:
 	await _frames(5)
 	var npc: Npc = null
 	for n in m.entities.get_children():
-		if n is Npc:
+		if n is Npc and n.npc_id == "brannoc":
 			npc = n
 	_check(npc != null, "Brannoc stands in the woods")
 	_check(not npc.present and not npc.visible, "he hides while the mine goblins live")
@@ -77,6 +77,10 @@ func _run() -> void:
 	_check("wraith" in d.current_text() and d.choice_texts().size() == 1, "he offers the quest")
 	d.pick(0)
 	_check(Quest.given and m.inventory.has("rune_of_return"), "quest accepted: the Rune of Return is in the bag")
+	d.pick(0)
+	_check("Pell" in d.current_text() and Quest.side_given("taken"), "Phase 7: he asks after old Pell (side quest 'The Taken')")
+	d.pick(0)
+	_check("Hanna" in d.current_text(), "and points the party to Hanna")
 	_check("Trade" in d.choice_texts(), "then: Trade / Goodbye")
 	d.pick(0)
 	_check(m.hud.shop.visible and not d.visible, "Trade opens his stall")

@@ -37,7 +37,12 @@ level 1 to about 20. A module is one folder, `modules/<id>/`:
   (Quest.flags: set by puzzles (`Puzzle.flag`), NPC talks, `met_<npc_id>`), stage kinds map / item / kill
   / flag / claim, optional stage `xp` (5e milestone XP: monsters alone don't carry a party 5 -> 9).
 - **The Rune of Return** goes on with the party; each module's trader binds it (`RunePortal.bound`).
-- Module 1: `modules/wraith_below/` "The Wraith Below" (start level 1, ends ~5).
+- Module 1: `modules/wraith_below/` "The Wraith Below" (start level 1, ends ~5). Story (Phase 7): Grell's miners broke
+  into the vault of King Ostric, who bought undeath with a crown and became the Wraith; the goblins sell him
+  living prisoners ("the Cold King"). NPCs: Brannoc (main quest + "The Taken": free old Pell), Hanna at his
+  camp ("Word of Tobin": her husband's last letter, a LoreNote with a `flag`), Pell in the Warrens' holding
+  pen (freed, he moves to the camp), Sir Aldric's ghost in the Sunken Crypts ("The King's Crown": lay the
+  Wraith's crown in his tomb, after the fight). The epilogue follows what the party did (`epilogue_text()`).
 - Module 2: `modules/frost_spire/` "The Frost Spire" (start level 5-6, ends ~9): the Frostfell (snow
   lands: three beacons = an ALL_ON puzzle that melts an ICE ward into the hidden vale; a young white
   dragon; Hilde's camp: shop, rune binding, two side quests) and the Rimecaller's tower (five floors:
@@ -67,7 +72,7 @@ level 1 to about 20. A module is one folder, `modules/<id>/`:
 | Resolution | 640×360 base, integer scaling (window 1280×720), nearest filtering, pixel snapping |
 | Art | Pixel art, limited palettes, light ordered (Bayer 4×4) dithering, 1px dark outlines on sprites |
 | Audio | Retro synthesized SFX (WAV); optional chiptune music later |
-| Story | Placeholder. One pitch exists (below), not chosen. |
+| Story | Module 1 keeps "The Wraith Below" (the Weaver's Deep pitch below was not used); Phase 7 deepened it with NPCs + side quests. Module 2 has its own. |
 | Party level | The party starts at **level 1** in the woods and reaches **5** by the last floor (Phase 5). Data files hold level-1 stat blocks; `Progression` grows them. Each map has `start_level` for playing it on its own. |
 | XP | SRD thresholds (300 / 900 / 2700 / 6500 per hero); a fight's XP is split between the heroes who aren't dead; level-ups happen right after the fight (fixed average HP, "LEVEL UP!" box + fanfare). |
 | Campaign (module 1) | `modules/wraith_below/`: `surface.tscn` "The Harrow Woods" (first map, after the intro; L1→2) → mine entrance → 5 floors: Upper Halls (L2→3), Webbed Deep (L3, Eye Tyrant), Goblin Warrens (L3→4), Sunken Crypts (L4), Sealed Vault (L4→5, the **Wraith**). All built by `modules/wraith_below/build_maps.gd`; it prints each map's XP (total ~31,200 incl. disarmed traps, solved puzzles + the ambushers). |
@@ -123,7 +128,7 @@ level 1 to about 20. A module is one folder, `modules/<id>/`:
 assets/
   tiles/      floor_atlas.png, wall_atlas.png, dungeon_tileset.tres; outdoor_floor_atlas.png, cliff_atlas.png,
               forest_atlas.png, outdoor_tileset.tres (same layout: 0 ground, 1 cliffs, 2 forest)   (generated)
-  sprites/    heroes/ (walk sheets 16×24, action sheets 32×32, face portraits 32×32 `<hero>_portrait.png`), monsters/ (Eye Tyrant), npcs/ (trader_sheet 16x24: idle, idle, talk), props/ (chest, chest_open, bones, torch_sheet, web, stairs_up/down, barrel, crate, sarcophagus, rubble, cocoon, urn, brazier, stall, portal_sheet 8x24x40; Phase 6: trap_* (armed + sprung, flat 34x18 at (-17,-9)), plate(_down), lever_up/down (24x34 at (-12,-27)), block (28x34 at (-14,-27)), stone_face (28x44 at (-14,-36)), lore_book / lore_tablet (24x34 at (-12,-27)), lore_remains (flat 34x18 at (-17,-9)))
+  sprites/    heroes/ (walk sheets 16×24, action sheets 32×32, face portraits 32×32 `<hero>_portrait.png`), monsters/ (Eye Tyrant), npcs/ (16x24: idle, idle, talk: trader (Brannoc), hanna, pell, aldric (ghost), hilde, tamsin), props/ (chest, chest_open, bones, torch_sheet, web, stairs_up/down, barrel, crate, sarcophagus, rubble, cocoon, urn, brazier, stall, portal_sheet 8x24x40; Phase 6: trap_* (armed + sprung, flat 34x18 at (-17,-9)), plate(_down), lever_up/down (24x34 at (-12,-27)), block (28x34 at (-14,-27)), stone_face (28x44 at (-14,-36)), lore_book / lore_tablet (24x34 at (-12,-27)), lore_remains (flat 34x18 at (-17,-9)))
   effects/    fireball_sheet.png (6×16px), explosion_sheet.png (7×32px)
   fonts/      herra_pixel.fnt/.png: our pixel font (use size 10; scale the Control 2x/3x for big text)
   sfx/        13 WAVs from the concept session (torch_ambience imports as a forward loop) + generated ones (gen_sfx.gd)
@@ -179,7 +184,8 @@ scripts/
   audio/sfx.gd          Sfx.play("name"): static, self-creating player for assets/sfx/<name>.wav
   story/quest.gd        Quest (static): the current module's quest (stages + reward from Modules.current); snapshotted with the party (PartyState.story)
   story/rune_portal.gd  RunePortal (static): the Rune of Return's open portal (map + cell; home = the module's portal_home_map); DungeonMap.use_rune / take_portal
-  (modules/wraith_below/story/trader_talk.gd) TraderTalk: Brannoc's lines (intro, quest, reward), his STOCK; uses CombatHud.dialogue / .shop
+  (modules/wraith_below/story/trader_talk.gd) TraderTalk: Brannoc's lines (intro, quest, reward), his STOCK; uses CombatHud.dialogue / .shop;
+                        "Ask about..." menu, greetings by progress; HannaTalk, PellTalk, AldricTalk alongside it
   ui/dialogue_box.gd    DialogueBox: portrait, name, typed line, choices (1-4, Space, Esc = goodbye); camera frames the speaker
   ui/shop_screen.gd     ShopScreen: wares list + party bag; click = pick, Buy/Sell button or double-click
   ui/quest_screen.gd    QuestScreen (J): stages done (ticked) + the current one; HUD quest_toast() on updates
@@ -216,6 +222,9 @@ tools/
               gen_puzzle_art.gd (traps armed/sprung, pressure plate up/down, lever up/down, pushable block, stone face,
               lectern, tablet, adventurer's remains),
               test_modules.gd (modules, start screen, Roster, saves with a module; writes user://test_parties + test_saves),
+              test_wraith_story.gd (module 1's story: Hanna, Pell, Aldric, the three side quests, lore flags, the epilogue: PASS/FAIL;
+              run without --headless, HERRA_AUTO_REACT=1, -t 150), gen_story_art.gd (Hanna, Pell, Sir Aldric's ghost: NPC sheets
+              recoloured from the hero / trader drawings),
               test_frost.gd (module 2: beacons + ward, Hilde, side quests, rune binding, mimic, the tower's puzzles, levels 6-9 rules,
               troll regeneration, breath AI, the ending: PASS/FAIL; run without --headless, HERRA_AUTO_REACT=1, -t 200),
               gen_frost_art.gd (module 2: snow + tower tilesets by palette remapping, snow props, the spire, the ice ward,
@@ -449,7 +458,13 @@ _handoff/     original handoff package (.gdignore'd). Can be deleted once the us
   monsters, damage-power AI, Worn slots + new SRD items, side quests + story flags + stage XP, rune
   rebinding, mimics, the ice ward, snow + tower tilesets, Hilde + Tamsin, six maps. Waiting for the
   user's playtest. Possible next: a level 9-13 module (needs Progression past 9).
-- [ ] **Phase 7 — Story:** quests, NPCs, dialogue, lore notes.
+- [x] **Phase 7 — Story:** module 1 deepened (module 2 already had NPCs + side quests). Three new NPCs (Hanna,
+  Pell, Sir Aldric's ghost: `Npc.ghostly` = unshaded, see-through, floor glow), three side quests (The Taken,
+  Word of Tobin, The King's Crown; `Quest.claim_side(paid = false)` = reward turned down), `LoreNote.flag`
+  (reading sets a story flag), Brannoc's "Ask about..." menu + progress-aware greetings, a holding pen room
+  in the Warrens, the Crown of Ostric (quest item, a module item), an epilogue that follows the story
+  (`AdventureModule.epilogue_text()`). Module 1 maps rebuilt (surface, floors 1, 3, 4, 5). Waiting for the
+  user's playtest.
 - [ ] **Phase 8 — Wrapper:** title screen + module select (DONE early: Modules, Roster, start screen), save/load (DONE early: F5 quick save, F6 3 slots, F9 load), settings, music, mixing, game over/victory.
 - [ ] **Phase 9 — Polish & release:** balance, bugs, juice, export builds (Windows/Mac/Linux, itch.io).
 - **First milestone (after phases 0–3):** one user-built dungeon, 4 heroes, 2–3 monster types,

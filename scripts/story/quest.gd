@@ -221,14 +221,15 @@ static func side_reward_due(qid: String) -> bool:
 
 
 ## Hand over a side quest's reward (gold + item) and tick it off.
-static func claim_side(qid: String, bag: Inventory) -> void:
+static func claim_side(qid: String, bag: Inventory, paid := true) -> void:
 	if not side.has(qid) or side_claimed(qid):
 		return
 	var q := side_def(qid)
 	side[qid].claimed = true
-	bag.add_gold(int(q.get("reward_gold", 0)))
-	if q.get("reward_item", "") != "":
-		bag.add(q.reward_item)
+	if paid:                     # false: the party turned the reward down (Hanna's coins)
+		bag.add_gold(int(q.get("reward_gold", 0)))
+		if q.get("reward_item", "") != "":
+			bag.add(q.reward_item)
 	update(bag)
 
 

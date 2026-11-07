@@ -122,7 +122,7 @@ func _build() -> void:
 	var title := _label(Vector2.ZERO, CombatHud.COL_BANNER)
 	_centre(title, "VICTORY!", 18, 4)
 	var ep := _label(Vector2(110, 62), CombatHud.COL_TEXT)
-	ep.text = Modules.current.epilogue if Modules.current else ""
+	ep.text = Modules.current.epilogue_text() if Modules.current else ""
 	ep.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	ep.size = Vector2(SCREEN.x - 220, 0)
 	ep.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
