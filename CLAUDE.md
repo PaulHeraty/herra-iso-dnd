@@ -192,7 +192,7 @@ scripts/
                         "Ask about..." menu, greetings by progress; HannaTalk, PellTalk, AldricTalk alongside it
   ui/dialogue_box.gd    DialogueBox: portrait, name, typed line, choices (1-4, Space, Esc = goodbye); camera frames the speaker
   ui/shop_screen.gd     ShopScreen: wares list + party bag; click = pick, Buy/Sell button or double-click
-  ui/quest_screen.gd    QuestScreen (J): stages done (ticked) + the current one; HUD quest_toast() on updates
+  ui/quest_screen.gd    QuestScreen (J): tabs Quests / Completed / Journal; quests folded, click one = giver, reward, stages done (ticked) + the current one; HUD quest_toast() on updates
   ui/character_sheet.gd CharacterSheet (C / Sheet button / right-click a hero card; also in combat, read-only): portrait,
                         level + XP, HP + hit dice, AC/init/speed/prof, abilities, saves, skills, attacks, spell slots,
                         powers + Progression.FEATURES (hover = details); rebuilds live while open
@@ -480,6 +480,31 @@ All 4 heroes have 4 facings + idle/walk + attack/shoot/cast/hurt/down animations
 sheets in Art specs). Possible later: drink-potion / use-item pose (Phase 4). Monsters are real `Monster` actors spawned at `MonsterSpawn` markers
 (scene `scenes/actors/monsters/<monster_id>.tscn` + stats `data/monsters/<monster_id>.tres`). Heroes are real `Hero` actors (`scenes/actors/hero.tscn`,
 `scripts/actors/actor.gd` + `hero.gd`), spawned by `DungeonMap` at the `PartyStart` marker.
+
+## Bugs + todo (user playtest, 2026-11-07)
+Combat + rules:
+- [ ] 1. Clicking a square hidden behind a hero / monster sprite is hard: click through to the cell under the cursor for moves and attacks.
+- [ ] 2. Prone creatures should look prone (a lying pose / graphic for heroes and monsters).
+- [ ] 5. A hidden Rogue: monsters can't target what they can't see (5e: they must guess the square; attacks against an unseen target at disadvantage, the Rogue's own attacks at advantage). AI shouldn't pick him while hidden.
+- [x] 9. Heavy Crossbow "1d8": the rolls were right (2d10 on a crit); the dice scene drew the d10 as a kite almost like the d8 diamond. The d10 now has its own shape (wide shoulders, lit kite face, long point).
+- [ ] 12. Monsters always attack the weakest hero: only smart monsters (INT ~8+?) focus fire; beasts / mindless undead take the nearest or whoever hurt them.
+- [x] 16. Second Wind only when hurt (any SELF + HEAL power greys out at full HP: "not hurt", `menu_powers`).
+Monsters on the map:
+- [ ] 10. Monsters open doors (alarm tripwire: the group never came through the door). Unlocked doors at least; not locked / secret / portcullis / ice.
+- [ ] 11. Monsters set off traps they walk over (not their own group's? decide).
+- [ ] 17. Monsters stuck in corners behind pots / trees / props (user found at least 2): check every map for spawns with no path to the party.
+Spells:
+- [ ] 3. The Mage can copy a spell scroll into the spellbook if he doesn't know the spell (SRD: 2 hours + 50 gp per spell level; the scroll is used up).
+- [ ] 4. Look at the spellbook outside combat (list of spells, slots, details).
+Puzzles + maps:
+- [ ] 6. Puzzles are a bit too easy.
+- [x] 7. Map titles show the level: "THE WEBBED DEEP (level 2)" on arrival + the full map (`DungeonMap.floor_number`: -1 = from the file name dungeon_N / tower_N, 0 = none; `full_title()`).
+- [ ] 13. Room names on the full map: a marker per room, hover = its name.
+Rests:
+- [ ] 8. Long rest after every fight is too easy. Decided: long rests only in safe places (camps, through the rune portal, a cleared room with the door shut) + a wandering-monster roll when resting in the dungeon. No 24-hour limit, no rations. Short rests stay free.
+Quest log:
+- [x] 14. Quest log tabs: Quests (n) / Completed (n) / Journal (n).
+- [x] 15. Each quest is one line ("+ NAME (main / side quest)"), folded by default; click = details + stages; one open at a time (`QuestScreen._open`).
 
 ## Story pitch (optional, not chosen)
 "The Weaver's Deep": an apprentice's master vanished in the silver mines beneath Harrowmere, which

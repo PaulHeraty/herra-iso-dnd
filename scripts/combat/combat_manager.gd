@@ -1190,6 +1190,9 @@ func menu_powers(h: Actor) -> Array[Dictionary]:
 			why = "use your action first"
 		if why == "" and p.id == "turn_undead" and _undead_in_range(h, p).is_empty():
 			why = "no undead in sight"
+		if why == "" and p.target == SpellData.Target.SELF and p.resolve == SpellData.Resolve.HEAL \
+				and h.hp >= h.stats.max_hp:
+			why = "not hurt"                 # Second Wind on a full-HP Fighter
 		if why == "" and p.id == "hide" and _enemy_adjacent(h):
 			why = "an enemy is right next to you"
 		if why == "" and not h.can_use(p):

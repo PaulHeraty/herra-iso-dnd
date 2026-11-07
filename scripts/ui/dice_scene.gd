@@ -319,8 +319,9 @@ static func die_outline(sides: int, s: float) -> PackedVector2Array:
 			pts = PackedVector2Array([Vector2(0, -0.66), Vector2(0.5, 0), Vector2(0, 0.66), Vector2(-0.5, 0)])
 			for i in pts.size():
 				pts[i] *= s
-		10:
-			pts = PackedVector2Array([Vector2(0, -0.64), Vector2(0.52, -0.08), Vector2(0, 0.58), Vector2(-0.52, -0.08)])
+		10:                                  # wide shoulders up high, then a long point down (not the d8's diamond)
+			pts = PackedVector2Array([Vector2(0, -0.68), Vector2(0.6, -0.16), Vector2(0.44, 0.26),
+					Vector2(0, 0.64), Vector2(-0.44, 0.26), Vector2(-0.6, -0.16)])
 			for i in pts.size():
 				pts[i] *= s
 		12:
@@ -356,11 +357,12 @@ func _draw_die(c: Vector2, s: float, ang: float, val: int, sides: int) -> void:
 		8:
 			v.draw_colored_polygon(PackedVector2Array([face[0], face[1], face[3]]), FIREC.hi.lerp(FIREC.face, 0.55))
 			v.draw_line(face[3], face[1], FIREC.edge)
-		10:
-			var low := c + Vector2(0, s * 0.18).rotated(ang)
-			v.draw_line(face[0], low, FIREC.side)
-			v.draw_line(face[1], low, FIREC.side)
-			v.draw_line(face[3], low, FIREC.side)
+		10:                                  # the lit kite face on top, side facets below it
+			var low := c + Vector2(0, s * 0.2).rotated(ang)
+			v.draw_colored_polygon(PackedVector2Array([face[0], face[1], low, face[5]]), FIREC.hi.lerp(FIREC.face, 0.55))
+			v.draw_line(face[1], low, FIREC.edge)
+			v.draw_line(face[5], low, FIREC.edge)
+			v.draw_line(low, face[3], FIREC.side)
 	var fp := face.duplicate()
 	fp.append(face[0])
 	v.draw_polyline(fp, FIREC.edge)

@@ -21,6 +21,9 @@ extends Node2D
 @export var entry_id := "start"
 ## Shown when the party arrives (e.g. "The Upper Halls").
 @export var map_title := ""
+## The dungeon level shown after the title ("THE WEBBED DEEP (level 2)"): -1 = from the scene's file
+## name (dungeon_2 -> 2, tower_3 -> 3; others none), 0 = none, else this number.
+@export var floor_number := -1
 ## Fog of war: only explored cells are drawn; explored ones out of sight are dimmed and their
 ## monsters hidden (see FogOfWar).
 @export var fog_of_war := true
@@ -765,7 +768,7 @@ func _arrival_fade(from_black: bool) -> void:
 	title.add_theme_font_override("font", load("res://assets/fonts/herra_pixel.fnt"))
 	title.add_theme_font_size_override("font_size", 10)
 	title.add_theme_color_override("font_color", Color8(255, 220, 120))
-	title.text = map_title.to_upper()
+	title.text = full_title()
 	title.scale = Vector2(2, 2)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.size = Vector2(320, 12)
@@ -1391,6 +1394,25 @@ func _place_portals(fresh: bool) -> void:
 		if fresh:
 			p.open_fx()
 	_refresh_fog_look()
+
+
+## Which level of the dungeon this map is (0 = not a numbered level: the woods, the Frostfell).
+func floor_no() -> int:
+	if floor_number >= 0:
+		return floor_number
+	var base := scene_file_path.get_file().get_basename()          # "dungeon_2"
+	var cut := base.rfind("_")
+	if cut > 0 and base.substr(cut + 1).is_valid_int():
+		return int(base.substr(cut + 1))
+	return 0
+
+
+## The title in capitals with its level: "THE WEBBED DEEP (level 2)" ("" if the map has no title).
+func full_title() -> String:
+	if map_title == "":
+		return ""
+	var n := floor_no()
+	return map_title.to_upper() + (" (level %d)" % n if n > 0 else "")
 
 
 ## A map scene's map_title (read from the file without loading the map), or "".

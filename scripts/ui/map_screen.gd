@@ -68,7 +68,7 @@ func toggle() -> void:
 
 func open() -> void:
 	var m := hud.combat.map
-	_title.text = (m.map_title if m.map_title != "" else "MAP").to_upper()
+	_title.text = m.full_title() if m.map_title != "" else "MAP"
 	_fit()
 	visible = true
 	Sfx.play("ui_select", -8.0)

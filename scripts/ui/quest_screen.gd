@@ -1,20 +1,24 @@
 class_name QuestScreen
 extends Panel
-## The quest log (Quest button / J): the main quest and any side quests: who gave each, the reward,
-## (Journal page: the lore the party has read, LoreNote; pick a title to read it again)
-## the last few stages done (ticked) and the one the party is on now (later ones stay hidden). Read-only; J, Esc or a click
-## on the map closes it. Lives on the CombatHud's root (inherits its theme).
+## The quest log (Quest button / J). Pages: Quests (the ones still going), Completed, Journal (the
+## lore the party has read, LoreNote; pick a title to read it again). Each quest is one line, folded
+## by default (one open at a time): click its name for who gave it, the reward, the last few stages done (ticked) and the
+## one the party is on now (later ones stay hidden). J, Esc or a click on the map closes it. Lives on
+## the CombatHud's root (inherits its theme).
 
 const RECT := Rect2(120, 24, 400, 266)
 const COL_DONE := Color8(120, 186, 116)
+const MAIN := "_main"            ## the main quest's key in _open
 
 var combat: CombatManager
 var _body: Control
-var _page := "quests"            ## or "journal"
+var _page := "quests"            ## or "completed", "journal"
 var _sel := -1                   ## journal: the entry shown (-1 = the latest)
 var _page_btns := {}
 
 static var _tick_tex: Texture2D
+## The quest unfolded (quest id -> true; MAIN for the main one; one at a time): kept while the game runs.
+static var _open := {}
 
 
 func _ready() -> void:
@@ -28,7 +32,7 @@ func _ready() -> void:
 	var close_l := _label(self, Vector2(RECT.size.x - 74, 4), CombatHud.COL_DIM)
 	close_l.text = "J / Esc: close"
 	var bx := 92.0
-	for p in ["quests", "journal"]:
+	for p in ["quests", "completed", "journal"]:
 		var b := Button.new()
 		b.focus_mode = Control.FOCUS_NONE
 		b.position = Vector2(bx, 2)
@@ -72,7 +76,12 @@ func _build() -> void:
 	_body.position = Vector2(0, 22)
 	_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_body)
-	_page_btns.quests.text = "Quests"
+	var all := quests()
+	var n_done := 0
+	for q in all:
+		n_done += 1 if q.done else 0
+	_page_btns.quests.text = "Quests (%d)" % (all.size() - n_done)
+	_page_btns.completed.text = "Completed (%d)" % n_done
 	_page_btns.journal.text = "Journal (%d)" % Quest.lore.size()
 	for p in _page_btns:
 		_page_btns[p].set_deferred("size", Vector2(70, 14))
@@ -81,42 +90,24 @@ func _build() -> void:
 		_journal()
 		return
 	var w := RECT.size.x - 24
-	var sides: Array[Dictionary] = []
-	for q in Quest.side_quests():
-		if Quest.side_given(q.id):
-			sides.append(q)
-	if not Quest.given and sides.is_empty():
+	var shown: Array[Dictionary] = []
+	for q in all:
+		if q.done == (_page == "completed"):
+			shown.append(q)
+	if shown.is_empty():
 		var l := _text(Vector2(10, 4), w, CombatHud.COL_DIM)
-		l.text = "No quests yet.\n\n" + (Modules.current.quest_hint if Modules.current else "")
-		_fit(70.0)
+		if _page == "completed":
+			l.text = "No quests finished yet."
+		elif all.is_empty():
+			l.text = "No quests yet.\n\n" + (Modules.current.quest_hint if Modules.current else "")
+		else:
+			l.text = "Every quest the party has taken on is finished (see Completed)."
+		_fit(70.0 if all.is_empty() else 30.0)
 		return
 	var y := 2.0
-	if Quest.given:
-		var t := _label(_body, Vector2(10, y), CombatHud.COL_BANNER)
-		t.text = Quest.title().to_upper()
-		t.scale = Vector2(2, 2)
-		y += 24
-		var by := _label(_body, Vector2(10, y), CombatHud.COL_DIM)
-		by.text = "From %s, %s." % [Quest.giver(), Modules.current.quest_where if Modules.current else ""]
-		y += 12
-		y = _reward_line(y, Quest.reward_gold(), Quest.reward_item(), Quest.claimed)
-		y = _stages(y, w, Quest.stages(), Quest.current(), func(sid): return Quest.is_done(sid))
-		if Quest.current() == -1:
-			var done := _label(_body, Vector2(10, y + 4), CombatHud.COL_BANNER)
-			done.text = "Quest complete!"
-			y += 16
-	for q in sides:
-		y += 6
-		var st := _label(_body, Vector2(10, y), CombatHud.COL_BANNER)
-		st.text = String(q.title).to_upper() + "  (side quest)"
-		y += 12
-		var sby := _label(_body, Vector2(10, y), CombatHud.COL_DIM)
-		sby.text = "From %s, %s." % [q.get("giver", ""), q.get("where", "")]
-		y += 12
-		y = _reward_line(y, int(q.get("reward_gold", 0)), q.get("reward_item", ""), Quest.side_claimed(q.id))
-		var qid: String = q.id
-		y = _stages(y, w, q.stages, Quest.side_current(qid), func(sid): return Quest.side.get(qid, {}).get("done", {}).has(sid))
-	if combat and combat.map.inventory.has("rune_of_return"):
+	for q in shown:
+		y = _quest(q, y, w)
+	if _page == "quests" and combat and combat.map.inventory.has("rune_of_return"):
 		var tip := _text(Vector2(10, y + 8), w, CombatHud.COL_DIM)
 		tip.text = "Rune of Return: click it in the Bag (I) to open a portal back to the trader. Step through it again to come back." \
 				if RunePortal.bound else "Rune of Return: it isn't bound to anywhere here yet. A trader nearby may be able to rebind it."
@@ -124,40 +115,96 @@ func _build() -> void:
 	_fit(y)
 
 
-func _reward_line(y: float, gold: int, item_id: String, claimed: bool) -> float:
-	var rw := _label(_body, Vector2(10, y), CombatHud.COL_GOLD)
+## Every quest the party has been given, main first: {key, title, kind, giver, where, gold, item,
+## claimed, stages, cur, is_done (Callable: stage id -> bool), done}.
+static func quests() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if Quest.given:
+		out.append({key = MAIN, title = Quest.title(), kind = "main quest", giver = Quest.giver(),
+				where = Modules.current.quest_where if Modules.current else "",
+				gold = Quest.reward_gold(), item = Quest.reward_item(), claimed = Quest.claimed,
+				stages = Quest.stages(), cur = Quest.current(), done = Quest.current() == -1,
+				is_done = func(sid): return Quest.is_done(sid)})
+	for q in Quest.side_quests():
+		if not Quest.side_given(q.id):
+			continue
+		var qid: String = q.id
+		var cur := Quest.side_current(qid)
+		out.append({key = qid, title = String(q.title), kind = "side quest", giver = q.get("giver", ""),
+				where = q.get("where", ""), gold = int(q.get("reward_gold", 0)), item = q.get("reward_item", ""),
+				claimed = Quest.side_claimed(qid), stages = q.stages, cur = cur, done = cur == -1,
+				is_done = func(sid): return Quest.side.get(qid, {}).get("done", {}).has(sid)})
+	return out
+
+
+## One quest: its name as a button ("+" folded, "-" open); open = giver, reward and stages below.
+func _quest(q: Dictionary, y: float, w: float) -> float:
+	var open: bool = _open.get(q.key, false)
+	var b := Button.new()
+	b.focus_mode = Control.FOCUS_NONE
+	b.flat = true
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.text = "%s %s  (%s)" % ["-" if open else "+", String(q.title).to_upper(), q.kind]
+	b.position = Vector2(6, y)
+	b.add_theme_font_size_override("font_size", 10)
+	for c in ["font_color", "font_hover_color", "font_pressed_color"]:
+		b.add_theme_color_override(c, COL_DONE if q.done else CombatHud.COL_BANNER)
+	b.pressed.connect(func():
+		_open.clear()                    # one open at a time: four open quests would overflow the screen
+		_open[q.key] = not open
+		Sfx.play("ui_select", -10.0)
+		_build())
+	_body.add_child(b)
+	b.set_deferred("size", Vector2(w + 8, 14))
+	y += 16
+	if not open:
+		return y
+	var by := _label(_body, Vector2(16, y), CombatHud.COL_DIM)
+	by.text = "From %s, %s." % [q.giver, q.where]
+	y += 12
+	y = _reward_line(y, q.gold, q.item, q.claimed, 16)
+	y = _stages(y, w, q.stages, q.cur, q.is_done)
+	if q.done:
+		var done := _label(_body, Vector2(16, y), COL_DONE)
+		done.text = "Quest complete!"
+		y += 12
+	return y + 6
+
+
+func _reward_line(y: float, gold: int, item_id: String, claimed: bool, x := 10.0) -> float:
+	var rw := _label(_body, Vector2(x, y), CombatHud.COL_GOLD)
 	var it := ItemData.get_item(item_id) if item_id != "" else null
 	rw.text = "Reward: %d gold%s%s" % [gold, (" and a %s" % it.display_name) if it else "", "  (claimed)" if claimed else ""]
 	return y + 14
 
 
 ## The stages: the last few done (ticked; older ones summed up in one line), then the current one.
-func _stages(y: float, w: float, st: Array, cur: int, is_done: Callable) -> float:
+func _stages(y: float, w: float, st: Array, cur: int, is_done: Callable, ind := 6.0) -> float:
 	var done_idx: Array[int] = []
 	for i in st.size():
 		if is_done.call(st[i].id):
 			done_idx.append(i)
 	const SHOW := 3
 	if done_idx.size() > SHOW:
-		var more := _label(_body, Vector2(24, y), COL_DONE.darkened(0.25))
+		var more := _label(_body, Vector2(24 + ind, y), COL_DONE.darkened(0.25))
 		more.text = "(%d earlier steps done)" % (done_idx.size() - SHOW)
 		y += 12
 		done_idx = done_idx.slice(done_idx.size() - SHOW)
 	for i in done_idx:
 		var tick := TextureRect.new()
 		tick.texture = tick_texture()
-		tick.position = Vector2(12, y + 2)
+		tick.position = Vector2(12 + ind, y + 2)
 		tick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_body.add_child(tick)
-		var l := _label(_body, Vector2(24, y), COL_DONE)
+		var l := _label(_body, Vector2(24 + ind, y), COL_DONE)
 		l.text = st[i].text
 		y += 12
 	if cur >= 0:
-		var arrow := _label(_body, Vector2(12, y), CombatHud.COL_ACTIVE)
+		var arrow := _label(_body, Vector2(12 + ind, y), CombatHud.COL_ACTIVE)
 		arrow.text = ">"
-		var l := _text(Vector2(24, y), w - 14, CombatHud.COL_TEXT)
+		var l := _text(Vector2(24 + ind, y), w - 14 - ind, CombatHud.COL_TEXT)
 		l.text = st[cur].text
-		y += 12 * maxi(1, ceili(CombatHud.FONT.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x / (w - 14)))
+		y += 12 * maxi(1, ceili(CombatHud.FONT.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x / (w - 14 - ind)))
 	return y
 
 
