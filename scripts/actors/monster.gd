@@ -163,6 +163,24 @@ func take_damage(amount: int) -> int:
 	return t
 
 
+## INT a monster needs to fight with tactics (focus the weak, finish the dying, step round its own
+## traps); below it, it goes for the nearest hero or whoever hurt it last (beasts, zombies, oozes).
+const SMART_INT := 7
+## INT a monster needs to work a door handle (no wolves, rats, spiders, zombies).
+const DOOR_INT := 5
+
+## The hero that last hurt this monster (a dim monster turns on them).
+var last_hurt_by: Actor
+
+
+func smart() -> bool:
+	return stats != null and stats.int_score >= SMART_INT
+
+
+func opens_doors() -> bool:
+	return stats != null and stats.int_score >= DOOR_INT
+
+
 ## Small bar above the monster: dark frame, red fill for the HP left.
 func _draw_hp_bar() -> void:
 	if not show_hp_bar or not is_alive() or stats == null:

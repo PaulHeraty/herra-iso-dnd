@@ -384,6 +384,8 @@ func perform_attack(attacker: Actor, target: Actor, opt: Dictionary) -> void:
 			parts += ", halved (Uncanny Dodge)"
 			short += " (halved)"
 		apply_damage(target, dmg, a.damage_type, crit)
+		if target is Monster and attacker is Hero:
+			target.last_hurt_by = attacker            # a dim monster turns on whoever hurt it
 		_detail("  %s takes %s." % [target.display_name(), parts])
 		_say("%s %s %s: %d%s" % [attacker.display_name(), "CRITS" if crit else "hits", target.display_name(), dmg, short])
 		for rc in _rider_conditions:
@@ -739,6 +741,16 @@ func move_along(who: Actor, path: Array[Vector2i]) -> void:
 	for c in path:
 		if move_left <= 0 or not in_combat:
 			break
+		if map.monster_door(c, who):        # a monster opens the door in its way (free, like a hero's)
+			var door := map.door_at(c)
+			who.facing = (c - who.cell).clampi(-1, 1)
+			door.open()
+			if map.is_seen(c):
+				_say("%s throws open the door!" % who.display_name())
+			await get_tree().create_timer(0.25).timeout
+			_check_join()
+			if not in_combat:
+				break
 		var d := c - who.cell
 		var tw := who.step_to(c, STEP_TIME * (1.4142 if d.x != 0 and d.y != 0 else 1.0))
 		move_left -= 1
@@ -925,11 +937,37 @@ func _monster_turn(m: Monster) -> void:
 				await perform_attack(m, next.target, next.opt)
 				if _check_end():
 					return
+	elif plan.get("search", false):
+		await _monster_search(m)
 	elif plan.path.is_empty():
 		_say("%s waits." % m.display_name())
 	await get_tree().create_timer(0.25).timeout
 	if in_combat and current == m:
 		end_turn()
+
+
+## A monster's action spent searching (5e Search: Perception vs the hider's Stealth roll) for the
+## hidden heroes it could see from here if they weren't hiding; found = no longer hidden.
+func _monster_search(m: Monster) -> void:
+	var looked := false
+	var r := Dice.d20(m.stats.skill_bonus("perception"))
+	for h in map.party:
+		if not h.is_alive() or not h.has_condition("hidden"):
+			continue
+		if DungeonMap.grid_distance(m.cell, h.cell) > m.stats.sight_cells() or not map.has_line_of_sight(m.cell, h.cell):
+			continue
+		looked = true
+		var dc: int = h.get_meta("stealth_total", 10)
+		_detail("  %s Perception %s vs %s's Stealth %d" % [m.display_name(), r.describe(), h.display_name(), dc])
+		if r.total >= dc:
+			h.remove_condition("hidden")
+			_say("%s searches and spots %s!" % [m.display_name(), h.display_name()])
+			FloatText.spawn(map, h.body_position() + Vector2(0, -10), "SPOTTED", COL_BLOCKED, 10)
+		else:
+			_say("%s searches, but can't find %s." % [m.display_name(), h.display_name()])
+	if not looked and map.is_seen(m.cell):
+		_say("%s looks around warily." % m.display_name())
+	await get_tree().create_timer(0.3).timeout
 
 
 ## The next multiattack swing: the same attack at `first` if it is still up, else the best
@@ -938,7 +976,7 @@ func _multiattack_option(m: Monster, first: Actor, a: AttackData) -> Dictionary:
 	var best := {}
 	var best_ev := -1.0
 	for h in map.party:
-		if not h.is_alive():
+		if not h.is_alive() or h.has_condition("hidden"):
 			continue
 		for o in attack_options_from(m, h, m.cell):
 			var ev := expected_damage(m, h, o) + (5.0 if h == first and o.attack == a else 0.0)
@@ -980,14 +1018,22 @@ const AI_STEP_COST := 0.08          ## per square walked: prefer not to wander
 const AI_RANGED_CROWDED := 2.5      ## per adjacent hero when the chosen attack is ranged
 const AI_FINISH_BONUS := 4.0        ## the attack would likely drop the target
 
-## What a monster does this turn: {path: cells to walk, target: Actor or null, attack: AttackData}.
-## Scores every reachable stopping cell x every standing hero x every usable attack by expected
-## damage; if nothing can be attacked this turn, walks toward the nearest hero by real path.
+## What a monster does this turn: {path: cells to walk, target: Actor or null, attack: AttackData,
+## power, search: bool}. A smart monster (Monster.smart) scores every reachable stopping cell x every
+## hero it can see x every usable attack by expected damage (+ a bonus for finishing one off); a dim
+## one picks one hero (_dim_target: the nearest, or whoever hurt it) and goes for that one. Hidden
+## heroes can't be picked; if nobody else can be attacked this turn, it spends its action searching
+## for them. If nothing can be attacked, it walks toward the nearest hero by real path.
 func plan_monster_turn(m: Monster) -> Dictionary:
-	var heroes := map.party.filter(func(h): return h.is_alive())
-	var plan := {path = [] as Array[Vector2i], target = null, attack = null, power = null}
+	var alive := map.party.filter(func(h): return h.is_alive())
+	var heroes := alive.filter(func(h): return not h.has_condition("hidden"))
+	var plan := {path = [] as Array[Vector2i], target = null, attack = null, power = null, search = false}
+	var hiding := alive.size() > heroes.size()
 	if heroes.is_empty():
+		plan.search = hiding
 		return plan
+	if not m.smart():
+		heroes = [_dim_target(m, heroes)]
 	var reach := map.combat_reach(m.cell, move_left, m)
 	var best := -INF
 	for c: Vector2i in reach:
@@ -999,7 +1045,7 @@ func plan_monster_turn(m: Monster) -> Dictionary:
 				var a: AttackData = o.attack
 				var ev := expected_damage(m, h, o)
 				var score := ev + randf() * AI_JITTER
-				if ev >= h.hp * 0.8:
+				if ev >= h.hp * 0.8 and m.smart():          # only a smart monster goes for the kill
 					score += AI_FINISH_BONUS
 				score -= reach[c].cost * AI_STEP_COST
 				if a.kind == AttackData.Kind.RANGED:
@@ -1023,6 +1069,7 @@ func plan_monster_turn(m: Monster) -> Dictionary:
 					plan.path = DungeonMap.reach_path(reach, c)
 	if plan.target:
 		return plan
+	plan.search = hiding                # nobody to hit: look for the one who vanished (after moving)
 	# Nothing in reach: close in on the nearest hero (by real path, around walls).
 	var far := map.combat_reach(m.cell, 200, m)
 	var goal := Vector2i.ZERO
@@ -1050,6 +1097,30 @@ func plan_monster_turn(m: Monster) -> Dictionary:
 		steps -= 1
 	plan.path = full.slice(0, steps)
 	return plan
+
+
+## A dim monster's target: the hero it went for last turn, unless another is much nearer (by real
+## path, 3+ squares) or one just hurt it (it turns on them); else the nearest. Kept on the monster.
+func _dim_target(m: Monster, heroes: Array) -> Hero:
+	var far := map.combat_reach(m.cell, 60, m)
+	var dist := func(h: Hero) -> float:
+		var best := INF
+		for d: Vector2i in DungeonMap.DIRS8:
+			if far.has(h.cell + d):
+				best = minf(best, far[h.cell + d].cost)
+		return best if best < INF else 100.0 + DungeonMap.grid_distance(m.cell, h.cell)
+	var near: Hero = null
+	for h: Hero in heroes:
+		if near == null or dist.call(h) < dist.call(near):
+			near = h
+	var pick := near
+	var last: Hero = m.get_meta("ai_target") if m.has_meta("ai_target") else null
+	if last in heroes and dist.call(last) < dist.call(near) + 3.0:
+		pick = last
+	if m.last_hurt_by in heroes and dist.call(m.last_hurt_by) < dist.call(near) + 4.0:
+		pick = m.last_hurt_by
+	m.set_meta("ai_target", pick)
+	return pick
 
 
 ## Squares (grid distance, walls ignored) from `cell` to the nearest of `heroes`.
@@ -1750,7 +1821,8 @@ func _contest(caster: Actor, p: SpellData, target: Actor) -> void:
 		_detail("  Stealth %s vs passive Perception %d" % [mine.describe(), best])
 		if mine.total > best:
 			caster.add_condition("hidden", -1, caster, p)
-			_say("%s hides! (next attack has advantage)" % caster.display_name())
+			caster.set_meta("stealth_total", mine.total)      # what a monster's Search must beat
+			_say("%s hides! (unseen: next attack has advantage)" % caster.display_name())
 			FloatText.spawn(map, caster.body_position() + Vector2(0, -10), "HIDDEN", COL_ALLY, 10)
 		else:
 			_say("%s fails to hide" % caster.display_name())
@@ -1788,6 +1860,8 @@ func _contest(caster: Actor, p: SpellData, target: Actor) -> void:
 func _deal(src: Actor, target: Actor, amount: int, dtype: String, crit: bool, note := "", by := "") -> void:
 	var dmg := _adjust(maxi(1, amount), dtype, target)
 	apply_damage(target, dmg, dtype, crit)
+	if target is Monster and src is Hero:
+		target.last_hurt_by = src
 	_say("%s %s %s: %d%s" % [by if by != "" else src.display_name(), "CRITS" if crit else "hits", target.display_name(), dmg, note])
 	Sfx.play("crit_hit" if crit else _hit_sound(dtype))
 	FloatText.spawn(map, target.body_position() + Vector2(0, -10), ("CRIT %d" if crit else "%d") % dmg,
@@ -2618,7 +2692,8 @@ func _damage_power_value(m: Actor, p: SpellData, h: Actor, c: Vector2i) -> float
 			continue
 		var v := _save_damage_value(m, p, a, avg) if p.resolve == SpellData.Resolve.SAVE else avg
 		if a is Hero:
-			total += v
+			if not a.has_condition("hidden"):
+				total += v               # (a hidden hero in the blast is hit, but the monster isn't aiming at him)
 		elif p.hits_allies:
 			total -= v * 0.8
 	return total

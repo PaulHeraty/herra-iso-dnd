@@ -342,7 +342,9 @@ func combat_reach(from: Vector2i, budget: int, mover: Actor) -> Dictionary:
 				continue
 			for d: Vector2i in DIRS8:
 				var n := c + d
-				if reach.has(n) or not terrain_walkable(n):
+				if reach.has(n):
+					continue
+				if not terrain_walkable(n) and not monster_door(n, mover):
 					continue
 				if d.x != 0 and d.y != 0 and not (terrain_walkable(c + Vector2i(d.x, 0)) and terrain_walkable(c + Vector2i(0, d.y))):
 					continue
@@ -350,10 +352,23 @@ func combat_reach(from: Vector2i, budget: int, mover: Actor) -> Dictionary:
 					continue
 				if mover is Hero and mech and mech.trap_blocks(n):
 					continue          # a known trap: heroes go round it
+				if mover is Monster and mech and mech.monster_avoids(n, mover):
+					continue          # a smart monster steps round its own traps
 				reach[n] = {cost = cost, prev = c, stop = true}
 				next.append(n)
 		frontier = next
 	return reach
+
+
+## A closed door on `cell` that `mover` (a monster with hands: Monster.opens_doors) would open on
+## its way through (CombatManager.move_along opens it as it steps in).
+func monster_door(cell: Vector2i, mover: Actor) -> bool:
+	if not mover is Monster or not mover.opens_doors():
+		return false
+	for d: Door in _static_cells().doors:          # (not door_at: asked for every blocked cell on a path)
+		if d.get_cell() == cell:
+			return d.monster_can_open()
+	return false
 
 
 ## The creature taking up `cell` (not `except`): anyone standing, and downed heroes (still
@@ -1081,7 +1096,66 @@ func _spawn_monsters() -> void:
 	for n in entities.get_children():
 		if not n is MonsterSpawn or n.cleared or n.lurking():
 			continue
-		_spawn_from(n, n.get_cell())
+		_spawn_from(n, _open_spawn_cell(n))
+
+
+## Where a spawn's monster can stand: its own cell, unless that is inside a wall / forest block or
+## boxed in by props (it could never move or be reached), then the nearest open cell with a way out.
+func _open_spawn_cell(n: MonsterSpawn) -> Vector2i:
+	var cell := n.get_cell()
+	if terrain_walkable(cell) and _has_way_out(cell):
+		return cell
+	var taken := {}
+	for s in entities.get_children():
+		if s is MonsterSpawn and s != n:
+			taken[s.monster.cell if s.monster else s.get_cell()] = true
+	for r in range(1, 7):
+		var best := cell
+		var bd := INF
+		for dx in range(-r, r + 1):
+			for dy in range(-r, r + 1):
+				if maxi(absi(dx), absi(dy)) != r:
+					continue
+				var c := cell + Vector2i(dx, dy)
+				var d := Vector2(dx, dy).length()
+				if d < bd and terrain_walkable(c) and not taken.has(c) and occupant(c) == null and _has_way_out(c):
+					best = c
+					bd = d
+		if best != cell:
+			push_warning("%s: %s at %s can't move from there (wall or props); it stands at %s instead" % [
+					name, n.name, cell, best])
+			return best
+	return cell
+
+
+## A door (any kind) stands on `cell`.
+func _is_door_cell(cell: Vector2i) -> bool:
+	for d: Door in _static_cells().doors:
+		if d.get_cell() == cell:
+			return true
+	return false
+
+
+## Can a creature on `cell` get out into the map, not just a pocket? True if a walk from it (8 ways,
+## no cutting wall corners, doors count as open) reaches at least 12 cells.
+func _has_way_out(cell: Vector2i) -> bool:
+	var seen := {cell: true}
+	var frontier: Array[Vector2i] = [cell]
+	while not frontier.is_empty():
+		var next: Array[Vector2i] = []
+		for c in frontier:
+			for d: Vector2i in DIRS8:
+				var n := c + d
+				if seen.has(n) or (not terrain_walkable(n) and not _is_door_cell(n)):
+					continue
+				if d.x != 0 and d.y != 0 and not (terrain_walkable(c + Vector2i(d.x, 0)) and terrain_walkable(c + Vector2i(0, d.y))):
+					continue
+				seen[n] = true
+				if seen.size() >= 12:
+					return true
+				next.append(n)
+		frontier = next
+	return false
 
 
 func _spawn_from(n: MonsterSpawn, cell: Vector2i) -> Monster:

@@ -136,7 +136,7 @@ const TOPICS := {
 		{at = "focus", t = "The front line: heavy armour, the most HP, and a good weapon. Stand between the monsters and the Mage.\n\nSecond Wind (a bonus action) heals the Fighter; Shove knocks a foe prone or pushes it away. More attacks and tricks come with levels."},
 	]},
 	"class_rogue": {title = "THE ROGUE", pages = [
-		{at = "focus", t = "Sneak Attack: once a turn, extra damage when the Rogue has advantage, or when an ally stands next to the target. Hide gives advantage on the next attack.\n\nThe Rogue also picks locks and disarms traps."},
+		{at = "focus", t = "Sneak Attack: once a turn, extra damage when the Rogue has advantage, or when an ally stands next to the target. Hide gives advantage on the next attack, and monsters can't target a hidden Rogue until they search him out.\n\nThe Rogue also picks locks and disarms traps."},
 	]},
 	"class_cleric": {title = "THE CLERIC", pages = [
 		{at = "focus", t = "The healer. Cure Wounds (touch) and Healing Word (at range, a bonus action) heal and get downed heroes back up. Bless helps the party hit and save; Sacred Flame is a free radiant attack.\n\nKeep a spell slot or two for healing."},

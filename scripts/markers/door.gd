@@ -126,6 +126,12 @@ func by_hand() -> bool:
 	return style == Style.WOOD or (style == Style.SECRET and found)
 
 
+## Can a monster (with hands and wits: Monster.opens_doors) open it on its way? An unlocked
+## wooden door, or a secret door it knows of (its own lair's); never a portcullis or the ice.
+func monster_can_open() -> bool:
+	return not is_open and not locked and style in [Style.WOOD, Style.SECRET]
+
+
 ## Swing it open (no checks: the caller handles locks).
 func open() -> void:
 	if is_open:

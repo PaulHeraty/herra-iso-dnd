@@ -7,7 +7,8 @@ extends RefCounted
 ##   prone       own attacks: disadvantage. Attacks against: advantage within 5 ft, else disadvantage.
 ##               Standing up costs half your speed.
 ##   restrained  speed 0. Own attacks: disadvantage. Attacks against: advantage. DEX saves: disadvantage.
-##   hidden      next attack has advantage (then the condition ends)
+##   hidden      next attack has advantage (then the condition ends); attacks against it have
+##               disadvantage, and monsters can't pick it as a target (they must Search for it)
 ##   frightened  own attacks: disadvantage (while the source can be seen)
 ##   shielded    +5 AC (Shield, until the start of the caster's next turn)
 ##   paralyzed   loses its turns, auto-fails STR and DEX saves; attacks against have advantage and
@@ -49,7 +50,9 @@ static func attack_advantage(attacker: Actor, target: Actor, melee: bool, dist: 
 	var adv := false
 	var dis := false
 	if attacker.has_condition("hidden"):
-		adv = true
+		adv = true                       # 5e: an unseen attacker has advantage
+	if target.has_condition("hidden"):
+		dis = true                       # 5e: attacks against a creature you can't see
 	if attacker.has_condition("prone") or attacker.has_condition("restrained"):
 		dis = true
 	if attacker.has_condition("frightened"):
@@ -105,7 +108,7 @@ const EFFECTS := {
 	"blessed": "+1d4 to attack rolls and saving throws.",
 	"prone": "Own attacks have disadvantage. Attacks against: advantage within 5 ft, disadvantage from further. Standing up costs half your speed.",
 	"restrained": "Can't move. Own attacks and DEX saves have disadvantage; attacks against have advantage.",
-	"hidden": "Your next attack has advantage.",
+	"hidden": "Your next attack has advantage. Monsters can't target you (they must search); attacks against you have disadvantage.",
 	"frightened": "Own attacks have disadvantage.",
 	"shielded": "+5 AC until the start of your next turn.",
 	"concentrating": "Taking damage forces a CON save (DC 10 or half the damage) or the spell ends.",

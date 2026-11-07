@@ -733,7 +733,7 @@ func _build_spells() -> void:
 	sv.sfx = "hit_blunt"
 
 	var hd := _spell("hide", "Hide", A, 0, C.BONUS, T.SELF, 0, R.CONTEST,
-			"Cunning Action (bonus action): Stealth vs the enemies' passive Perception. Success: your next attack has advantage.")
+			"Cunning Action (bonus action): Stealth vs the enemies' passive Perception. Success: monsters can't target you until they search you out, and your next attack has advantage.")
 	hd.contest_skill = "stealth"
 	hd.condition = "hidden"
 	hd.condition_rounds = -1

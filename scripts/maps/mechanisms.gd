@@ -186,13 +186,25 @@ func after_party_step() -> bool:
 	return stop
 
 
-## After a step in a fight: a hero (not a monster: they know their traps) on a hidden trap sets it
-## off. True = stop moving.
+## A smart monster's path goes round an armed trap (it knows its lair's traps, hidden or not);
+## a dim one (Monster.smart false) walks straight over it, and fliers never touch the floor.
+func monster_avoids(cell: Vector2i, m: Actor) -> bool:
+	if not m is Monster or not m.smart() or m.stats.fly:
+		return false
+	var t := trap_at(cell)
+	return t != null and t.armed()
+
+
+## After a step in a fight: a hero on a hidden trap sets it off; so does a monster on any armed
+## trap (dim monsters walk into them; fliers pass over). True = stop moving.
 func after_combat_step(who: Actor) -> bool:
 	var stop := false
-	if who is Hero and who.is_alive():
+	if who.is_alive():
 		var t := trap_at(who.cell)
-		if t and t.armed() and not t.known():
+		if who is Hero and t and t.armed() and not t.known():
+			spring(t, who)
+			stop = true
+		elif who is Monster and t and t.armed() and not who.stats.fly:
 			spring(t, who)
 			stop = true
 	update_plates()
