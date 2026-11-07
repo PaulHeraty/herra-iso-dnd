@@ -748,7 +748,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		_close_popup()
 		get_viewport().set_input_as_handled()
-	elif event is InputEventMouseButton and event.pressed:
+	elif _is_click(event):
 		_close_popup()
 		get_viewport().set_input_as_handled()    # the click only closes the menu
 
@@ -794,7 +794,7 @@ func _inventory_input(event: InputEvent) -> bool:
 	if map_screen.visible:
 		if event is InputEventKey and event.pressed:
 			return map_screen.handle_key(event)
-		if event is InputEventMouseButton and event.pressed:
+		if _is_click(event):
 			map_screen.close()               # a click outside the map closes it
 			return true
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -824,7 +824,7 @@ func _inventory_input(event: InputEvent) -> bool:
 			return true
 		if event.keycode == KEY_I and shop.visible:
 			return true                      # the shop shows the bag already
-	if (shop.visible or quest_screen.visible or sheet.visible) and event is InputEventMouseButton and event.pressed:
+	if (shop.visible or quest_screen.visible or sheet.visible) and _is_click(event):
 		shop.close()
 		quest_screen.close()
 		sheet.close()
@@ -842,7 +842,7 @@ func _inventory_input(event: InputEvent) -> bool:
 		if event.keycode == KEY_ESCAPE and inventory_screen.visible:
 			inventory_screen.close()
 			return true
-	if inventory_screen.visible and event is InputEventMouseButton and event.pressed:
+	if inventory_screen.visible and _is_click(event):
 		inventory_screen.close()
 		return true
 	return false
@@ -1082,7 +1082,7 @@ func loot_open() -> bool:
 
 func _input(event: InputEvent) -> void:
 	# Any click or key closes the loot box (the click still does its normal job).
-	if _loot and ((event is InputEventMouseButton and event.pressed) or (event is InputEventKey and event.pressed)):
+	if _loot and (_is_click(event) or (event is InputEventKey and event.pressed)):
 		_close_loot.call_deferred()
 
 
@@ -1312,3 +1312,10 @@ func caption(title: String, text: String) -> void:
 	_caption_tw.tween_interval(CAPTION_TIME)
 	_caption_tw.tween_property(_caption, "modulate:a", 0.0, 0.8)
 	_caption_tw.tween_callback(func(): _caption.visible = false)
+
+
+## A real click (left or right button), not the mouse wheel: a wheel turn that the list under the
+## mouse doesn't use (already at its end) must not close a screen.
+static func _is_click(event: InputEvent) -> bool:
+	return event is InputEventMouseButton and event.pressed \
+			and event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]

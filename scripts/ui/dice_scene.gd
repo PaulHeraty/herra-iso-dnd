@@ -201,7 +201,7 @@ func _fade_dim(a: float, b: float, sec: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
-	var skip: bool = (event is InputEventMouseButton and event.pressed) or \
+	var skip: bool = CombatHud._is_click(event) or \
 			(event is InputEventKey and event.pressed and event.keycode in [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER])
 	if skip:
 		_speed = 4.0
