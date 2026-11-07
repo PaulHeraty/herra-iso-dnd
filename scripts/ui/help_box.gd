@@ -4,7 +4,7 @@ extends CanvasLayer
 ## 0 HP, a trap...) a box explains it. `HelpBox.tip(id, focus)` asks for a topic (HelpTopics);
 ## each is shown once, ever. The box pauses the game (and freezes time, so fights wait too),
 ## frames the part of the screen it talks about and dims the rest. Space / Enter / Right = next
-## page, Left / Backspace = back, Esc = close; "Help off" stops the tips for good. F1 = the help
+## page, Left / Backspace = back, Esc = close (or the x top right); "Help off" stops the tips for good. F1 = the help
 ## menu: every topic to read again, tips on / off, show all tips again.
 ## The setting + the topics seen are kept in user://settings.cfg (not in save games). Test runs
 ## (a -s script, HERRA_AUTO_REACT set, or headless) have help off and never write the file; HERRA_HELP=1 turns
@@ -141,11 +141,23 @@ func _ready() -> void:
 	_title.add_theme_color_override("font_color", CombatHud.COL_BANNER)
 	_panel.add_child(_title)
 	_count = Label.new()
-	_count.position = Vector2(W - 46, 3)
+	_count.position = Vector2(W - 62, 3)
 	_count.size = Vector2(40, 10)
 	_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_count.add_theme_color_override("font_color", CombatHud.COL_DIM)
 	_panel.add_child(_count)
+	var x := _button(_panel, "x", _close_topic)
+	x.tooltip_text = "Close (Esc). Help stays on."
+	x.position = Vector2(W - 17, 2)
+	x.set_deferred("size", Vector2(12, 11))
+	x.add_theme_constant_override("h_separation", 0)
+	for st in ["normal", "hover", "pressed"]:
+		var sb := CombatHud._box_static(CombatHud.COL_CARD if st == "normal" else CombatHud.COL_EDGE, CombatHud.COL_EDGE)
+		sb.content_margin_left = 0
+		sb.content_margin_right = 0
+		sb.content_margin_top = 0
+		sb.content_margin_bottom = 0
+		x.add_theme_stylebox_override(st, sb)
 	var rule := ColorRect.new()
 	rule.color = CombatHud.COL_EDGE
 	rule.position = Vector2(4, 15)

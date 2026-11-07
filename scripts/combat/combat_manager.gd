@@ -72,6 +72,8 @@ var _starting := false
 
 
 func _ready() -> void:
+	Settings.load_settings()
+	dice_mode = clampi(Settings.dice_mode, 0, DiceMode.size() - 1) as DiceMode
 	if not InputMap.has_action("dice_mode"):
 		InputMap.add_action("dice_mode")
 		var e2 := InputEventKey.new()
@@ -2133,6 +2135,7 @@ func show_dice(big: bool) -> bool:
 
 func cycle_dice_mode() -> void:
 	dice_mode = ((dice_mode + 1) % DiceMode.size()) as DiceMode
+	Settings.set_dice_mode(dice_mode)
 	_say("Dice scene: %s" % DICE_MODE_NAMES[dice_mode])
 
 

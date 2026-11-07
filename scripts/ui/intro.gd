@@ -49,6 +49,7 @@ var _module: AdventureModule
 
 func _ready() -> void:
 	size = SCREEN
+	Settings.apply()
 	theme = CombatHud.make_theme()
 	var bg := ColorRect.new()
 	bg.size = SCREEN
@@ -82,6 +83,10 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if Settings.is_fullscreen_key(event):
+		Settings.toggle_fullscreen()
+		get_viewport().set_input_as_handled()
+		return
 	var menus := _stage in [Stage.MENU, Stage.LOAD, Stage.PARTY, Stage.MODULE]
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		match _stage:

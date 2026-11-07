@@ -582,6 +582,11 @@ func _build_popup(root: Control) -> void:
 	_popup.add_child(_popup_rows)
 
 
+## Is the Attack / Spell / Item menu (or a weapon popup) open?
+func popup_open() -> bool:
+	return _popup != null and _popup.visible
+
+
 func _close_popup() -> void:
 	_popup.visible = false
 	_popup_kind = ""

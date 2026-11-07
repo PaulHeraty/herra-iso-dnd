@@ -61,6 +61,7 @@ var mech: Mechanisms
 var hud: CombatHud
 ## Save / load (F5 quick save, F6 save to a slot, F9 load).
 var save_screen: SaveScreen
+var pause_menu: PauseMenu
 var help: HelpBox
 ## The victory screen (after Brannoc pays for the Wraith), made when first shown.
 var victory_screen: VictoryScreen
@@ -92,6 +93,7 @@ var _placed := {}
 
 func _ready() -> void:
 	Modules.ensure_for(scene_file_path)      # a map run on its own: its module
+	Settings.apply()
 	# The quest and the rune's portal travel with the party (a new game starts them afresh).
 	var fresh_story := PartyState.story.is_empty()
 	if PartyState.has_state() and not fresh_story:
@@ -170,6 +172,10 @@ func _ready() -> void:
 	save_screen.name = "SaveScreen"
 	save_screen.map = self
 	add_child(save_screen)
+	pause_menu = PauseMenu.new()
+	pause_menu.name = "PauseMenu"
+	pause_menu.map = self
+	add_child(pause_menu)
 	help = HelpBox.new()
 	help.name = "HelpBox"
 	help.map = self

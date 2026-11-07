@@ -21,7 +21,7 @@ G="/c/Godot/Godot_v4.7.2-stable_win64_console.exe"
 here="$(cd "$(dirname "$0")" && pwd)"
 log="$(mktemp)"
 start=$(date +%s)
-"$G" "$@" > "$log" 2>&1 &
+"$G" --windowed "$@" > "$log" 2>&1 &
 pid=$!
 code=""
 err_at=""
